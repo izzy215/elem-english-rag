@@ -186,6 +186,24 @@ progress.json    {"A":{"2/U3":{"learned_word_ids":["w-0031",...],"quiz_taken":2}
 
 오답 반영 우선순위 = count 내림차순, 같으면 last 최신순.
 
+### 6.3 RAG 저장소 (`data/chroma/` · Chroma · RAG 담당)
+
+```
+data/golden/chunks.jsonl  ──임베딩(조각당 1회)──▶  data/chroma/   ──검색──▶  /rag/search
+```
+
+| 항목 | 결정 |
+|---|---|
+| 벡터 DB | **Chroma** (`chromadb`, 로컬 폴더 저장). 수업에서 다른 것을 쓰면 rag.py 안에서만 교체 |
+| 컬렉션 | `chunks` 하나. 문서 = chunk 1개, id = chunks.jsonl 의 id |
+| 메타데이터 | level, unit, source_page, word_ids — `/rag/search?level=` 필터에 사용 |
+| 임베딩 | Gemini Embedding API. **chunks.jsonl 이 바뀔 때만** 다시 생성 (`tests/build_index.py` 같은 스크립트로) |
+| 생성 시점 | 서버 시작 시 `data/chroma/` 가 없으면 자동 생성, 있으면 읽기만 |
+| Git | `data/chroma/` 는 제외. 각자 chunks.jsonl 로 다시 만들 수 있음 |
+| 검수용 | `/rag/check` 도 같은 컬렉션을 검색 (유사 문장 = score ≥ 0.85) |
+
+(2026-09-04 추가: FAISS → Chroma)
+
 ## 7. 프롬프트 규칙 (`backend/prompts/*.txt`)
 
 | 파일 | 역할 | 반드시 포함 |

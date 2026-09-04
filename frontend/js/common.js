@@ -34,11 +34,11 @@ function requireState(...keys) {
 }
 
 // ---------- 상단바 ----------
-function renderTopbar({ back = true } = {}) {
+function renderTopbar({ back = true, crumbs = true } = {}) {
   const s = S.get();
   const parts = [];
-  if (s.level) parts.push(`Level ${s.level.level}`);
-  if (s.unit) parts.push(`${s.unit.unit} ${s.unit.title}`);
+  if (crumbs && s.level) parts.push(`Level ${s.level.level}`);
+  if (crumbs && s.unit) parts.push(`${s.unit.unit} ${s.unit.title}`);
   $('#topbar').innerHTML = `
     ${back ? '<button class="back" onclick="history.back()">‹ 뒤로</button>' : ''}
     <div class="crumb">${parts.map(p => `<span>${esc(p)}</span>`).join('')}</div>

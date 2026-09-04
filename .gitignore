@@ -9,6 +9,7 @@
 # 생성물 · 개인 데이터
 audio_cache/
 data/student/
+data/chroma/
 __pycache__/
 *.pyc
 

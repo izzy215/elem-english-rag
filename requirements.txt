@@ -8,3 +8,6 @@ uvicorn>=0.30
 
 # (선택) Streamlit 샘플을 돌려볼 때만
 streamlit>=1.45
+
+# RAG (RAG 담당)
+chromadb>=0.5

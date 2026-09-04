@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>초등 영어 · 관리자</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+  /* 관리자는 데스크톱에서 보므로 폭을 넓힌다 */
+  .app{max-width:760px}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:14px}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px}
+  .panel h2{font-size:1rem;font-weight:800;margin:0 0 4px}
+  .panel .d{color:var(--muted);font-size:.82rem;margin-bottom:12px}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .kpi{background:var(--bg);border-radius:10px;padding:12px 10px;text-align:center}
+  .kpi .num{font-size:1.5rem;font-weight:800;color:var(--primary);font-variant-numeric:tabular-nums}
+  .kpi .num.na{color:var(--muted);font-size:1rem}
+  .kpi .lbl{font-size:.72rem;color:var(--muted)}
+  .bars{display:grid;gap:8px;margin-top:12px}
+  .bar{display:grid;grid-template-columns:130px 1fr 48px;align-items:center;gap:10px;font-size:.82rem}
+  .bar .track{height:10px;border-radius:5px;background:var(--line);overflow:hidden}
+  .bar .track i{display:block;height:100%;background:var(--primary)}
+  .bar .track i.best{background:var(--accent)}
+  .bar .v{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+  label.field{margin:12px 0 6px}
+  input[type=text],textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:.92rem;background:var(--surface)}
+  textarea{min-height:130px;resize:vertical;line-height:1.6}
+  .row{display:grid;grid-template-columns:1fr 130px;gap:10px}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+  .actions .btn{margin-top:0}
+  .checks{display:grid;gap:6px;margin-top:12px}
+  .check{display:grid;grid-template-columns:22px 1fr;gap:8px;align-items:start;font-size:.85rem;padding:8px 10px;border-radius:8px;background:var(--bg)}
+  .check.ok{background:var(--primary-soft)} .check.ok .ic{color:var(--primary)}
+  .check.warn{background:var(--accent-soft)} .check.warn .ic{color:#B07514}
+  .check .ic{font-weight:800}
+  .check .t{font-weight:600} .check .w{color:var(--muted);font-size:.8rem;margin-top:2px}
+  table.mini{width:100%;border-collapse:collapse;font-size:.83rem;margin-top:8px}
+  table.mini th,table.mini td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+  table.mini th{font-size:.72rem;color:var(--muted);font-weight:600}
+  .pill{display:inline-block;font-size:.72rem;font-weight:700;padding:2px 9px;border-radius:999px}
+  .pill.ok{background:var(--primary-soft);color:var(--primary)} .pill.warn{background:var(--accent-soft);color:#B07514}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar" id="topbar"></header>
+  <main>
+    <h1>관리자</h1>
+    <p class="sub">골든 데이터 상태 · RAG 검색 정확도 · 소스 등록(검수 경고)</p>
+
+    <div class="grid2">
+      <!-- 데이터 상태 -->
+      <section class="panel">
+        <h2>골든 데이터</h2>
+        <div class="d">서버가 지금 읽고 있는 데이터</div>
+        <div id="dataStatus" class="hint">확인 중…</div>
+        <table class="mini" id="dataTable"></table>
+      </section>
+
+      <!-- RAG 정확도 (PRD 4.6 · GET /api/rag/eval) -->
+      <section class="panel">
+        <h2>RAG 검색 정확도</h2>
+        <div class="d">평가셋(eval.csv) 기준 · 상위 3개 안에 정답 조각이 있으면 맞힘</div>
+        <div class="kpis">
+          <div class="kpi"><div class="num na" id="hit3">–</div><div class="lbl">hit@3</div></div>
+          <div class="kpi"><div class="num na" id="hit1">–</div><div class="lbl">hit@1</div></div>
+          <div class="kpi"><div class="num na" id="evalN">–</div><div class="lbl">문항 수</div></div>
+        </div>
+        <div class="bars" id="runs"></div>
+        <div class="hint" id="evalHint"></div>
+      </section>
+    </div>
+
+    <!-- 소스 등록 + RAG 검수 경고 (PRD 4.6 · POST /api/rag/check) -->
+    <section class="panel" style="margin-top:14px">
+      <h2>소스 등록</h2>
+      <div class="d">한 줄에 한 문장 · <code>영어 | 한국어 뜻</code> · 등록 전에 교육과정 범위와 중복을 RAG로 검사합니다</div>
+      <div class="row">
+        <div>
+          <label class="field" for="srcTitle">제목</label>
+          <input type="text" id="srcTitle" placeholder="예: 동물원에서">
+        </div>
+        <div>
+          <label class="field" for="srcLevel">Level</label>
+          <select id="srcLevel"><option value="1">Level 1</option><option value="2" selected>Level 2</option><option value="3">Level 3</option></select>
+        </div>
+      </div>
+      <label class="field" for="srcText">문장</label>
+      <textarea id="srcText" placeholder="The giraffe is eating leaves. | 기린이 나뭇잎을 먹고 있어요.
+I have a rabbit. | 나는 토끼가 있어요."></textarea>
+      <div class="actions">
+        <button class="btn ghost" id="checkBtn" onclick="runCheck()">검수 경고 확인</button>
+        <button class="btn" id="submitBtn" onclick="submitSource()" disabled>등록</button>
+      </div>
+      <div class="checks" id="checks"></div>
+      <div class="hint" id="srcHint"></div>
+    </section>
+  </main>
+  <div class="status" id="status"></div>
+</div>
+<script src="js/common.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
