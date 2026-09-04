@@ -50,7 +50,7 @@ A1·A2는 팀장 결정이며 초안의 기본값을 승인하면 끝. A3·A4는
 | # | 내용 | 이유 | 시점 |
 |---|---|---|---|
 | C1 | `/quiz?prefetch=1` 추가 여부 | 30초 대기를 학습 화면에서 미리 흡수 | 5일차 |
-| C2 | `/progress` 를 golden.py → student.py 로 이동 (소유자 TTS 담당 → 팀장) | 학생 DB를 읽고 써야 함 | 2일차 |
+| C2 | `/progress` 를 golden.py → student.py 로 이동 (소유자 TTS 담당 → 팀장) | 학생 DB를 읽고 써야 함 | ✓ 2026-09-04 팀장 결정: 학생 DB 모듈은 `student.py` 로 분리. TTS 담당에게 통보만 남음 |
 | C3 | 소스 등록 저장 API (`POST /sources` 등) 추가 | 관리자 화면이 보내는데 받는 곳이 없음 | A3 결정 후 |
 | C4 | 학습 기록 API (`POST /progress/learned` 등) 추가 | 진행률이 항상 0% | A1 결정 후 |
 

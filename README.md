@@ -10,6 +10,7 @@ project/
 │   ├─ main.py        FastAPI 앱. 라우터를 모아 frontend/ 를 서빙
 │   ├─ config.py      .env → settings  (키·모델은 항상 여기서 읽는다)
 │   ├─ rag.py         (예정) A. 청킹 · 임베딩 · 검색 · 검수 경고 — RAG 담당
+│   ├─ student.py     (예정) 학생 DB 읽기·쓰기 (progress · wrong_words · quiz_log) — 팀장
 │   ├─ quiz.py        (예정) B. 문제 생성 + 오답 반영  — 팀장
 │   ├─ explain.py     (예정) C. 오답 설명              — 팀장
 │   ├─ tts.py         (예정) D. TTS 캐시 (sample 에서 복사) — TTS 담당
@@ -126,7 +127,7 @@ index.html ─▶ units.html ─▶ learn.html ─▶ quiz.html ─▶ explain.h
 
 | 역할 | 담당 | 파일 |
 |---|---|---|
-| 리딩 + 화면 + AI API (문제 생성 · 오답 설명 · 프롬프트) | 팀장 | frontend/, backend/quiz.py, explain.py, prompts/ |
+| 리딩 + 화면 + AI API (문제 생성 · 오답 설명 · 프롬프트) + 학생 DB | 팀장 | frontend/, backend/student.py, quiz.py, explain.py, prompts/ |
 | TTS + 말하기 + 학습 데이터 API | 팀원 2 (TTS) | backend/tts.py, speak.py, golden.py |
 | RAG + 검수 경고 + 정확도 측정 + 데이터팀 창구 | 팀원 3 (RAG) | backend/rag.py, tests/, data/golden/ |
 

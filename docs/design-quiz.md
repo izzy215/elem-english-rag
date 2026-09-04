@@ -116,4 +116,4 @@
 - [ ] prefetch 를 PRD API 에 추가할지 — 5일차, 셋 합의
 - [ ] 연속 정답 2회 삭제 기준이 너무 느슨/빡빡한지 — 11일차 테스트 후
 - [ ] 경량 모델(3.5-flash-lite) 품질이 충분한지 — 5일차 비교
-- [ ] `/progress` 를 golden.py → student.py 로 옮기는 시점 (TTS 담당과 합의) — 2일차
+- [x] 학생 DB 모듈 = `student.py` 로 분리 (2026-09-04 팀장 결정). `/progress` 이동은 TTS 담당에게 통보 후 2일차

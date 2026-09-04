@@ -186,6 +186,8 @@ progress.json    {"A":{"2/U3":{"learned_word_ids":["w-0031",...],"quiz_taken":2}
 
 오답 반영 우선순위 = count 내림차순, 같으면 last 최신순.
 
+**모듈**: 이 파일들을 읽고 쓰는 코드는 `backend/student.py` (팀장) 한 곳에만 둔다. quiz.py · explain.py · 오답노트 API 는 student.py 의 함수를 가져다 쓴다. `/progress` 는 student.py 소유 (golden.py 에서 이동, TTS 담당에게 통보). (2026-09-04 결정)
+
 ### 6.3 RAG 저장소 (`data/chroma/` · Chroma · RAG 담당)
 
 ```
