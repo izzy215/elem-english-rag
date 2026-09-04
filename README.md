@@ -34,22 +34,60 @@ project/
 └─ requirements.txt
 ```
 
-## 세팅
+## 세팅 (처음 한 번)
 
-```bash
-pip install -r project/requirements.txt
+가상환경(`.venv`)은 Git에 없다. **각자 자기 컴퓨터에서 만든다.** 아래는 저장소를 받은 폴더 안에서 실행.
+Python 3.11 이상 (`python --version` 또는 `python3 --version` 으로 확인).
+
+### Windows (PowerShell)
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+Copy-Item .env.example .env
 ```
+
+### Mac · Linux (터미널)
 ```bash
-Copy-Item project/.env.example project/.env
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
 ```
-`project/.env` 에 `GEMINI_API_KEY` 를 넣는다. 확인: `python project/backend/config.py`
+
+그다음 `.env` 를 열어 `GEMINI_API_KEY=` 뒤에 자기 키를 넣는다 (https://aistudio.google.com/apikey 에서 무료 발급).
+확인: `python backend/config.py` → "API 키: 설정됨" 이면 끝.
+
+| | Windows | Mac · Linux |
+|---|---|---|
+| 파이썬 명령 | `python` | `python3` (설치에 따라 `python` 도 됨) |
+| 가상환경 켜기 | `.venv\Scripts\activate` | `source .venv/bin/activate` |
+| 가상환경 끄기 | `deactivate` | `deactivate` |
+| 파이썬 실행 파일 위치 | `.venv\Scripts\python.exe` | `.venv/bin/python` |
+
+가상환경이 켜지면 프롬프트 앞에 `(.venv)` 가 붙는다. 터미널을 새로 열 때마다 켜야 한다 (VS Code 는 자동으로 켜 줌).
+PowerShell 에서 `activate` 가 "스크립트 실행이 차단" 되면 한 번만: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
 
 ## 실행
 
+가상환경을 켠 상태에서, 저장소 폴더 안에서:
 ```bash
-python -m uvicorn backend.main:app --app-dir project --reload --port 8000
+uvicorn backend.main:app --reload --port 8000
 ```
 → http://localhost:8000  (`/api/health` 로 키·모델 확인)
+
+가상환경을 안 켰거나 `uvicorn` 을 못 찾으면 `python -m uvicorn backend.main:app --reload --port 8000` (Mac은 `python3 -m ...`).
+`.env` 를 바꾸면 서버를 다시 켠다.
+
+## 자주 막히는 것
+
+| 증상 | 원인 · 해결 |
+|---|---|
+| `uvicorn: command not found` | 가상환경이 안 켜짐 → activate 먼저 |
+| `ModuleNotFoundError: backend` | 저장소 폴더 밖에서 실행함 → `cd` 로 README 가 있는 폴더로 |
+| `GEMINI_API_KEY 없음` | `.env` 를 안 만들었거나 키를 안 넣음 |
+| VS Code 가 패키지를 못 찾음 | 오른쪽 아래 인터프리터를 `.venv` 것으로 선택 (Windows: `.venv\Scripts\python.exe`, Mac: `.venv/bin/python`) |
+| Mac에서 `python` 이 2.x | `python3` 사용 |
 
 ## API (기획서 6절)
 
