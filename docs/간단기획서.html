@@ -1,0 +1,304 @@
+<title>초등 영어 RAG 맞춤 복습 기획서</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #F6F7F3;
+    --surface: #FFFFFF;
+    --ink: #1F2823;
+    --muted: #69746C;
+    --line: #DCE3DB;
+    --accent: #14554A;
+    --accent-soft: #E3EEE9;
+    --amber: #B07514;
+    --amber-soft: #FBF0DC;
+    --red: #B9473A;
+    --red-soft: #F7E4DE;
+    --mono-bg: #EEF2EC;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #151A17; --surface: #1D2420; --ink: #E6ECE6; --muted: #98A59B; --line: #2E3833;
+      --accent: #7FC4B0; --accent-soft: #1F3A33; --amber: #E0A94B; --amber-soft: #3A2E15;
+      --red: #E07A69; --red-soft: #3D231E; --mono-bg: #242D28;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #151A17; --surface: #1D2420; --ink: #E6ECE6; --muted: #98A59B; --line: #2E3833;
+    --accent: #7FC4B0; --accent-soft: #1F3A33; --amber: #E0A94B; --amber-soft: #3A2E15;
+    --red: #E07A69; --red-soft: #3D231E; --mono-bg: #242D28;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font-family: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+    font-size: 15px; line-height: 1.65;
+  }
+  .page { max-width: 820px; margin: 0 auto; padding: 40px 24px 96px; }
+
+  /* header */
+  .masthead { display: grid; gap: 14px; padding-bottom: 28px; border-bottom: 2px solid var(--accent); margin-bottom: 40px; }
+  .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  h1 {
+    font-family: 'Gowun Batang', 'Noto Serif KR', serif; font-weight: 700;
+    font-size: clamp(28px, 4.2vw, 38px); line-height: 1.25; margin: 0; text-wrap: balance;
+  }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); align-items: center; }
+  .chip { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 1.6; }
+  .chip.draft { background: var(--amber-soft); color: var(--amber); }
+  .chip.ok { background: var(--accent-soft); color: var(--accent); }
+  .chip.no { background: var(--red-soft); color: var(--red); }
+
+  .thesis {
+    font-family: 'Gowun Batang', serif; font-size: 19px; line-height: 1.6;
+    padding: 20px 24px; border-left: 4px solid var(--accent); background: var(--surface); margin: 0;
+  }
+  .thesis strong { color: var(--accent); font-weight: 700; }
+  .loop { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin-top: 14px; font-weight: 600; font-size: 14px; }
+  .loop span { padding: 4px 10px; background: var(--accent-soft); color: var(--accent); border-radius: 6px; }
+  .loop i { color: var(--muted); font-style: normal; }
+
+  /* sections */
+  section { margin-top: 44px; }
+  h2 {
+    font-family: 'Gowun Batang', serif; font-size: 22px; font-weight: 700; margin: 0 0 14px;
+    display: flex; align-items: baseline; gap: 12px; text-wrap: balance;
+  }
+  h2 .n { font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--muted); font-weight: 500; }
+  p { margin: 0 0 12px; max-width: 68ch; }
+  ul, ol { margin: 0 0 12px; padding-left: 22px; max-width: 68ch; }
+  li { margin: 4px 0; }
+  code, .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px; background: var(--mono-bg); padding: 1px 6px; border-radius: 4px; }
+  pre { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px; line-height: 1.55; background: var(--mono-bg); padding: 16px 18px; border-radius: 8px; overflow-x: auto; margin: 0 0 12px; }
+
+  /* tables */
+  .tbl { overflow-x: auto; margin: 0 0 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; background: var(--surface); }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; letter-spacing: .04em; color: var(--muted); font-weight: 600; background: var(--ground); }
+  td.mark { font-family: 'IBM Plex Mono', monospace; font-weight: 500; white-space: nowrap; width: 1%; }
+  .m-o { color: var(--accent); } .m-t { color: var(--amber); } .m-x { color: var(--red); } .m-2 { color: var(--muted); }
+  tr.core td:first-child { font-weight: 700; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+  .legend b { font-family: 'IBM Plex Mono', monospace; font-weight: 500; margin-right: 4px; }
+
+  /* callouts */
+  .note { padding: 14px 18px; border-radius: 8px; background: var(--accent-soft); font-size: 14px; margin: 14px 0; max-width: none; }
+  .note.warn { background: var(--amber-soft); }
+  .note b { color: var(--accent); }
+  .note.warn b { color: var(--amber); }
+  .decision { display: grid; gap: 4px; padding: 16px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; margin: 14px 0; }
+  .decision .k { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .decision .v { font-family: 'Gowun Batang', serif; font-size: 17px; }
+
+  /* two-column bits */
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; }
+  .card h3 { margin: 0 0 8px; font-size: 14px; font-weight: 700; }
+  .card ul { padding-left: 18px; font-size: 14px; }
+
+  .todo { list-style: none; padding: 0; }
+  .todo li { display: flex; gap: 10px; align-items: baseline; }
+  .todo li::before { content: '☐'; color: var(--muted); font-size: 15px; }
+  .todo li.owner::after { content: attr(data-owner); margin-left: auto; font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+  footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <div class="eyebrow">NIPA-Google Study Jam PBL · 팀 프로젝트 · 간단 기획서</div>
+    <h1>초등 영어학습 · RAG 맞춤 복습</h1>
+    <div class="meta">
+      <span class="chip draft">v0.2 초안 · 팀 회의용</span>
+      <span>작성 2026-09-04 · 팀장</span>
+      <span>다음 문서: PRD (이 문서로 범위 합의 후)</span>
+    </div>
+  </header>
+
+  <section>
+    <h2><span class="n">1</span>한 줄 정의</h2>
+    <p class="thesis">초등학생이 Level·Unit을 골라 단어·문장을 학습하고, AI가 낸 문제를 풀면 <strong>틀린 내용을 기록해 두었다가 RAG가 교재에서 근거를 찾아 그 학생에게 맞는 문제와 설명을 다시 만들어 주는</strong> 학습 서비스.</p>
+    <div class="loop">
+      <span>학습</span><i>→</i><span>오답 기록</span><i>→</i><span>RAG 교재 검색</span><i>→</i><span>맞춤 문제 · 오답 설명</span><i>→</i><span>다시 학습</span>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">2</span>왜 만드는가</h2>
+    <ul>
+      <li><b>수업 요건</b> — Gemini API · RAG · 프롬프트 엔지니어링 · (선택) BigQuery / Vertex AI</li>
+      <li><b>팀 목표</b> — RAG를 중심에 두고, "검색 정확도를 숫자로 개선했다"를 발표의 핵심으로 삼는다</li>
+      <li><b>차별점</b> — 문제은행이 아니라 <b>교재 근거 + 학생 오답 이력</b>으로 문제가 학생마다 달라진다</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2><span class="n">3</span>대상 사용자</h2>
+    <div class="tbl"><table>
+      <tr><th>사용자</th><th>설명</th><th>1차</th></tr>
+      <tr><td>학생</td><td>초등 3~6학년, Level로 구분</td><td class="mark m-o">○</td></tr>
+      <tr><td>교사 · 관리자</td><td>골든 데이터 검수, 정확도 확인 — 화면 최소</td><td class="mark m-t">△</td></tr>
+    </table></div>
+    <p>로그인은 만들지 않는다. 학생은 <b>이름 드롭다운</b>으로 선택한다 (데모용 학생 A / 학생 B).</p>
+  </section>
+
+  <section>
+    <h2><span class="n">4</span>1차 범위</h2>
+    <div class="legend"><span><b class="m-o">○</b>1차 개발</span><span><b class="m-t">△</b>시간 남으면</span><span><b class="m-2">2차</b>다음 단계</span><span><b class="m-x">✕</b>안 만듦</span></div>
+    <div class="tbl"><table>
+      <tr><th>기능</th><th>1차</th><th>비고</th></tr>
+      <tr><td>Level 선택</td><td class="mark m-o">○</td><td>교재 학년 기준 1 · 2 · 3</td></tr>
+      <tr><td>Unit 선택</td><td class="mark m-o">○</td><td>교재 목차 그대로</td></tr>
+      <tr><td>단어 학습</td><td class="mark m-o">○</td><td>골든 데이터의 단어 · 뜻 · 예문 표시</td></tr>
+      <tr><td>문장 학습</td><td class="mark m-o">○</td><td>골든 데이터의 문장 · 뜻 표시</td></tr>
+      <tr class="core"><td>AI 문제 생성</td><td class="mark m-o">○</td><td>Unit 단어 + RAG 조각 + <b>학생 최근 오답</b> → 객관식 / 빈칸</td></tr>
+      <tr class="core"><td>RAG 검색 (학습용)</td><td class="mark m-o">○</td><td><b>핵심.</b> 학생 오답 · Unit 단어로 <code>04_rag_chunks</code> 검색 → 문제 생성 · 오답 설명의 근거. 평가셋으로 정확도 측정</td></tr>
+      <tr><td>RAG 검수 경고 (등록용)</td><td class="mark m-o">○</td><td>같은 인덱스로 선생님이 등록한 문장을 검색해 "교육과정 범위 밖 단어 / 기존 문장과 중복" 경고 한 줄. 등록 폼에 표시, 별도 화면 없음</td></tr>
+      <tr class="core"><td>오답 설명</td><td class="mark m-o">○</td><td>초등 눈높이 설명 + 교재 출처 표시</td></tr>
+      <tr><td>듣기 (TTS)</td><td class="mark m-o">○</td><td>단어 · 문장 카드에 듣기 버튼. sample의 캐시 TTS 그대로 이식</td></tr>
+      <tr><td>말하기 평가</td><td class="mark m-o">○</td><td>녹음 → STT(Gemini 음성 입력) → 원문과 유사도로 점수. <b>음소 단위 발음 평가는 하지 않음</b></td></tr>
+      <tr><td>로그인 · 회원가입</td><td class="mark m-x">✕</td><td>이름 드롭다운으로 대체</td></tr>
+      <tr><td>개인별 복습 화면</td><td class="mark m-x">✕</td><td>별도 화면 없이 <b>문제 생성 프롬프트에 오답 반영</b>으로 흡수</td></tr>
+      <tr><td>스토리 생성 · XP · 배지 · 랭킹</td><td class="mark m-x">✕</td><td>2차 로드맵 슬라이드에만</td></tr>
+    </table></div>
+    <div class="decision">
+      <div class="k">결정 · 2026-09-04</div>
+      <div class="v">RAG의 주인공은 <b>학습용</b>(학생 화면 · 데모 · 정확도 숫자). 검수용은 같은 엔진의 부가 입구로, 등록 시 경고 한 줄 이상 확장하지 않는다.</div>
+      <div class="v" style="font-size:15px;margin-top:6px">변경 · RAG 검수 경고 · 듣기(TTS) · 말하기 평가를 △/2차에서 <b>1차(○)로 승격</b>. 말하기 평가는 유사도 채점까지만.</div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">5</span>화면 목록</h2>
+    <ol>
+      <li><b>시작</b> — 학생 이름 선택 → Level 선택</li>
+      <li><b>Unit 목록</b> — 해당 Level의 Unit 카드</li>
+      <li><b>학습</b> — 단어 카드(뜻 · 예문 · 듣기) → 문장 카드(듣기 · 따라 말하기 → 점수)</li>
+      <li><b>문제 풀기</b> — AI 문제 3~5개, 즉시 채점</li>
+      <li><b>오답 설명</b> — 틀린 문제별 설명 + "교재 N쪽" 근거, [다시 풀기]</li>
+      <li><b>정확도 대시보드</b> (관리자, △) — 평가셋 기준 검색 정확도, 개선 전후 비교. 소스 등록 폼에는 RAG 검수 경고 한 줄만</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2><span class="n">6</span>시스템 구성</h2>
+<pre>브라우저 (HTML + JS, 기존 목업 스타일 유지)
+   │  /api/...
+FastAPI (server.py)
+   ├─ A. RAG 엔진 (인덱스 하나, 입구 둘)   임베딩 + FAISS
+   │     ├─ 학습용 ○  /api/rag/search     학생 오답 · 단어 → 교재 조각 (B · C의 근거)
+   │     └─ 검수용 ○  /api/rag/check      선생님 등록 문장 → 범위 밖 단어 · 중복 경고
+   ├─ B. 문제 생성     /api/quiz           Gemini + RAG 조각 + 오답 로그
+   ├─ C. 오답 설명     /api/explain        Gemini + RAG 조각 → 출처 표시
+   ├─ D. TTS ○        /api/tts/{id}       Gemini TTS, 파일 캐시 (sample에서 이식)
+   └─ E. 말하기 평가 ○  /api/speak          녹음 업로드 → Gemini STT → 원문 유사도 점수
+데이터
+   ├─ 골든 데이터셋 (데이터팀 제공)  → 단어 · 문장 · chunks · 평가셋
+   └─ 학생 DB (JSON → 여유 시 BigQuery) → 진도 · quiz_log · wrong_words
+설정: .env (Gemini 키 · 모델) → config.py</pre>
+    <p><b>이미 있는 것</b> — FastAPI 뼈대, <code>.env</code>/config, TTS 캐시, 이벤트 로그, 승인 워크플로우(검수 화면에 재활용 가능)</p>
+  </section>
+
+  <section>
+    <h2><span class="n">7</span>데이터 — 골든 데이터셋</h2>
+    <div class="note warn"><b>담당: 골든 데이터셋 팀 · 상세 기획서 별도 작성 예정.</b> 이 문서에서는 우리 서비스가 <b>받을 형식(인터페이스)</b>만 정한다. 형식은 데이터팀과 협의 후 확정.</div>
+    <div class="tbl"><table>
+      <tr><th>파일 (안)</th><th>내용</th><th>서비스에서 쓰는 곳</th></tr>
+      <tr><td><code>words.csv</code></td><td>level, unit, word, meaning, example, source_page</td><td>단어 학습, 문제 생성</td></tr>
+      <tr><td><code>sentences.csv</code></td><td>level, unit, sentence, meaning, source_page</td><td>문장 학습, 문제 생성</td></tr>
+      <tr><td><code>chunks.jsonl</code></td><td>id, text, level, unit, source_page</td><td><b>RAG 검색 대상</b> (04_rag_chunks)</td></tr>
+      <tr><td><code>eval.csv</code></td><td>question, expected_chunk_id 또는 expected_answer</td><td><b>검색 정확도 측정</b> (05_evaluation)</td></tr>
+    </table></div>
+    <p><b>데이터팀에 요청할 사항</b> (작성 예정)</p>
+    <ul class="todo">
+      <li>원본 교재 후보와 저작권 확인 (교육부 기본 어휘 목록 등)</li>
+      <li>Level · Unit 정의 (몇 학년 = Level 몇, Unit당 단어 수)</li>
+      <li>1차 납품 범위: 데모용 Unit 2~3개, 단어 50~100개면 충분</li>
+      <li>평가셋 최소 30문항</li>
+      <li>납품 일정: <b>1주차 말</b> (RAG 개발이 2주차에 시작되므로)</li>
+    </ul>
+    <p>데이터가 늦어질 경우: 개발팀이 임시 샘플 데이터(단어 20개)로 먼저 개발하고 나중에 교체한다.</p>
+
+    <h3 style="font-size:15px;font-weight:700;margin:22px 0 8px">7.1 교재 · 어휘 소스 후보 <span style="font-weight:500;color:var(--muted);font-size:13px">데이터팀 참고용</span></h3>
+    <div class="tbl"><table>
+      <tr><th>소스</th><th>내용</th><th>형식</th><th>저작권</th><th>비고</th></tr>
+      <tr><td><b>NCIC 국가교육과정정보센터</b><br><a href="https://ncic.re.kr/" style="color:var(--accent)">ncic.re.kr</a></td><td>2022 개정 영어과 교육과정 [별표 3] 기본 어휘 3,000개. 별표(*) 800개가 <b>초등 권장 어휘</b></td><td>HWP/PDF 부록</td><td>교육부 고시 · 공공</td><td><b>1순위.</b> 단어만 있고 뜻 · 예문 없음 → 02_golden에서 채움. 학년 구분은 없고 초등/중등 구분만</td></tr>
+      <tr><td>에듀넷 · 티-클리어<br><a href="https://www.edunet.net/" style="color:var(--accent)">edunet.net</a></td><td>국가 교육과정 원문 · 해설</td><td>PDF</td><td>공공</td><td>NCIC와 같은 문서, 찾기 쉬운 편</td></tr>
+      <tr><td>KICE Word Lister (한국교육과정평가원)</td><td>교과서 검정용 어휘 검색 프로그램. 어떤 단어가 기본 어휘인지 확인</td><td>프로그램</td><td>공공</td><td>검수 경고(범위 밖 단어) 판단 기준으로 활용 가능</td></tr>
+      <tr><td>Cambridge Young Learners 어휘표<br>(Starters / Movers / Flyers)</td><td>초등 수준 영어 단어를 3단계로 나눈 공식 목록. 주제별 분류</td><td>PDF 무료</td><td>Cambridge 소유, 교육 목적 사용 관례</td><td><b>Level 1 · 2 · 3 나누기에 유용.</b> 뜻 없음</td></tr>
+      <tr><td>Oxford 3000 / Oxford Learner's Word Lists</td><td>CEFR A1~B2 단계별 핵심 단어</td><td>웹/PDF</td><td>Oxford 소유, 비상업 사용</td><td>A1 부분만 쓰면 초등 범위와 겹침</td></tr>
+      <tr><td>NGSL (New General Service List)</td><td>빈도 기반 핵심 2,800단어</td><td>CSV</td><td>CC BY</td><td>빈도 순위 → 난이도 정렬에 활용</td></tr>
+      <tr><td>Dolch / Fry sight words</td><td>미국 초등 저학년 필수 단어 220 / 1,000</td><td>텍스트</td><td>퍼블릭 도메인</td><td>저작권 걱정 없음. Level 1 후보</td></tr>
+      <tr><td>위키낱말사전 (ko.wiktionary.org)</td><td>단어 뜻 · 예문</td><td>웹</td><td>CC BY-SA</td><td>뜻 · 예문 채우기 참고 (출처 표기 필요)</td></tr>
+      <tr><td>초등 영어 교과서 (YBM · 천재 · 대교 등)</td><td>학년 · Unit 구조 그대로</td><td>책</td><td><b>출판사 저작권</b></td><td>Unit 구조 참고만. 본문 그대로 넣지 않는다</td></tr>
+    </table></div>
+    <div class="note"><b>권장 조합</b> NCIC 800단어를 기준 목록으로 삼고, Cambridge YLE 3단계로 Level을 나누고, 뜻 · 예문은 Gemini로 생성 후 사람이 검수(03_enriched). 교과서는 Unit 주제(동물 · 음식 · 학교 등)만 참고한다.<br><span style="color:var(--muted)">확인 필요: 각 소스의 정확한 이용 조건은 데이터팀이 납품 전에 한 번 더 확인. (2026-09-04 추가)</span></div>
+  </section>
+
+  <section>
+    <h2><span class="n">8</span>역할 분담 · 개발팀 3인</h2>
+    <div class="tbl"><table>
+      <tr><th>역할</th><th>담당</th><th>산출물</th></tr>
+      <tr><td>리딩 + 화면 + AI API</td><td>팀장</td><td>화면 5개, <code>/api/quiz</code>, <code>/api/explain</code>, 프롬프트, 오답 로그(학생 DB), 발표</td></tr>
+      <tr><td>TTS + 말하기 + 학습 데이터 API</td><td>팀원 2 (TTS)</td><td><code>/api/tts</code>, <code>/api/speak</code>(STT), <code>/api/levels · units · words · sentences</code> (골든 데이터 읽기)</td></tr>
+      <tr><td>RAG + 평가</td><td>팀원 3 (RAG)</td><td><code>/api/rag/search</code>, <code>/api/rag/check</code>, 청킹 · 임베딩, 평가셋 정확도 리포트, 데이터팀 연락 창구</td></tr>
+    </table></div>
+    <ul>
+      <li>골든 데이터셋 제작은 데이터팀. 개발 3인은 받은 파일을 읽어 쓰는 쪽만 맡는다.</li>
+      <li>TTS는 sample 이식이라 작업량이 작으므로, 팀원 2가 학습 데이터 읽기 API를 함께 맡아 팀장의 화면 부담을 나눈다.</li>
+      <li>프롬프트 · 사용자 테스트 · 발표는 팀장이 겸임. <span class="mono">2026-09-04 변경: 4인 → 개발 3인</span></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2><span class="n">9</span>일정 · 3주</h2>
+    <div class="tbl"><table>
+      <tr><th>주</th><th>개발팀</th><th>데이터팀 (요청)</th></tr>
+      <tr><td class="mark">1주</td><td>PRD 확정 · 화면 1~3 · 임시 샘플로 API 뼈대 · 평가 방법 정의</td><td>원본 확보 · 골든 1차 납품</td></tr>
+      <tr><td class="mark">2주</td><td>RAG 검색 완성 · 문제 생성 · 오답 설명 · TTS 이식 · 검수 경고 · 정확도 1차 측정 → 청킹 개선</td><td>평가셋 납품 · 보완</td></tr>
+      <tr><td class="mark">3주</td><td>말하기 평가(STT) · 오답 반영 · 통합 · <b>기능 동결 (13일차)</b> · 발표</td><td>—</td></tr>
+    </table></div>
+  </section>
+
+  <section>
+    <h2><span class="n">10</span>성공 기준</h2>
+    <div class="cols">
+      <div class="card"><h3>데모 60초</h3><ul>
+        <li>Level → Unit → 단어 학습</li><li>문제 3개 → 1개 틀림</li><li>근거 있는 설명 ("교재 12쪽")</li><li>다시 풀기 → 틀린 단어 우선 출제, 학생 B와 다름</li></ul></div>
+      <div class="card"><h3>숫자</h3><ul>
+        <li>평가셋 30문항 기준 검색 정확도 (상위 3개 안에 정답 포함) <b>80% 이상</b></li><li>개선 전후 비교 그래프 1장</li></ul></div>
+      <div class="card"><h3>비용</h3><ul>
+        <li>무료 티어 내 운영</li><li>TTS 캐시 · 임베딩 1회 생성</li></ul></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">11</span>리스크</h2>
+    <div class="tbl"><table>
+      <tr><th>리스크</th><th>대응</th></tr>
+      <tr><td>골든 데이터 납품 지연</td><td>임시 샘플 데이터로 개발 선행, 형식만 먼저 합의</td></tr>
+      <tr><td>Gemini 응답 30초</td><td>문제는 5개 이하, "생각 중" 표시, 가능하면 경량 모델</td></tr>
+      <tr><td>화면 작업이 AI 시간을 잠식</td><td>화면 5개 고정, 기존 목업 CSS 재사용</td></tr>
+      <tr><td>검색 정확도가 안 오름</td><td>청킹 단위(단어별/문장별) 비교, 키워드 검색 병행(하이브리드)</td></tr>
+      <tr><td>말하기 평가(STT) 품질</td><td>원문 유사도 채점으로 한정. 3주차 초까지 안 되면 "녹음 → 텍스트 보여주고 자기 채점"으로 축소</td></tr>
+    </table></div>
+  </section>
+
+  <section>
+    <h2><span class="n">12</span>결정 필요 · 작성 예정</h2>
+    <ul class="todo">
+      <li class="owner" data-owner="데이터팀"><b>골든 데이터셋 상세 기획서</b></li>
+      <li class="owner" data-owner="양 팀 협의">데이터 인터페이스(7절 표) 최종 확정</li>
+      <li class="owner" data-owner="개발팀">문제 유형: 객관식만 / 빈칸 포함</li>
+      <li class="owner" data-owner="개발팀">말하기 채점 기준: 유사도 몇 % 이상을 통과로 볼지</li>
+      <li class="owner" data-owner="데이터팀">Level ↔ 학년 매핑</li>
+      <li class="owner" data-owner="개발팀">BigQuery 사용 여부 (수업 요건 충족용, 3주차 여유 시)</li>
+      <li class="owner" data-owner="팀장">PRD 작성 (이 문서 합의 후)</li>
+    </ul>
+  </section>
+
+  <footer>원본 파일: <span class="mono">docs/간단기획서.md</span> · 그림: <span class="mono">elem-english-rag-overview.svg</span> · 이 페이지는 팀 공유용 사본이며 수정은 md 파일에서</footer>
+</div>

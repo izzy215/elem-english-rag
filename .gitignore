@@ -1,0 +1,19 @@
+# 비밀 정보 — 절대 커밋하지 않는다 (.env.example 은 올린다)
+.env
+.env.*
+!.env.example
+
+# 가상환경
+.venv/
+
+# 생성물 · 개인 데이터
+audio_cache/
+data/student/
+__pycache__/
+*.pyc
+
+# 도구 (settings.json 은 팀 공통이라 올린다)
+.vscode/*
+!.vscode/settings.json
+.idea/
+.claude/

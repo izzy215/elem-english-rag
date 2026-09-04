@@ -1,0 +1,10 @@
+# 공통
+google-genai>=1.0
+python-dotenv>=1.0
+
+# 웹 서버 (목업 HTML + FastAPI 구조)
+fastapi[standard]>=0.115
+uvicorn>=0.30
+
+# (선택) Streamlit 샘플을 돌려볼 때만
+streamlit>=1.45

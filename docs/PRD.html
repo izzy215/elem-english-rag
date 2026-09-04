@@ -1,0 +1,286 @@
+<title>초등 영어 RAG 맞춤 복습 PRD</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #F6F7F3; --surface: #FFFFFF; --ink: #1F2823; --muted: #69746C; --line: #DCE3DB;
+    --accent: #14554A; --accent-soft: #E3EEE9; --amber: #B07514; --amber-soft: #FBF0DC;
+    --red: #B9473A; --red-soft: #F7E4DE; --mono-bg: #EEF2EC;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #151A17; --surface: #1D2420; --ink: #E6ECE6; --muted: #98A59B; --line: #2E3833;
+      --accent: #7FC4B0; --accent-soft: #1F3A33; --amber: #E0A94B; --amber-soft: #3A2E15;
+      --red: #E07A69; --red-soft: #3D231E; --mono-bg: #242D28;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #151A17; --surface: #1D2420; --ink: #E6ECE6; --muted: #98A59B; --line: #2E3833;
+    --accent: #7FC4B0; --accent-soft: #1F3A33; --amber: #E0A94B; --amber-soft: #3A2E15;
+    --red: #E07A69; --red-soft: #3D231E; --mono-bg: #242D28;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: 'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif; font-size: 15px; line-height: 1.65; }
+  .page { max-width: 860px; margin: 0 auto; padding: 40px 24px 96px; }
+  .masthead { display: grid; gap: 14px; padding-bottom: 28px; border-bottom: 2px solid var(--accent); margin-bottom: 36px; }
+  .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  h1 { font-family: 'Gowun Batang','Noto Serif KR',serif; font-weight: 700; font-size: clamp(28px,4.2vw,38px); line-height: 1.25; margin: 0; text-wrap: balance; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); align-items: center; }
+  .chip { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 1.6; }
+  .chip.ok { background: var(--accent-soft); color: var(--accent); }
+  .purpose { font-family: 'Gowun Batang',serif; font-size: 18px; line-height: 1.6; padding: 18px 24px; border-left: 4px solid var(--accent); background: var(--surface); margin: 0; }
+  .purpose strong { color: var(--accent); }
+  section { margin-top: 44px; }
+  h2 { font-family: 'Gowun Batang',serif; font-size: 22px; font-weight: 700; margin: 0 0 14px; display: flex; align-items: baseline; gap: 12px; text-wrap: balance; }
+  h2 .n { font-family: 'IBM Plex Mono',monospace; font-size: 13px; color: var(--muted); font-weight: 500; }
+  h3 { font-size: 15px; font-weight: 700; margin: 22px 0 8px; }
+  h3 .who { font-weight: 500; color: var(--muted); font-size: 13px; margin-left: 8px; }
+  p { margin: 0 0 12px; max-width: 70ch; }
+  ul, ol { margin: 0 0 12px; padding-left: 22px; max-width: 70ch; }
+  li { margin: 4px 0; }
+  code { font-family: 'IBM Plex Mono',ui-monospace,monospace; font-size: 13px; background: var(--mono-bg); padding: 1px 6px; border-radius: 4px; }
+  pre { font-family: 'IBM Plex Mono',ui-monospace,monospace; font-size: 12.5px; line-height: 1.55; background: var(--mono-bg); padding: 14px 16px; border-radius: 8px; overflow-x: auto; margin: 0 0 12px; }
+  pre .c { color: var(--muted); }
+  .tbl { overflow-x: auto; margin: 0 0 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; background: var(--surface); }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; letter-spacing: .04em; color: var(--muted); font-weight: 600; background: var(--ground); }
+  td.k { font-weight: 600; white-space: nowrap; width: 1%; }
+  td.num { font-family: 'IBM Plex Mono',monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .note { padding: 14px 18px; border-radius: 8px; background: var(--accent-soft); font-size: 14px; margin: 14px 0; }
+  .note.warn { background: var(--amber-soft); }
+  .note b { color: var(--accent); } .note.warn b { color: var(--amber); }
+  .scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 14px; }
+  .scope .box { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; font-size: 14px; }
+  .scope .box b { display: block; margin-bottom: 6px; }
+  .scope .in b { color: var(--accent); } .scope .out b { color: var(--red); }
+  footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <div class="eyebrow">NIPA-Google Study Jam PBL · 팀 프로젝트 · PRD</div>
+    <h1>초등 영어학습 · RAG 맞춤 복습 — PRD v1.0</h1>
+    <div class="meta">
+      <span class="chip ok">1차 · 개발 착수용</span>
+      <span>작성 2026-09-04 · 팀장</span>
+      <span>근거: 간단기획서 v0.2 · rag-data-flow.png</span>
+    </div>
+  </header>
+
+  <p class="purpose">이 문서의 목적은 하나다. <strong>3명이 서로 기다리지 않고 동시에 개발을 시작할 수 있게</strong> 화면 · API · 데이터 형식을 고정한다. "미정"으로 표시된 항목은 착수를 막지 않는 선에서 기본값을 정해 두었고, 바뀌면 이 문서를 고친다.</p>
+
+  <section>
+    <h2><span class="n">1</span>제품 정의</h2>
+    <div class="tbl"><table>
+      <tr><td class="k">한 줄</td><td>초등학생이 Level · Unit을 골라 단어 · 문장을 학습하고 AI 문제를 풀면, 오답을 기록해 두었다가 RAG가 교재에서 근거를 찾아 <b>그 학생에게 맞는 문제와 설명</b>을 다시 만들어 주는 서비스</td></tr>
+      <tr><td class="k">핵심 루프</td><td>학습 → 오답 기록 → RAG 교재 검색 → 맞춤 문제 · 오답 설명 → 다시 학습</td></tr>
+      <tr><td class="k">1차 사용자</td><td>초등 3~6학년 학생 (로그인 없음, 이름 드롭다운)</td></tr>
+      <tr><td class="k">부 사용자</td><td>관리자(선생님) — 소스 등록 시 RAG 검수 경고, 정확도 대시보드</td></tr>
+      <tr><td class="k">발표 핵심 문장</td><td>"같은 Unit인데 학생 A와 B가 받는 문제가 다르다" + "검색 정확도 62% → 84%"</td></tr>
+    </table></div>
+  </section>
+
+  <section>
+    <h2><span class="n">2</span>범위 <span class="n">기획서 4절 확정본</span></h2>
+    <div class="scope">
+      <div class="box in"><b>○ 1차</b>Level 선택 · Unit 선택 · 단어 학습 · 문장 학습 · AI 문제 생성(오답 반영) · RAG 검색(학습용) · RAG 검수 경고(등록용) · 오답 설명 · 듣기(TTS) · 말하기 평가(STT 유사도)</div>
+      <div class="box out"><b>✕ 제외</b>로그인 · 개인별 복습 화면 · 스토리 생성 · XP / 배지 / 랭킹 · 음소 단위 발음 채점</div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">3</span>사용자 시나리오 <span class="n">데모 60초</span></h2>
+    <ol>
+      <li>시작 화면에서 "학생 A" 선택 → Level 2</li>
+      <li>Unit 3 "Animals" 선택</li>
+      <li>단어 카드 5개: rabbit / 토끼 / The rabbit can jump. — 듣기 버튼, 따라 말하기 → 점수 82</li>
+      <li>문장 카드 3개 → 문제 풀기</li>
+      <li>문제 3개 중 rabbit 문제 틀림 → 즉시 채점</li>
+      <li>오답 설명: "rabbit은 토끼예요. 교재 12쪽: The rabbit can jump." + 출처 표시</li>
+      <li>[다시 풀기] → rabbit이 첫 문제로 출제됨. "학생 B"로 바꾸면 다른 문제</li>
+      <li>관리자 화면: 정확도 그래프</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2><span class="n">4</span>화면 명세 <span class="n">팀장</span></h2>
+    <p>공통: 상단에 학생 이름 · Level · Unit 표시. 모든 화면은 <code>frontend/index.html</code> 하나 안의 <code>.screen</code> 전환(sample 방식). 모바일 폭(360px) 우선.</p>
+
+    <h3>4.1 시작</h3>
+    <div class="tbl"><table><tr><th>요소</th><th>동작</th><th>API</th></tr>
+      <tr><td>학생 드롭다운</td><td>학생 A / 학생 B (고정 2명)</td><td>—</td></tr>
+      <tr><td>Level 카드 3개</td><td>클릭 → Unit 목록</td><td><code>GET /api/levels</code></td></tr></table></div>
+
+    <h3>4.2 Unit 목록</h3>
+    <div class="tbl"><table><tr><th>요소</th><th>동작</th><th>API</th></tr>
+      <tr><td>Unit 카드 (제목 · 단어 수 · 진행률)</td><td>클릭 → 학습</td><td><code>GET /api/units?level=</code></td></tr>
+      <tr><td>진행률</td><td>학습한 단어 수 / 전체</td><td><code>GET /api/progress?student=&amp;level=&amp;unit=</code></td></tr></table></div>
+
+    <h3>4.3 학습</h3>
+    <div class="tbl"><table><tr><th>요소</th><th>동작</th><th>API</th></tr>
+      <tr><td>단어 카드 (word · meaning · example · 출처 쪽)</td><td>좌우 이동</td><td><code>GET /api/words?level=&amp;unit=</code></td></tr>
+      <tr><td>🔊 듣기</td><td>음원 재생 (캐시)</td><td><code>GET /api/tts/{item_id}</code></td></tr>
+      <tr><td>🎙 따라 말하기</td><td>녹음 3초 → 점수 표시</td><td><code>POST /api/speak</code></td></tr>
+      <tr><td>문장 카드 (sentence · meaning)</td><td>단어 끝나면 이어서</td><td><code>GET /api/sentences?level=&amp;unit=</code></td></tr>
+      <tr><td>[문제 풀기]</td><td>→ 4.4</td><td>—</td></tr></table></div>
+
+    <h3>4.4 문제 풀기</h3>
+    <div class="tbl"><table><tr><th>요소</th><th>동작</th><th>API</th></tr>
+      <tr><td>문제 3개 (기본값, 최대 5)</td><td>객관식 4지선다 (1차 기본). 빈칸은 미정</td><td><code>POST /api/quiz</code></td></tr>
+      <tr><td>보기 클릭</td><td>즉시 채점, 정답/오답 표시</td><td><code>POST /api/answer</code></td></tr>
+      <tr><td>완료</td><td>틀린 문제 있으면 → 4.5, 없으면 → 4.2</td><td>—</td></tr></table></div>
+
+    <h3>4.5 오답 설명</h3>
+    <div class="tbl"><table><tr><th>요소</th><th>동작</th><th>API</th></tr>
+      <tr><td>틀린 문제별 카드</td><td>설명 + 출처("교재 N쪽" + 원문 조각)</td><td><code>POST /api/explain</code></td></tr>
+      <tr><td>🔊 듣기</td><td>해당 단어 음원</td><td><code>GET /api/tts/{item_id}</code></td></tr>
+      <tr><td>[다시 풀기]</td><td>→ 4.4 (오답 반영된 새 문제)</td><td><code>POST /api/quiz</code></td></tr></table></div>
+
+    <h3>4.6 관리자 <span class="who">△ 최소</span></h3>
+    <div class="tbl"><table><tr><th>요소</th><th>동작</th><th>API</th></tr>
+      <tr><td>소스 등록 폼 (sample 재사용)</td><td>등록 시 경고 한 줄 표시</td><td><code>POST /api/rag/check</code></td></tr>
+      <tr><td>정확도 카드</td><td>평가셋 기준 hit@3, 개선 전후</td><td><code>GET /api/rag/eval</code></td></tr></table></div>
+  </section>
+
+  <section>
+    <h2><span class="n">5</span>API 명세</h2>
+    <p>베이스 <code>/api</code>. 요청 · 응답은 JSON. 오류는 <code>{"detail": "메시지"}</code> + 4xx/5xx. 아래 형식은 <b>계약</b>이며 바꾸려면 세 사람 합의.</p>
+
+    <h3>5.1 학습 데이터 <span class="who">TTS 담당 · golden.py</span></h3>
+<pre>GET /levels
+→ [{"level":1,"label":"Level 1 · 3~4학년","units":4}]
+
+GET /units?level=2
+→ [{"unit":"U3","title":"Animals","words":12,"sentences":6}]
+
+GET /words?level=2&amp;unit=U3
+→ [{"id":"w-0031","word":"rabbit","meaning":"토끼","example":"The rabbit can jump.","source_page":12}]
+
+GET /sentences?level=2&amp;unit=U3
+→ [{"id":"s-0012","sentence":"The rabbit can jump.","meaning":"토끼는 뛸 수 있어요.","source_page":12}]
+
+GET /progress?student=A&amp;level=2&amp;unit=U3
+→ {"learned":5,"total":12,"quiz_taken":2,"wrong_words":["rabbit","jump"]}</pre>
+
+    <h3>5.2 TTS · 말하기 <span class="who">TTS 담당 · tts.py, speak.py</span></h3>
+<pre>GET /tts/{item_id}            <span class="c">item_id = 단어 id 또는 문장 id</span>
+→ audio/wav (24kHz mono). 캐시: audio_cache/{item_id}.wav
+   <span class="c">없으면 Gemini TTS로 생성 후 저장. 원문은 golden에서 id로 찾는다.</span>
+
+POST /speak
+{"student":"A","item_id":"s-0012","audio_base64":"...","mime":"audio/webm"}
+→ {"heard":"the rabbit can jump","expected":"The rabbit can jump.","score":82,"passed":true}
+   <span class="c">score = 정규화(소문자 · 구두점 제거) 후 단어 단위 유사도 0~100. passed = score ≥ 70 (미정, 기본값 70)
+   STT는 Gemini 멀티모달(오디오 입력). 실패 시 {"heard":"", "score":0, "error":"..."}</span></pre>
+
+    <h3>5.3 RAG <span class="who">RAG 담당 · rag.py</span></h3>
+<pre>GET /rag/search?q=rabbit&amp;level=2&amp;k=3
+→ {"query":"rabbit","chunks":[{"id":"c-0102","text":"rabbit은 초등 영어 기본 어휘이며 뜻은 토끼이다. 예문: The rabbit can jump.",
+                               "level":2,"unit":"U3","source_page":12,"score":0.91}]}
+   <span class="c">level 은 선택(없으면 전체). 정렬은 score 내림차순.</span>
+
+POST /rag/check
+{"text":"The giraffe is eating leaves.","level":2}
+→ {"ok":false,"warnings":["범위 밖 단어: giraffe","유사 문장 87%: The rabbit is eating grass. (U3)"]}
+   <span class="c">ok = warnings 비어 있음. 범위 밖 판단 = golden words 목록에 없는 단어. 유사 문장 = 검색 score ≥ 0.85</span>
+
+GET /rag/eval
+→ {"n":30,"hit_at_3":0.84,"hit_at_1":0.63,"runs":[{"label":"글자 500 청킹","hit_at_3":0.62},{"label":"문장 단위 청킹","hit_at_3":0.84}]}
+   <span class="c">eval.csv 를 돌린 결과. runs 는 tests/ 에서 기록한 실험 이력.</span></pre>
+
+    <h3>5.4 문제 · 오답 <span class="who">팀장 · quiz.py, explain.py</span></h3>
+<pre>POST /quiz
+{"student":"A","level":2,"unit":"U3","count":3}
+→ {"quiz_id":"q-20260904-001","questions":[
+     {"id":"q1","type":"choice","word_id":"w-0031","prompt":"'토끼'를 영어로?",
+      "choices":["rabbit","cat","dog","bird"],"answer":0,"source_chunk_id":"c-0102"}]}
+   <span class="c">생성 규칙: (1) 이 학생의 wrong_words 를 count 의 절반 이상 포함 (2) 나머지는 Unit 단어 중 무작위
+   (3) 각 문제는 RAG 조각 1개를 근거로 (4) Gemini 응답은 JSON 스키마 강제, 파싱 실패 시 1회 재시도</span>
+
+POST /answer
+{"student":"A","quiz_id":"q-20260904-001","question_id":"q1","choice":2}
+→ {"correct":false,"answer":0}
+   <span class="c">오답이면 student DB 의 wrong_words 에 word 추가, quiz_log 에 기록</span>
+
+POST /explain
+{"student":"A","quiz_id":"q-20260904-001","question_id":"q1"}
+→ {"explanation":"rabbit은 '토끼'예요. 귀가 길고 깡충깡충 뛰는 동물이에요.",
+   "source":{"chunk_id":"c-0102","page":12,"text":"The rabbit can jump."}}
+   <span class="c">규칙: 초등 3학년이 읽을 수 있는 문장 2~3개, 반드시 source 포함, 조각에 없는 내용은 만들지 않음</span></pre>
+
+    <h3>5.5 공통</h3>
+<pre>GET /health → {"ok":true,"api_key":true,"model":"gemini-3.6-flash","golden_files":["words.csv", ...]}</pre>
+  </section>
+
+  <section>
+    <h2><span class="n">6</span>데이터 명세</h2>
+    <h3>6.1 골든 데이터셋 <span class="who">데이터팀 → data/golden/</span></h3>
+    <div class="tbl"><table><tr><th>파일</th><th>컬럼</th><th>비고</th></tr>
+      <tr><td><code>words.csv</code></td><td>id, level, unit, word, meaning, example, source_page</td><td>id 는 <code>w-0001</code> 형식, UTF-8</td></tr>
+      <tr><td><code>sentences.csv</code></td><td>id, level, unit, sentence, meaning, source_page</td><td>id 는 <code>s-0001</code></td></tr>
+      <tr><td><code>chunks.jsonl</code></td><td>id, text, level, unit, source_page, word_ids</td><td>한 줄 = 조각 1개. <b>RAG 검색 대상</b></td></tr>
+      <tr><td><code>units.csv</code></td><td>level, unit, title, order</td><td>Unit 목록 · 순서</td></tr>
+      <tr><td><code>eval.csv</code></td><td>question, expected_chunk_id, note</td><td>30문항 이상. RAG 정확도 측정용</td></tr></table></div>
+    <div class="note warn"><b>1차 납품 최소치</b> Level 2의 Unit 2개, 단어 40개, 문장 20개, chunks 60개, eval 30문항.<br>납품 전까지 개발팀은 <code>data/golden/_sample/</code> 에 같은 형식의 임시 데이터 20단어를 두고 개발한다 (RAG 담당이 1주차 2일까지 작성).</div>
+
+    <h3>6.2 학생 DB <span class="who">data/student/ · JSON → 여유 시 BigQuery</span></h3>
+<pre>students.json    [{"id":"A","name":"학생 A","level":2}]
+quiz_log.jsonl   {"ts":"2026-09-10T14:02:11","student":"A","quiz_id":"q-..","question_id":"q1","word_id":"w-0031","word":"rabbit","correct":false}
+wrong_words.json {"A":{"rabbit":{"count":2,"last":"2026-09-10"},"jump":{"count":1,"last":"2026-09-09"}}}
+progress.json    {"A":{"2/U3":{"learned_word_ids":["w-0031",...],"quiz_taken":2}}}</pre>
+    <p>오답 반영 우선순위 = count 내림차순, 같으면 last 최신순.</p>
+  </section>
+
+  <section>
+    <h2><span class="n">7</span>프롬프트 규칙 <span class="n">backend/prompts/*.txt</span></h2>
+    <div class="tbl"><table><tr><th>파일</th><th>역할</th><th>반드시 포함</th></tr>
+      <tr><td><code>quiz.txt</code></td><td>문제 생성</td><td>Unit 단어 목록, 우선 단어(오답), RAG 조각, 출력 JSON 스키마, "보기는 같은 Unit 단어로"</td></tr>
+      <tr><td><code>explain.txt</code></td><td>오답 설명</td><td>틀린 문제, 학생 답, RAG 조각, "초등 3학년 어휘로 2~3문장", "조각에 없는 내용 금지", 출처 표기 형식</td></tr>
+      <tr><td><code>check.txt</code></td><td>검수 경고 (선택)</td><td>RAG 결과를 한 줄 경고로 요약</td></tr></table></div>
+    <p>프롬프트는 코드 밖 텍스트 파일로 두고 <code>{{변수}}</code> 자리에 값을 채운다. 수정 후 서버 재시작 없이 반영(파일을 매 호출 읽음).</p>
+  </section>
+
+  <section>
+    <h2><span class="n">8</span>비기능 요구사항</h2>
+    <div class="tbl"><table><tr><th>항목</th><th>기준</th></tr>
+      <tr><td class="k">응답 시간</td><td>화면 전환 즉시. TTS 첫 재생 ≤ 10초(이후 캐시 즉시). 문제 생성 ≤ 30초, "생각 중" 표시</td></tr>
+      <tr><td class="k">비용</td><td>무료 티어 내. TTS · 임베딩은 1회 생성 후 캐시</td></tr>
+      <tr><td class="k">키 관리</td><td><code>.env</code> 만. 코드 · 저장소에 키 금지</td></tr>
+      <tr><td class="k">브라우저</td><td>Chrome 최신. 마이크는 localhost 에서만 보장</td></tr>
+      <tr><td class="k">데이터</td><td>학생 실명 없음(학생 A/B). 녹음 파일은 채점 후 저장하지 않음</td></tr></table></div>
+  </section>
+
+  <section>
+    <h2><span class="n">9</span>성공 지표</h2>
+    <div class="tbl"><table><tr><th>지표</th><th>목표</th><th>측정</th></tr>
+      <tr><td>RAG hit@3</td><td class="num">≥ 80%</td><td>eval.csv 30문항, <code>/rag/eval</code></td></tr>
+      <tr><td>오답 반영</td><td>다시 풀기에서 wrong_words 가 첫 문제</td><td>데모 시나리오 7번</td></tr>
+      <tr><td>문제 생성 성공률</td><td class="num">JSON 파싱 ≥ 95%</td><td>quiz_log</td></tr>
+      <tr><td>말하기 채점</td><td class="num">정상 발화 score ≥ 70</td><td>팀원 5회 테스트</td></tr></table></div>
+  </section>
+
+  <section>
+    <h2><span class="n">10</span>마일스톤</h2>
+    <div class="tbl"><table><tr><th>일차</th><th>완료 기준</th></tr>
+      <tr><td class="num">2일</td><td>3명 모두 서버 실행 · <code>.env</code> · <code>_sample</code> 임시 데이터로 <code>/words</code> 응답</td></tr>
+      <tr><td class="num">5일</td><td>화면 4.1~4.3 동작(임시 데이터) · TTS 재생 · RAG 검색 기본 동작</td></tr>
+      <tr><td class="num">8일</td><td>골든 데이터 교체 · <code>/quiz</code> <code>/answer</code> <code>/explain</code> 동작 · hit@3 1차 측정</td></tr>
+      <tr><td class="num">11일</td><td>오답 반영 · 청킹 개선 2차 측정 · 말하기 평가 · 검수 경고</td></tr>
+      <tr><td class="num">13일</td><td><b>기능 동결.</b> 버그만 · 발표 자료 · 데모 리허설</td></tr>
+      <tr><td class="num">15일</td><td>발표</td></tr></table></div>
+  </section>
+
+  <section>
+    <h2><span class="n">11</span>미정 항목 <span class="n">기본값으로 착수</span></h2>
+    <div class="tbl"><table><tr><th>항목</th><th>기본값</th><th>결정 시점</th></tr>
+      <tr><td>문제 유형</td><td>객관식 4지선다만</td><td>8일차</td></tr>
+      <tr><td>말하기 통과 점수</td><td class="num">70</td><td>11일차</td></tr>
+      <tr><td>Level ↔ 학년</td><td>1=3~4, 2=5, 3=6</td><td>데이터팀 납품 시</td></tr>
+      <tr><td>골든 파일 컬럼명</td><td>6.1 표</td><td>데이터팀 협의 (1주차)</td></tr>
+      <tr><td>BigQuery 사용</td><td>안 함 (JSON)</td><td>11일차 여유 시</td></tr>
+      <tr><td>관리자 화면 범위</td><td>등록 폼 + 정확도 카드</td><td>8일차</td></tr></table></div>
+  </section>
+
+  <footer>원본: <code>project/docs/PRD.md</code> · 기획서: <code>project/docs/간단기획서.md</code> · 이 페이지는 팀 공유용 사본이며 수정은 md 파일에서</footer>
+</div>

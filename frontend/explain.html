@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>초등 영어 · 오답 설명</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar" id="topbar"></header>
+  <main>
+    <!-- 4.5 오답 설명 -->
+    <h1>오답 설명</h1>
+    <p class="sub">틀린 문제를 교재 근거와 함께 다시 봐요</p>
+    <div class="cards" id="explainList"></div>
+    <button class="btn" onclick="go('quiz.html')">다시 풀기 <small>(틀린 단어 먼저)</small></button>
+    <button class="btn ghost" onclick="go('units.html')">Unit 목록으로</button>
+  </main>
+  <div class="status" id="status"></div>
+</div>
+<script src="js/common.js"></script>
+<script src="js/explain.js"></script>
+</body>
+</html>

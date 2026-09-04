@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>초등 영어 · 문제 풀기</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar" id="topbar"></header>
+  <main>
+    <!-- 4.4 문제 풀기 -->
+    <section class="screen on" data-screen="quiz">
+      <div class="learn-top"><b id="quizTitle">문제 풀기</b><span class="cnt" id="quizPage">– / –</span></div>
+      <div class="dots" id="quizDots" style="justify-content:flex-start;margin:8px 0 0"></div>
+      <div id="quizSrc" class="hint" style="margin-top:6px"></div>
+
+      <div class="q" id="qBox">
+        <div class="q-prompt" id="qPrompt">문제를 만드는 중… <small>(AI가 생각하는 데 최대 30초)</small></div>
+        <div class="choices" id="qChoices"></div>
+        <div class="result" id="qResult"></div>
+      </div>
+      <button class="btn" id="qNextBtn" onclick="nextQuestion()" disabled>다음 문제</button>
+    </section>
+
+    <!-- 4.4 결과 (같은 파일: 문제와 결과는 한 흐름) -->
+    <section class="screen" data-screen="done">
+      <h1 id="doneTitle">다 풀었어요!</h1>
+      <p class="sub" id="doneSub"></p>
+      <div class="score-card">
+        <div class="big" id="doneScore">0 / 0</div>
+        <div class="d">맞힌 문제</div>
+      </div>
+      <div class="cards" id="doneList"></div>
+      <button class="btn" id="explainBtn" onclick="goExplain()">오답 설명 보기</button>
+      <button class="btn ghost" onclick="startQuiz()">다시 풀기</button>
+      <button class="btn ghost" onclick="go('units.html')">Unit 목록으로</button>
+    </section>
+  </main>
+  <div class="status" id="status"></div>
+</div>
+<script src="js/common.js"></script>
+<script src="js/quiz.js"></script>
+</body>
+</html>

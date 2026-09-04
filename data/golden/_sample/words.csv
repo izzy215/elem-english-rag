@@ -1,0 +1,21 @@
+id,level,unit,word,meaning,example,source_page
+w-0001,2,U3,rabbit,토끼,The rabbit can jump.,12
+w-0002,2,U3,cat,고양이,The cat is sleeping.,12
+w-0003,2,U3,dog,개,My dog likes to run.,12
+w-0004,2,U3,bird,새,A bird is singing.,13
+w-0005,2,U3,fish,물고기,Fish live in water.,13
+w-0006,2,U3,lion,사자,The lion is big.,13
+w-0007,2,U3,elephant,코끼리,An elephant has a long nose.,14
+w-0008,2,U3,monkey,원숭이,The monkey likes bananas.,14
+w-0009,2,U4,apple,사과,I eat an apple every day.,20
+w-0010,2,U4,bread,빵,She likes bread and milk.,20
+w-0011,2,U4,milk,우유,Milk is good for you.,20
+w-0012,2,U4,rice,밥,We eat rice for lunch.,21
+w-0013,2,U4,egg,달걀,I want an egg.,21
+w-0014,2,U4,water,물,Please give me some water.,21
+w-0015,2,U5,book,책,This is my book.,30
+w-0016,2,U5,pencil,연필,I have a red pencil.,30
+w-0017,2,U5,desk,책상,The book is on the desk.,30
+w-0018,2,U5,chair,의자,Sit on the chair.,31
+w-0019,2,U5,teacher,선생님,My teacher is kind.,31
+w-0020,2,U5,friend,친구,He is my best friend.,31
