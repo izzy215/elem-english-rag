@@ -177,8 +177,8 @@
         <div class="screen" data-screen="learn">
           <div class="topbar"><button class="back" onclick="goScreen('units')">‹ 뒤로</button><span class="crumb"><span>Level 2</span><span>U3 Animals</span></span><span class="student">학생 <b class="sName">A</b></span></div>
           <div class="learn-top"><b>U3 · Animals</b><span>단어 8 · 문장 3</span></div>
-          <div class="phase"><span class="now"></span><span></span></div>
-          <div class="learn-top"><span>단어 카드</span><span id="learnPage">1 / 8</span></div>
+          <div class="phase"><span class="now" id="ph1"></span><span id="ph2"></span></div>
+          <div class="learn-top"><span id="learnPhase">단어 카드</span><span id="learnPage">1 / 8</span></div>
           <div class="flash">
             <div class="word" id="fWord">rabbit</div><div class="mean" id="fMean">토끼</div>
             <div class="ex" id="fEx">The rabbit can jump.</div><div class="src">교재 <b id="fPage">p.12</b></div>
@@ -308,7 +308,13 @@ const WORDS = [
   {id:'w7',word:'elephant',mean:'코끼리',ex:'An elephant has a long nose.',p:14},
   {id:'w8',word:'monkey',mean:'원숭이',ex:'The monkey likes bananas.',p:14},
 ];
-const WRONG = { A: ['rabbit','lion'], B: [] };          // 학생별 오답 이력 (예시)
+const SENTS = [
+  {id:'s1',sent:'The rabbit can jump.',mean:'토끼는 뛸 수 있어요.',p:12},
+  {id:'s2',sent:'I have a cat and a dog.',mean:'나는 고양이와 개가 있어요.',p:12},
+  {id:'s3',sent:'Look at the big lion!',mean:'큰 사자를 보세요!',p:13},
+];
+const WRONG = { A: ['rabbit','lion'], B: [] };
+let phase = 'words';          // 학생별 오답 이력 (예시)
 let student = 'A', learnIdx = 0, seen = new Set();
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 
@@ -319,7 +325,7 @@ function setRole(r){
   $('#roleDesc').textContent = r==='student' ? '모바일 · 학생이 Level·Unit을 고르고 학습 → 문제 → 오답 설명 → 다시 풀기' : '데스크톱 · 골든 데이터 상태 · RAG 정확도 · 소스 등록(검수 경고)';
 }
 function goScreen(n){ $$('.phone .screen').forEach(s=>s.classList.toggle('on', s.dataset.screen===n)); renderNotes(n); if(n==='units') renderUnits(); if(n==='learn') renderLearn(); }
-function setStudent(v){ student=v; $$('.sName, #sName').forEach(e=>e.textContent=v); seen=new Set(); learnIdx=0; }
+function setStudent(v){ student=v; $$('.sName, #sName').forEach(e=>e.textContent=v); seen=new Set(); learnIdx=0; phase='words'; }
 
 // ---------- Unit 목록 ----------
 function renderUnits(){
@@ -331,23 +337,38 @@ function renderUnits(){
 }
 
 // ---------- 학습 ----------
+function cards(){ return phase==='words' ? WORDS : SENTS; }
 function renderLearn(){
-  const w = WORDS[learnIdx]; seen.add(w.id);
-  $('#fWord').textContent=w.word; $('#fMean').textContent=w.mean; $('#fEx').textContent=w.ex; $('#fPage').textContent='p.'+w.p;
-  $('#learnPage').textContent=`${learnIdx+1} / ${WORDS.length}`;
-  $('#learnDots').innerHTML = WORDS.map((x,i)=>`<i class="${i===learnIdx?'now':seen.has(x.id)?'done':''}"></i>`).join('');
-  $('#learnNext').textContent = learnIdx===WORDS.length-1 ? '문장 카드로' : '다음';
+  const list = cards(), c = list[learnIdx], isWord = phase==='words';
+  seen.add(c.id);
+  $('#learnPhase').textContent = isWord ? '단어 카드' : '문장 카드';
+  $('#ph1').className = isWord ? 'now' : 'done'; $('#ph2').className = isWord ? '' : 'now';
+  $('#fWord').textContent = isWord ? c.word : c.sent;
+  $('#fWord').style.fontSize = isWord ? '2rem' : '1.3rem';
+  $('#fMean').textContent = c.mean; $('#fEx').textContent = isWord ? c.ex : ''; $('#fPage').textContent = 'p.'+c.p;
+  $('#learnPage').textContent = `${learnIdx+1} / ${list.length}`;
+  $('#learnDots').innerHTML = list.map((x,i)=>`<i class="${i===learnIdx?'now':seen.has(x.id)?'done':''}"></i>`).join('');
+  const last = learnIdx===list.length-1;
+  $('#learnNext').textContent = isWord ? (last ? '문장 카드로' : '다음') : (last ? '다 봤어요' : '다음');
   const all = WORDS.every(x=>seen.has(x.id));
   $('#quizBtn').disabled = !all;
   $('#learnHint').textContent = all ? '단어를 다 봤어요. 문장까지 보거나 바로 문제를 풀 수 있어요.' : '단어 카드를 다 보면 문제를 풀 수 있어요.';
   $('#learnResult').className='result';
 }
-function learnMove(d){ learnIdx = Math.max(0, Math.min(WORDS.length-1, learnIdx+d)); renderLearn(); }
+function learnMove(d){
+  const list = cards();
+  if(d>0 && learnIdx===list.length-1){
+    if(phase==='words'){ phase='sentences'; learnIdx=0; renderLearn(); return; }
+    startQuiz(); return;
+  }
+  if(d<0 && learnIdx===0 && phase==='sentences'){ phase='words'; learnIdx=WORDS.length-1; renderLearn(); return; }
+  learnIdx = Math.max(0, Math.min(list.length-1, learnIdx+d)); renderLearn();
+}
 function fakeTTS(){ const b=$('#ttsBtn'); b.classList.add('on'); b.textContent='🔊 재생 중'; setTimeout(()=>{b.classList.remove('on'); b.textContent='🔊 듣기';},1200); }
 function fakeRec(){
   const b=$('#recBtn'), r=$('#learnResult');
-  b.classList.add('rec'); b.textContent='⏺ 녹음 중…'; r.className='result on'; r.textContent='따라 말해 보세요: '+WORDS[learnIdx].word;
-  setTimeout(()=>{ b.classList.remove('rec'); b.textContent='🎙 따라 말하기'; r.innerHTML='<span class="score">82점</span> 잘했어요! 🎉<br><small>들린 말: "'+WORDS[learnIdx].word+'" · 정답: "'+WORDS[learnIdx].word+'"</small>'; },1800);
+  b.classList.add('rec'); b.textContent='⏺ 녹음 중…'; r.className='result on'; const cur=cards()[learnIdx], txt=phase==='words'?cur.word:cur.sent; r.textContent='따라 말해 보세요: '+txt;
+  setTimeout(()=>{ b.classList.remove('rec'); b.textContent='🎙 따라 말하기'; r.innerHTML='<span class="score">82점</span> 잘했어요! 🎉<br><small>들린 말: "'+txt+'" · 정답: "'+txt+'"</small>'; },1800);
 }
 
 // ---------- 문제 ----------
@@ -418,7 +439,8 @@ const NOTES = {
     <li><b>카드 한 장에 단어·뜻·예문·교재 쪽수.</b> 쪽수는 골든 데이터의 source_page. 나중에 오답 설명의 "근거"와 같은 출처.</li>
     <li><b>듣기 = TTS.</b> 한 번 만든 음원은 캐시. 두 번째부터 즉시.</li>
     <li><b>따라 말하기 = 녹음 → 받아쓰기 → 원문과 비교 점수.</b> 발음 채점이 아니라 "제대로 들렸나" 점수. 눌러보면 82점 예시.</li>
-    <li><b>단어를 다 봐야 문제 버튼이 켜진다.</b> 문장 카드는 선택.</li></ol>
+    <li><b>단어를 다 봐야 문제 버튼이 켜진다.</b> 문장 카드는 선택 — 단어가 끝나면 이어서 나오고, 건너뛰고 문제로 갈 수 있다.</li>
+    <li><b>문장 카드 = 단어가 실제 쓰인 문장.</b> 뜻 · 쪽수 표시, 듣기 · 따라 말하기 동일. 문제 유형 '예문 빈칸'을 넣게 되면 여기서 본 문장이 출제된다.</li></ol>
     <div class="note"><b>확인 필요</b> 듣기·말하기가 필수인가 선택인가. 기본안: 선택. 필수로 하면 마이크 없는 환경에서 막힌다.</div>
     <div class="note"><b>확인 필요</b> 말하기 통과 점수 70이 적당한가. TTS 담당이 테스트 후 조정.</div>`,
   quiz: `<h3>문제 · 기획 포인트</h3><ol>
