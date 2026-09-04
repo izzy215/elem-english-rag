@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>초등 영어 · 문장 고치기</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+  /* 이 화면은 데이터팀 샘플(골든데이터셋 예시)로 동작하는 데모. 폰 화면 + 오른쪽에 "데이터가 어디에 쓰였나" 패널 */
+  .app{max-width:1000px}
+  .layout{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+  .phone{width:400px;flex:0 0 auto}
+  .side{flex:1;min-width:300px;max-width:520px}
+  .side h3{font-size:1rem;font-weight:800;margin-bottom:8px}
+  .side .box{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;font-size:.86rem}
+  .side .box .k{display:inline-block;font-family:ui-monospace,monospace;font-size:.76rem;background:var(--primary-soft);color:var(--primary);padding:1px 7px;border-radius:5px;margin-right:6px}
+  .side .box ol{padding-left:18px;display:grid;gap:6px}
+  .flow{display:grid;gap:6px;font-size:.82rem}
+  .flow div{display:grid;grid-template-columns:110px 1fr;gap:8px;padding:7px 10px;border-radius:8px;background:var(--bg)}
+  .flow div b{color:var(--primary)}
+  .flow div.now{background:var(--accent-soft)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+  .chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 11px;font-size:.78rem;font-weight:600;color:var(--muted)}
+  .chip.on{background:var(--primary);border-color:var(--primary);color:#fff}
+  .err{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px 16px;box-shadow:0 8px 24px rgba(31,40,35,.06)}
+  .err .lbl{font-size:.74rem;color:var(--muted);font-weight:600}
+  .err .sent{font-size:1.25rem;font-weight:800;margin:6px 0 2px;line-height:1.35}
+  .err .type{margin-top:6px}
+  textarea.fix{width:100%;margin-top:12px;padding:11px 12px;border:1.5px solid var(--line);border-radius:12px;font:inherit;font-size:1rem;min-height:64px;resize:none}
+  textarea.fix:focus{outline:none;border-color:var(--primary)}
+  .verdict{margin-top:10px;padding:12px 14px;border-radius:12px;display:none;font-size:.9rem}
+  .verdict.on{display:block}
+  .verdict.ok{background:var(--primary-soft);color:#2C4A42} .verdict.bad{background:var(--danger-soft);color:#5A2E24}
+  .verdict .big{font-size:1.15rem;font-weight:800}
+  .verdict .ans{margin-top:6px;font-weight:700}
+  .rag{margin-top:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:none}
+  .rag.on{display:block}
+  .rag .t{font-size:.72rem;font-weight:700;color:var(--muted);letter-spacing:.02em}
+  .rag .ctx{margin-top:4px;background:var(--primary-soft);border-radius:8px;padding:8px 10px;font-size:.86rem;color:#2C4A42}
+  .rag .fb{margin-top:8px;font-size:.92rem;line-height:1.55}
+  .rag .fb b{color:var(--primary)}
+  .stat{display:flex;gap:8px;margin-top:12px;font-size:.78rem;color:var(--muted)}
+  .stat span{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+  .stat span.bad{color:var(--danger)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar" id="topbar"></header>
+  <main>
+    <h1>문장 고치기 <span class="tag">데이터팀 샘플로 동작</span></h1>
+    <p class="sub">틀린 문장을 보고 바르게 고쳐 써요. 맞히면 근거와 피드백이 나와요.</p>
+
+    <div class="layout">
+      <div class="phone">
+        <div class="chips" id="chips"></div>
+
+        <div class="err">
+          <div class="lbl">학생이 쓴 문장 <span id="pos" style="float:right"></span></div>
+          <div class="sent" id="errSent">불러오는 중…</div>
+          <div class="type"><span class="tag" id="errType"></span></div>
+          <textarea class="fix" id="fixInput" placeholder="바르게 고쳐 써 보세요" rows="2"></textarea>
+          <div class="row2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button class="btn ghost" onclick="giveUp()">모르겠어요</button>
+            <button class="btn" id="checkBtn" onclick="check()">확인</button>
+          </div>
+        </div>
+
+        <div class="verdict" id="verdict"></div>
+        <div class="rag" id="rag">
+          <div class="t">📚 RAG가 찾아온 근거</div>
+          <div class="ctx" id="ragCtx"></div>
+          <div class="t" style="margin-top:10px">💬 AI 피드백</div>
+          <div class="fb" id="ragFb"></div>
+        </div>
+
+        <div class="row2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button class="btn ghost" onclick="move(-1)">이전</button>
+          <button class="btn" id="nextBtn" onclick="move(1)">다음 문장</button>
+        </div>
+        <div class="stat" id="stat"></div>
+      </div>
+
+      <div class="side">
+        <h3>이 화면에서 데이터가 쓰이는 곳</h3>
+        <div class="box">
+          <div class="flow" id="flow">
+            <div id="f1"><b>student_error</b><span>"학생이 쓴 문장"으로 화면에 표시 → 문제</span></div>
+            <div id="f2"><b>error_type</b><span>위 칩(필터)과 문장 아래 태그</span></div>
+            <div id="f3"><b>correct_expression</b><span>학생이 고쳐 쓴 문장과 비교해 채점 (대소문자·구두점 무시)</span></div>
+            <div id="f4"><b>retrieved_context</b><span>벡터DB(Chroma)에 들어갈 <b>조각</b>. 실제 서비스에선 학생 문장으로 검색해서 이걸 찾아옴</span></div>
+            <div id="f5"><b>feedback</b><span>LLM이 근거를 보고 만들 문장의 <b>예시</b>. 실제 서비스에선 매번 생성</span></div>
+          </div>
+        </div>
+        <div class="box">
+          <b>실제 서비스에서는</b>
+          <ol style="margin-top:6px">
+            <li>학생이 문장을 씀 (또는 문제로 제시)</li>
+            <li>서버가 그 문장으로 <span class="k">retrieved_context</span> 100개 중 가장 비슷한 것을 <b>검색</b> (RAG)</li>
+            <li>찾아온 근거 + 학생 문장 + 정답을 Gemini에 주고 <span class="k">feedback</span> 같은 문장을 <b>생성</b></li>
+            <li>틀린 문장은 <b>오답노트</b>에 쌓여 다음에 먼저 나옴</li>
+          </ol>
+          <p class="hint" style="margin-top:8px">지금 데모는 2·3번을 파일에서 바로 꺼내 보여주는 것. 검색·생성은 RAG 담당·팀장 구현 후 실제 동작.</p>
+        </div>
+        <div class="box">
+          <b>데이터팀에 부탁하고 싶은 것</b>
+          <ol style="margin-top:6px">
+            <li>이 구조에 <span class="k">level</span> <span class="k">unit</span>이 있으면 Unit별 학습 화면과 연결됨</li>
+            <li><span class="k">retrieved_context</span>가 교재 어디서 왔는지 <span class="k">source_page</span></li>
+            <li>같은 오류 유형끼리 근거 문장이 겹치는데, 근거를 "규칙 조각"으로 따로 모으면 검색이 더 정확함</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </main>
+  <div class="status" id="status"></div>
+</div>
+<script src="js/common.js"></script>
+<script src="js/fix.js"></script>
+</body>
+</html>
