@@ -92,6 +92,14 @@
   .explain .w{font-size:1.1rem;font-weight:800} .explain .text{margin-top:4px;line-height:1.55;font-size:.9rem}
   .explain .srcbox{margin-top:8px;font-size:.78rem;color:var(--muted);background:var(--primary-soft);padding:7px 10px;border-radius:8px}
   .explain .srcbox b{color:var(--primary)}
+  .card.note{grid-template-columns:auto 1fr auto;column-gap:10px;align-items:start}
+  .card.note .mark{grid-row:span 3}
+  .card.note .w{font-size:1.05rem;font-weight:800} .card.note .w small{font-weight:600;color:var(--muted);margin-left:4px}
+  .card.note .meta{font-size:.72rem;color:var(--muted);text-align:right;white-space:nowrap}
+  .card.note .src{grid-column:2/-1;font-size:.74rem;color:var(--muted);background:var(--primary-soft);padding:5px 8px;border-radius:7px}
+  .card.note .my{grid-column:2/-1;font-size:.72rem;color:var(--danger)}
+  .overcome{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .overcome span{background:var(--primary-soft);color:var(--primary);font-size:.76rem;font-weight:700;padding:3px 10px;border-radius:999px}
 
   /* 관리자 (브라우저 프레임) */
   .browser{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 8px 24px rgba(31,40,35,.08);flex:1;min-width:560px}
@@ -163,6 +171,7 @@
             <button class="card level" onclick="goScreen('units')"><div class="num">2</div><div class="t">Level 2 · 5학년</div><div class="d">Unit 3개</div></button>
             <button class="card level" disabled><div class="num">3</div><div class="t">Level 3 · 6학년</div><div class="d">준비 중</div></button>
           </div>
+          <button class="btn ghost" id="noteBtn" onclick="goScreen('notebook')">📒 내 오답노트</button>
         </div>
 
         <!-- Unit 목록 -->
@@ -224,6 +233,17 @@
           <div class="cards" id="explainList"></div>
           <button class="btn" onclick="startQuiz(true)">다시 풀기 <small>(틀린 단어 먼저)</small></button>
           <button class="btn ghost" onclick="goScreen('units')">Unit 목록으로</button>
+        </div>
+
+        <!-- 오답노트 -->
+        <div class="screen" data-screen="notebook">
+          <div class="topbar"><button class="back" onclick="goScreen('start')">‹ 뒤로</button><span class="student">학생 <b class="sName">A</b></span></div>
+          <h2>📒 내 오답노트</h2>
+          <p class="sub" id="noteSub"></p>
+          <div class="cards" id="noteList"></div>
+          <button class="btn" id="noteQuizBtn" onclick="startNoteQuiz()">이 단어들로 문제 풀기</button>
+          <div id="noteDone" style="margin-top:14px"></div>
+          <button class="btn ghost" onclick="goScreen('start')">시작으로</button>
         </div>
       </div>
 
@@ -313,7 +333,12 @@ const SENTS = [
   {id:'s2',sent:'I have a cat and a dog.',mean:'나는 고양이와 개가 있어요.',p:12},
   {id:'s3',sent:'Look at the big lion!',mean:'큰 사자를 보세요!',p:13},
 ];
-const WRONG = { A: ['rabbit','lion'], B: [] };
+const NOTE = {   // 학생별 오답노트 (예시). streak 2 이면 '극복'
+  A: { rabbit:{count:2,last:'09-10',unit:'U3',my:['cat','dog'],streak:0}, lion:{count:1,last:'09-09',unit:'U3',my:['fish'],streak:0},
+       fish:{count:1,last:'09-05',unit:'U3',my:['bird'],streak:2}, bird:{count:1,last:'09-04',unit:'U3',my:['fish'],streak:2} },
+  B: {},
+};
+const WRONG = { get A(){ return Object.keys(NOTE.A).filter(w=>NOTE.A[w].streak<2); }, get B(){ return Object.keys(NOTE.B).filter(w=>NOTE.B[w].streak<2); } };
 let phase = 'words';          // 학생별 오답 이력 (예시)
 let student = 'A', learnIdx = 0, seen = new Set();
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
@@ -324,8 +349,8 @@ function setRole(r){
   $$('.stage').forEach(s=>s.classList.toggle('on', s.id==='stage-'+r));
   $('#roleDesc').textContent = r==='student' ? '모바일 · 학생이 Level·Unit을 고르고 학습 → 문제 → 오답 설명 → 다시 풀기' : '데스크톱 · 골든 데이터 상태 · RAG 정확도 · 소스 등록(검수 경고)';
 }
-function goScreen(n){ $$('.phone .screen').forEach(s=>s.classList.toggle('on', s.dataset.screen===n)); renderNotes(n); if(n==='units') renderUnits(); if(n==='learn') renderLearn(); }
-function setStudent(v){ student=v; $$('.sName, #sName').forEach(e=>e.textContent=v); seen=new Set(); learnIdx=0; phase='words'; }
+function goScreen(n){ $$('.phone .screen').forEach(s=>s.classList.toggle('on', s.dataset.screen===n)); renderNotes(n); if(n==='units') renderUnits(); if(n==='learn') renderLearn(); if(n==='notebook') renderNotebook(); if(n==='start') renderNotebook(); }
+function setStudent(v){ student=v; $$('.sName, #sName').forEach(e=>e.textContent=v); seen=new Set(); learnIdx=0; phase='words'; renderNotebook(); }
 
 // ---------- Unit 목록 ----------
 function renderUnits(){
@@ -408,8 +433,12 @@ function answer(i){
 function nextQ(){ if(qIdx<quiz.length-1){qIdx++; renderQ(); return;} finish(); }
 function finish(){
   const ok=answers.filter(a=>a.ok).length, wrong=quiz.filter((q,i)=>!answers[i].ok);
-  // 오답 이력 갱신 (예시)
-  WRONG[student] = [...new Set([...wrong.map(q=>q.w.word), ...WRONG[student].filter(w=>!quiz.some((q,i)=>q.w.word===w && answers[i].ok))])];
+  // 오답노트 갱신: 틀리면 등록/횟수+1, 맞히면 streak+1 (2가 되면 극복)
+  const n = NOTE[student];
+  quiz.forEach((q,i)=>{ const w=q.w.word, a=answers[i];
+    if(!a.ok){ n[w] = n[w] || {count:0,last:'',unit:'U3',my:[],streak:0}; n[w].count++; n[w].last='오늘'; n[w].streak=0; if(!n[w].my.includes(q.choices[a.choice])) n[w].my.push(q.choices[a.choice]); }
+    else if(n[w] && n[w].streak<2){ n[w].streak++; }
+  });
   goScreen('done');
   $('#doneTitle').textContent= wrong.length?'다 풀었어요!':'완벽해요! 🎉';
   $('#doneSub').textContent= wrong.length?`틀린 단어 ${wrong.length}개는 설명을 보고 다시 풀어봐요`:'이 Unit 단어는 다 아는 것 같아요';
@@ -423,11 +452,37 @@ function goExplain(){
   $('#explainList').innerHTML=wrong.map(q=>`<div class="card explain"><div class="w">${q.w.word} <span class="d">${q.w.mean}</span></div><div class="text">${q.w.word}은 '${q.w.mean}'이에요. ${q.w.mean}는 ${q.w.word==='rabbit'?'귀가 길고 깡충깡충 뛰는 동물이에요.':'교재에 나온 동물이에요.'}</div><div class="srcbox">교재 <b>p.${q.w.p}</b> · ${q.w.ex}</div></div>`).join('');
 }
 
+// ---------- 오답노트 ----------
+function renderNotebook(){
+  const n = NOTE[student], active = Object.keys(n).filter(w=>n[w].streak<2), done = Object.keys(n).filter(w=>n[w].streak>=2);
+  $('#noteSub').textContent = active.length ? `아직 헷갈리는 단어 ${active.length}개 · 연속 2번 맞히면 극복!` : '헷갈리는 단어가 없어요 🎉';
+  $('#noteList').innerHTML = active.length ? active.map(w=>{ const e=n[w], wd=WORDS.find(x=>x.word===w); return `
+    <div class="card note">
+      <div class="mark bad">✕</div>
+      <div class="w">${w}<small>${wd.mean}</small></div>
+      <div class="meta">틀림 ${e.count}회 · ${e.unit}<br>${e.last}</div>
+      <div class="src">교재 p.${wd.p} · ${wd.ex}</div>
+      <div class="my">내가 고른 답: ${e.my.join(', ')}</div>
+    </div>`; }).join('') : '<div class="card" style="text-align:center;color:var(--muted)">문제를 풀다 틀리면 여기에 모여요</div>';
+  $('#noteQuizBtn').disabled = !active.length;
+  $('#noteDone').innerHTML = done.length ? `<div class="learn-top"><b>극복한 단어 ${done.length}</b><span>연속 2번 정답</span></div><div class="overcome">${done.map(w=>`<span>○ ${w}</span>`).join('')}</div>` : '';
+  $('#noteBtn').textContent = `📒 내 오답노트${active.length?` (${active.length})`:''}`;
+}
+function startNoteQuiz(){
+  const ws = WORDS.filter(w=>WRONG[student].includes(w.word));
+  quiz = ws.map((w,i)=>{ const others=WORDS.filter(x=>x!==w).sort(()=>Math.random()-.5).slice(0,3); const arr=[w,...others].sort(()=>Math.random()-.5);
+    return {id:'n'+i, w, prompt:`'${w.mean}'를 영어로?`, choices:arr.map(x=>x.word), answer:arr.indexOf(w)}; });
+  qIdx=0; answers=[];
+  $('#quizSrc').textContent = `오답노트 ${quiz.length}단어만 · Unit 상관없이`;
+  goScreen('quiz'); renderQ();
+}
+
 // ---------- 기획 메모 ----------
 const NOTES = {
   start: `<h3>시작 · 기획 포인트</h3><ol>
     <li><b>로그인 없음.</b> 학생은 드롭다운으로 고른다. 데모용 A(오답 이력 있음) / B(처음) 두 명이면 "학생마다 문제가 다르다"를 보여줄 수 있다.</li>
-    <li><b>Level 카드에 Unit 수.</b> 데이터가 없는 Level은 "준비 중"으로 잠근다.</li></ol>
+    <li><b>Level 카드에 Unit 수.</b> 데이터가 없는 Level은 "준비 중"으로 잠근다.</li>
+    <li><b>📒 내 오답노트</b> 버튼 — 괄호 안 숫자가 아직 헷갈리는 단어 수. 눌러보세요.</li></ol>
     <div class="note"><b>확인 필요</b> Level 1·2·3 = 3~4학년 / 5학년 / 6학년이 맞나? 데이터팀이 Unit을 어느 학년 교재로 만드느냐에 달림.</div>`,
   units: `<h3>Unit 목록 · 기획 포인트</h3><ol>
     <li><b>진행률 = 학습한 단어 ÷ 전체 단어.</b> 문장은 세지 않는다 (기본안).</li>
@@ -461,10 +516,18 @@ const NOTES = {
     <div class="note"><b>확인 필요</b> 설명에 영어 예문을 한국어로 번역해 같이 보여줄지 (기본: 영어 예문만 + 한국어 설명).</div>
     <div class="note"><b>확인 필요</b> RAG가 근거를 못 찾았을 때: 교재 예문으로 대체(기본) vs 설명 자체를 안 보여줌.</div>`,
 };
+NOTES.notebook = `<h3>오답노트 · 기획 포인트</h3><ol>
+    <li><b>학생별 데이터, 화면은 하나.</b> 학생 A는 4개(2개 극복), B는 비어 있음. 위에서 학생을 바꿔 확인.</li>
+    <li><b>한 줄에 단어 · 뜻 · 틀린 횟수 · Unit · 날짜 · 교재 근거 · 내가 고른 답.</b> 문제를 풀 때마다 자동으로 쌓인다.</li>
+    <li><b>극복 = 연속 2번 정답.</b> 지우지 않고 아래 "극복한 단어"로 옮긴다. 학생에겐 성취, 발표에선 "12개 중 9개 극복" 같은 숫자.</li>
+    <li><b>"이 단어들로 문제 풀기"</b> = Unit 상관없이 오답노트 단어만 출제. 문제 화면을 그대로 재사용.</li></ol>
+    <div class="note"><b>확인 필요</b> 오답노트 화면을 1차에 넣을지. PRD는 "개인별 복습 화면 ✕"였으나 팀장 담당으로 화면 1개 + API 1개면 가능.</div>
+    <div class="note"><b>확인 필요</b> "내가 고른 답"을 보여줄지. 오답을 다시 보여주면 헷갈림을 굳힐 수 있다는 의견도 있음.</div>
+    <div class="note"><b>확인 필요</b> 극복 기준 연속 2회 vs 3회. 진입 위치: 시작 화면 버튼(현재) vs Unit 목록 상단.</div>`;
 function renderNotes(n){ $('#notes-student').innerHTML = NOTES[n] || ''; }
 
 // ---------- 시작 ----------
-renderNotes('start');
+renderNotes('start'); renderNotebook();
 </script>
 </body>
 </html>
