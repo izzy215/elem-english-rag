@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>초등 영어 · RAG 맞춤 복습 — 화면 목업</title>
+<style>
+  :root{
+    --bg:#F4F6F2; --surface:#FFFFFF; --ink:#1F2823; --muted:#69746C; --line:#DEE4DC;
+    --primary:#14554A; --primary-soft:#E4EFEA; --accent:#E8A33D; --accent-soft:#FBF0DC;
+    --danger:#C4553B; --danger-soft:#F7E4DE; --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',system-ui,sans-serif;line-height:1.5;padding:28px 20px 60px}
+  button{font:inherit;cursor:pointer}
+  button:disabled{cursor:default;opacity:.45}
+  .wrap{max-width:1080px;margin:0 auto}
+
+  /* ---------- 상단 ---------- */
+  header h1{font-size:1.45rem;font-weight:800;letter-spacing:-.01em}
+  header p.sub{color:var(--muted);font-size:.9rem;margin-top:4px}
+  .bar{display:flex;gap:8px;align-items:center;margin:18px 0 6px;flex-wrap:wrap}
+  .bar .tab{border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:9px 18px;border-radius:999px;font-size:.92rem;font-weight:600}
+  .bar .tab.on{background:var(--primary);border-color:var(--primary);color:#fff}
+  .bar .spacer{flex:1}
+  .toggle{display:flex;align-items:center;gap:8px;font-size:.85rem;font-weight:600;color:var(--muted);cursor:pointer;background:var(--surface);border:1px solid var(--line);padding:8px 14px;border-radius:999px}
+  .toggle input{accent-color:var(--accent);width:16px;height:16px}
+  .role-desc{color:var(--muted);font-size:.86rem;margin-bottom:18px}
+
+  /* ---------- 폰 프레임 + 메모 ---------- */
+  .stage{display:none} .stage.on{display:block}
+  .grid{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
+  .phone{width:360px;flex:0 0 auto;background:var(--surface);border:1px solid var(--line);border-radius:30px;padding:14px 14px 12px;box-shadow:0 8px 24px rgba(31,40,35,.08)}
+  .statusbar{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);padding:0 10px 8px}
+  .screen{display:none;background:var(--bg);border-radius:20px;padding:16px 14px 18px;min-height:600px}
+  .screen.on{display:block}
+  .topbar{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--muted);margin-bottom:12px}
+  .topbar .back{border:0;background:none;color:var(--primary);font-weight:700}
+  .topbar .crumb span{background:var(--primary-soft);color:var(--primary);padding:2px 8px;border-radius:999px;font-weight:600;font-size:.72rem;margin-right:4px}
+  .topbar .student{margin-left:auto;font-weight:700;color:var(--ink)}
+  .screen h2{font-size:1.2rem;font-weight:800}
+  .screen .sub{color:var(--muted);font-size:.84rem;margin-top:2px}
+  .hint{color:var(--muted);font-size:.76rem;margin-top:8px}
+  label.field{display:block;font-size:.76rem;color:var(--muted);font-weight:600;margin:14px 0 6px}
+  select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font:inherit}
+  .cards{display:grid;gap:8px;margin-top:8px}
+  .card{width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;display:grid;gap:3px}
+  .card .t{font-weight:800;font-size:.95rem} .card .d{color:var(--muted);font-size:.78rem}
+  .card.level{grid-template-columns:auto 1fr;align-items:center;column-gap:12px}
+  .card.level .num{width:40px;height:40px;border-radius:11px;background:var(--primary);color:#fff;display:grid;place-items:center;font-weight:800;grid-row:span 2}
+  .card.unit{grid-template-columns:1fr auto}
+  .card.unit .prog{grid-column:1/-1;height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:4px}
+  .card.unit .prog i{display:block;height:100%;background:var(--primary)}
+  .card.unit .pct{font-size:.76rem;color:var(--muted);font-variant-numeric:tabular-nums}
+  .badge{display:inline-block;font-size:.68rem;font-weight:700;padding:1px 8px;border-radius:999px}
+  .b-review{background:var(--danger-soft);color:var(--danger)} .b-ok{background:var(--primary-soft);color:var(--primary)} .b-todo{background:var(--accent-soft);color:#B07514}
+  .btn{width:100%;padding:12px;border:0;border-radius:12px;background:var(--primary);color:#fff;font-weight:700;font-size:.92rem;margin-top:12px}
+  .btn.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px} .row2 .btn{margin-top:8px}
+
+  /* 학습 */
+  .learn-top{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted)}
+  .phase{display:flex;gap:5px;margin:8px 0 10px} .phase span{flex:1;height:5px;border-radius:3px;background:var(--line)}
+  .phase span.now{background:var(--accent)} .phase span.done{background:var(--primary)}
+  .flash{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:24px 16px 16px;text-align:center;min-height:210px;display:flex;flex-direction:column;justify-content:center;gap:6px;box-shadow:0 8px 24px rgba(31,40,35,.06)}
+  .flash .word{font-size:2rem;font-weight:800;line-height:1.15} .flash .mean{color:var(--primary);font-weight:700}
+  .flash .ex{color:var(--muted);font-size:.86rem} .flash .src{font-size:.7rem;color:var(--muted);margin-top:8px}
+  .flash .src b{background:var(--primary-soft);color:var(--primary);padding:1px 8px;border-radius:999px}
+  .dots{display:flex;gap:4px;justify-content:center;margin-top:10px} .dots i{width:6px;height:6px;border-radius:3px;background:var(--line)}
+  .dots i.done{background:var(--primary)} .dots i.now{width:16px;background:var(--accent)} .dots i.ok{background:var(--primary)} .dots i.bad{background:var(--danger)}
+  .tools{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  .tool{padding:11px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-weight:700;font-size:.88rem}
+  .tool.on{background:var(--primary);color:#fff;border-color:var(--primary)} .tool.rec{background:var(--danger);color:#fff;border-color:var(--danger)}
+  .result{margin-top:8px;font-size:.84rem;padding:9px 12px;border-radius:10px;background:var(--primary-soft);color:#2C4A42;display:none}
+  .result.on{display:block} .result.bad{background:var(--danger-soft);color:#5A2E24}
+  .result .score{font-size:1.25rem;font-weight:800}
+
+  /* 문제 */
+  .q{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px 16px;margin-top:10px;box-shadow:0 8px 24px rgba(31,40,35,.06)}
+  .q-prompt{font-size:1.15rem;font-weight:800;text-align:center;min-height:2.4em;display:flex;align-items:center;justify-content:center}
+  .choices{display:grid;gap:7px;margin-top:12px}
+  .choice{padding:11px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);font-weight:700;text-align:left;display:flex;gap:9px;align-items:center}
+  .choice .k{width:24px;height:24px;border-radius:7px;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-size:.75rem;flex:0 0 auto}
+  .choice.ok{border-color:var(--primary);background:var(--primary-soft)} .choice.ok .k{background:var(--primary);color:#fff}
+  .choice.bad{border-color:var(--danger);background:var(--danger-soft)} .choice.bad .k{background:var(--danger);color:#fff}
+  .choice.dim{opacity:.5}
+  .score-card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px;text-align:center;margin-top:10px}
+  .score-card .big{font-size:2.2rem;font-weight:800;color:var(--primary)} .score-card .d{color:var(--muted);font-size:.8rem}
+  .card.wrong{grid-template-columns:auto 1fr;column-gap:10px;align-items:center}
+  .card.wrong .mark{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-weight:800;grid-row:span 2}
+  .mark.bad{background:var(--danger-soft);color:var(--danger)} .mark.ok{background:var(--primary-soft);color:var(--primary)}
+  .explain .w{font-size:1.1rem;font-weight:800} .explain .text{margin-top:4px;line-height:1.55;font-size:.9rem}
+  .explain .srcbox{margin-top:8px;font-size:.78rem;color:var(--muted);background:var(--primary-soft);padding:7px 10px;border-radius:8px}
+  .explain .srcbox b{color:var(--primary)}
+
+  /* 관리자 (브라우저 프레임) */
+  .browser{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 8px 24px rgba(31,40,35,.08);flex:1;min-width:560px}
+  .chrome{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#EEF2EC;border-bottom:1px solid var(--line)}
+  .chrome .dots2 i{display:inline-block;width:10px;height:10px;border-radius:5px;background:#D5DBD3;margin-right:5px}
+  .chrome .url{flex:1;background:var(--surface);border-radius:6px;padding:4px 10px;font-size:.76rem;color:var(--muted)}
+  .admin{padding:20px 22px;display:grid;gap:14px}
+  .panel{border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .panel h3{font-size:.95rem;font-weight:800} .panel .d{color:var(--muted);font-size:.78rem;margin-bottom:10px}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .kpi{background:var(--bg);border-radius:10px;padding:10px;text-align:center}
+  .kpi .num{font-size:1.4rem;font-weight:800;color:var(--primary)} .kpi .lbl{font-size:.7rem;color:var(--muted)}
+  .bars{display:grid;gap:7px;margin-top:10px}
+  .brow{display:grid;grid-template-columns:150px 1fr 44px;align-items:center;gap:10px;font-size:.8rem}
+  .brow .track{height:10px;border-radius:5px;background:var(--line);overflow:hidden} .brow .track i{display:block;height:100%;background:var(--primary)}
+  .brow .track i.best{background:var(--accent)} .brow .v{text-align:right;font-weight:700}
+  table.mini{width:100%;border-collapse:collapse;font-size:.8rem} table.mini th,table.mini td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line)}
+  table.mini th{font-size:.7rem;color:var(--muted)}
+  .form input,.form textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:.85rem;margin-top:4px}
+  .checks{display:grid;gap:5px;margin-top:8px}
+  .check{display:grid;grid-template-columns:20px 1fr;gap:6px;font-size:.8rem;padding:7px 9px;border-radius:8px;background:var(--bg)}
+  .check.ok{background:var(--primary-soft)} .check.warn{background:var(--accent-soft)}
+  .check .ic{font-weight:800} .check.ok .ic{color:var(--primary)} .check.warn .ic{color:#B07514}
+  .check .w{color:var(--muted);font-size:.74rem}
+
+  /* ---------- 기획 메모 ---------- */
+  .notes{flex:1;min-width:300px;max-width:520px}
+  .notes h3{font-size:1rem;font-weight:800;margin-bottom:8px}
+  .notes ol{padding-left:18px;font-size:.88rem;display:grid;gap:8px} .notes li b{color:var(--primary)}
+  .note{background:var(--accent-soft);border-left:4px solid var(--accent);border-radius:8px;padding:10px 14px;font-size:.84rem;color:#5A3A08;margin-top:12px}
+  .note b{color:#B07514}
+  .note.decided{background:var(--primary-soft);border-color:var(--primary);color:#2C4A42} .note.decided b{color:var(--primary)}
+  body.no-notes .notes{display:none}
+  body.no-notes .phone{margin:0 auto}
+  footer{margin-top:40px;color:var(--muted);font-size:.8rem;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>초등 영어 · RAG 맞춤 복습 — 화면 목업</h1>
+    <p class="sub">완성됐을 때 모습. 서버 없이 이 파일만 열면 됨 · 데이터는 예시 · 버튼을 눌러 흐름을 따라가 보세요</p>
+  </header>
+
+  <div class="bar">
+    <button class="tab on" data-role="student" onclick="setRole('student')">학생 앱</button>
+    <button class="tab" data-role="admin" onclick="setRole('admin')">관리자 웹</button>
+    <span class="spacer"></span>
+    <label class="toggle"><input type="checkbox" id="notesToggle" checked onchange="document.body.classList.toggle('no-notes', !this.checked)"> 기획 메모 보기</label>
+  </div>
+  <div class="role-desc" id="roleDesc">모바일 · 학생이 Level·Unit을 고르고 학습 → 문제 → 오답 설명 → 다시 풀기</div>
+
+  <!-- ================= 학생 앱 ================= -->
+  <div class="stage on" id="stage-student">
+    <div class="grid">
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>●●●</span></div>
+
+        <!-- 시작 -->
+        <div class="screen on" data-screen="start">
+          <div class="topbar"><span class="student">학생 <b id="sName">A</b></span></div>
+          <h2>안녕! 오늘도 영어 연습하자 👋</h2>
+          <p class="sub">이름을 고르고 Level을 선택하세요</p>
+          <label class="field">학생</label>
+          <select id="studentSel" onchange="setStudent(this.value)"><option value="A">학생 A (복습할 단어 있음)</option><option value="B">학생 B (처음)</option></select>
+          <label class="field">Level</label>
+          <div class="cards">
+            <button class="card level" disabled><div class="num">1</div><div class="t">Level 1 · 3~4학년</div><div class="d">준비 중</div></button>
+            <button class="card level" onclick="goScreen('units')"><div class="num">2</div><div class="t">Level 2 · 5학년</div><div class="d">Unit 3개</div></button>
+            <button class="card level" disabled><div class="num">3</div><div class="t">Level 3 · 6학년</div><div class="d">준비 중</div></button>
+          </div>
+        </div>
+
+        <!-- Unit 목록 -->
+        <div class="screen" data-screen="units">
+          <div class="topbar"><button class="back" onclick="goScreen('start')">‹ 뒤로</button><span class="crumb"><span>Level 2</span></span><span class="student">학생 <b class="sName">A</b></span></div>
+          <h2>Level 2 · 5학년</h2>
+          <p class="sub">공부할 Unit을 고르세요</p>
+          <div class="cards" id="unitCards"></div>
+        </div>
+
+        <!-- 학습 -->
+        <div class="screen" data-screen="learn">
+          <div class="topbar"><button class="back" onclick="goScreen('units')">‹ 뒤로</button><span class="crumb"><span>Level 2</span><span>U3 Animals</span></span><span class="student">학생 <b class="sName">A</b></span></div>
+          <div class="learn-top"><b>U3 · Animals</b><span>단어 8 · 문장 3</span></div>
+          <div class="phase"><span class="now"></span><span></span></div>
+          <div class="learn-top"><span>단어 카드</span><span id="learnPage">1 / 8</span></div>
+          <div class="flash">
+            <div class="word" id="fWord">rabbit</div><div class="mean" id="fMean">토끼</div>
+            <div class="ex" id="fEx">The rabbit can jump.</div><div class="src">교재 <b id="fPage">p.12</b></div>
+          </div>
+          <div class="dots" id="learnDots"></div>
+          <div class="tools">
+            <button class="tool" id="ttsBtn" onclick="fakeTTS()">🔊 듣기</button>
+            <button class="tool" id="recBtn" onclick="fakeRec()">🎙 따라 말하기</button>
+          </div>
+          <div class="result" id="learnResult"></div>
+          <div class="row2"><button class="btn ghost" onclick="learnMove(-1)">이전</button><button class="btn" id="learnNext" onclick="learnMove(1)">다음</button></div>
+          <button class="btn" id="quizBtn" onclick="startQuiz()" disabled>문제 풀기</button>
+          <p class="hint" id="learnHint">단어 카드를 다 보면 문제를 풀 수 있어요.</p>
+        </div>
+
+        <!-- 문제 -->
+        <div class="screen" data-screen="quiz">
+          <div class="topbar"><button class="back" onclick="goScreen('learn')">‹ 뒤로</button><span class="crumb"><span>Level 2</span><span>U3 Animals</span></span><span class="student">학생 <b class="sName">A</b></span></div>
+          <div class="learn-top"><b>문제 풀기</b><span id="quizPage">1 / 3</span></div>
+          <div class="dots" id="quizDots" style="justify-content:flex-start;margin-top:6px"></div>
+          <p class="hint" id="quizSrc"></p>
+          <div class="q"><div class="q-prompt" id="qPrompt"></div><div class="choices" id="qChoices"></div><div class="result" id="qResult"></div></div>
+          <button class="btn" id="qNext" onclick="nextQ()" disabled>다음 문제</button>
+        </div>
+
+        <!-- 결과 -->
+        <div class="screen" data-screen="done">
+          <div class="topbar"><span class="crumb"><span>Level 2</span><span>U3 Animals</span></span><span class="student">학생 <b class="sName">A</b></span></div>
+          <h2 id="doneTitle">다 풀었어요!</h2>
+          <p class="sub" id="doneSub"></p>
+          <div class="score-card"><div class="big" id="doneScore">2 / 3</div><div class="d">맞힌 문제</div></div>
+          <div class="cards" id="doneList"></div>
+          <button class="btn" id="explainBtn" onclick="goExplain()">오답 설명 보기</button>
+          <button class="btn ghost" onclick="startQuiz(true)">다시 풀기</button>
+          <button class="btn ghost" onclick="goScreen('units')">Unit 목록으로</button>
+        </div>
+
+        <!-- 오답 설명 -->
+        <div class="screen" data-screen="explain">
+          <div class="topbar"><button class="back" onclick="goScreen('done')">‹ 뒤로</button><span class="crumb"><span>Level 2</span><span>U3 Animals</span></span><span class="student">학생 <b class="sName">A</b></span></div>
+          <h2>오답 설명</h2>
+          <p class="sub">틀린 문제를 교재 근거와 함께 다시 봐요</p>
+          <div class="cards" id="explainList"></div>
+          <button class="btn" onclick="startQuiz(true)">다시 풀기 <small>(틀린 단어 먼저)</small></button>
+          <button class="btn ghost" onclick="goScreen('units')">Unit 목록으로</button>
+        </div>
+      </div>
+
+      <!-- 기획 메모 (학생) -->
+      <div class="notes" id="notes-student"></div>
+    </div>
+  </div>
+
+  <!-- ================= 관리자 ================= -->
+  <div class="stage" id="stage-admin">
+    <div class="grid">
+      <div class="browser">
+        <div class="chrome"><span class="dots2"><i></i><i></i><i></i></span><span class="url">localhost:8000/admin.html</span></div>
+        <div class="admin">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div class="panel">
+              <h3>골든 데이터</h3><div class="d">서버가 지금 읽고 있는 데이터</div>
+              <div style="font-size:.8rem;margin-bottom:6px"><span class="badge b-ok">골든 데이터</span> words.csv · sentences.csv · units.csv · chunks.jsonl · eval.csv</div>
+              <table class="mini"><tr><th>Level</th><th>Unit</th><th>단어</th><th>문장</th></tr>
+                <tr><td>Level 1 · 3~4학년</td><td>0</td><td>0</td><td>0</td></tr>
+                <tr><td>Level 2 · 5학년</td><td>3</td><td>40</td><td>20</td></tr>
+                <tr><td>Level 3 · 6학년</td><td>0</td><td>0</td><td>0</td></tr></table>
+            </div>
+            <div class="panel">
+              <h3>RAG 검색 정확도</h3><div class="d">평가셋 30문항 · 상위 3개 안에 정답 조각</div>
+              <div class="kpis"><div class="kpi"><div class="num">84%</div><div class="lbl">hit@3</div></div><div class="kpi"><div class="num">63%</div><div class="lbl">hit@1</div></div><div class="kpi"><div class="num">30</div><div class="lbl">문항</div></div></div>
+              <div class="bars">
+                <div class="brow"><span>A · 단어 1개 = 1조각</span><div class="track"><i style="width:62%"></i></div><span class="v">62%</span></div>
+                <div class="brow"><span>B · 문장 1개 = 1조각</span><div class="track"><i style="width:55%"></i></div><span class="v">55%</span></div>
+                <div class="brow"><span>C · 단어 + 관련 문장</span><div class="track"><i class="best" style="width:84%"></i></div><span class="v">84%</span></div>
+              </div>
+              <p class="hint">목표 80% 달성 · 채택: C</p>
+            </div>
+          </div>
+          <div class="panel form">
+            <h3>소스 등록</h3><div class="d">한 줄에 한 문장 · 영어 | 한국어 뜻 · 등록 전에 교육과정 범위와 중복을 RAG로 검사</div>
+            <div style="display:grid;grid-template-columns:1fr 120px;gap:10px">
+              <div><label class="field" style="margin-top:0">제목</label><input value="동물원에서"></div>
+              <div><label class="field" style="margin-top:0">Level</label><select><option>Level 2</option></select></div>
+            </div>
+            <label class="field">문장</label>
+            <textarea rows="3">The giraffe is eating leaves. | 기린이 나뭇잎을 먹고 있어요.
+I have a rabbit. | 나는 토끼가 있어요.
+The rabbit is eating grass. | 토끼가 풀을 먹고 있어요.</textarea>
+            <div class="row2"><button class="btn ghost">검수 경고 확인</button><button class="btn">등록</button></div>
+            <div class="checks">
+              <div class="check warn"><span class="ic">!</span><div>The giraffe is eating leaves.<div class="w">범위 밖 단어: giraffe (초등 권장 어휘 800에 없음)</div></div></div>
+              <div class="check ok"><span class="ic">✓</span><div>I have a rabbit.<div class="w">나는 토끼가 있어요.</div></div></div>
+              <div class="check warn"><span class="ic">!</span><div>The rabbit is eating grass.<div class="w">유사 문장 87%: The rabbit can jump. (U3)</div></div></div>
+            </div>
+            <p class="hint">경고 2건. 고치거나 그대로 등록할 수 있어요 (최종 판단은 관리자).</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="notes" id="notes-admin">
+        <h3>관리자 · 기획 포인트</h3>
+        <ol>
+          <li><b>화면 하나.</b> 로그인·선생님 관리·승인 워크플로우 없음. 데이터 상태 · 정확도 · 등록 세 패널이 전부.</li>
+          <li><b>정확도 그래프가 발표의 핵심 숫자.</b> 청킹 전략 A/B/C를 같은 평가셋으로 비교한 결과. 62 → 84가 "개선했다"의 증거.</li>
+          <li><b>검수 경고는 판단 보조.</b> RAG가 "범위 밖 단어"와 "유사 문장"만 알려주고, 등록 여부는 사람이 정함.</li>
+        </ol>
+        <div class="note"><b>확인 필요 ①</b> 등록한 문장은 어디로 가나? (a) 골든 데이터에 바로 합침 (b) "대기" 상태로 두고 데이터팀이 검토 후 합침. 기본안: (b). 저장 API 소유자도 미정.</div>
+        <div class="note"><b>확인 필요 ②</b> 정확도 그래프를 학생 앱에도 보여줄지 (아니오가 기본). 발표에서만 쓰면 관리자 화면으로 충분.</div>
+        <div class="note decided"><b>결정됨</b> 관리자 화면은 △ → 1차에 포함. 검수 경고는 한 줄 이상 확장하지 않음. (기획서 v0.2)</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>목업 · project/docs/mockup.html · 실제 화면은 project/frontend/ · 데이터는 전부 예시</footer>
+</div>
+
+<script>
+// ---------- 예시 데이터 ----------
+const WORDS = [
+  {id:'w1',word:'rabbit',mean:'토끼',ex:'The rabbit can jump.',p:12},
+  {id:'w2',word:'cat',mean:'고양이',ex:'The cat is sleeping.',p:12},
+  {id:'w3',word:'dog',mean:'개',ex:'My dog likes to run.',p:12},
+  {id:'w4',word:'bird',mean:'새',ex:'A bird is singing.',p:13},
+  {id:'w5',word:'fish',mean:'물고기',ex:'Fish live in water.',p:13},
+  {id:'w6',word:'lion',mean:'사자',ex:'The lion is big.',p:13},
+  {id:'w7',word:'elephant',mean:'코끼리',ex:'An elephant has a long nose.',p:14},
+  {id:'w8',word:'monkey',mean:'원숭이',ex:'The monkey likes bananas.',p:14},
+];
+const WRONG = { A: ['rabbit','lion'], B: [] };          // 학생별 오답 이력 (예시)
+let student = 'A', learnIdx = 0, seen = new Set();
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+
+// ---------- 역할 · 화면 ----------
+function setRole(r){
+  $$('.bar .tab').forEach(b=>b.classList.toggle('on', b.dataset.role===r));
+  $$('.stage').forEach(s=>s.classList.toggle('on', s.id==='stage-'+r));
+  $('#roleDesc').textContent = r==='student' ? '모바일 · 학생이 Level·Unit을 고르고 학습 → 문제 → 오답 설명 → 다시 풀기' : '데스크톱 · 골든 데이터 상태 · RAG 정확도 · 소스 등록(검수 경고)';
+}
+function goScreen(n){ $$('.phone .screen').forEach(s=>s.classList.toggle('on', s.dataset.screen===n)); renderNotes(n); if(n==='units') renderUnits(); if(n==='learn') renderLearn(); }
+function setStudent(v){ student=v; $$('.sName, #sName').forEach(e=>e.textContent=v); seen=new Set(); learnIdx=0; }
+
+// ---------- Unit 목록 ----------
+function renderUnits(){
+  const wrong = WRONG[student].length;
+  $('#unitCards').innerHTML = `
+    <button class="card unit" onclick="goScreen('learn')"><div><div class="t">U3 · Animals</div><div class="d">단어 8개 · 문장 3개${wrong?` · <span class="badge b-review">복습할 단어 ${wrong}</span>`:''}</div></div><div class="pct">${student==='A'?'75%':'0%'}</div><div class="prog"><i style="width:${student==='A'?75:0}%"></i></div></button>
+    <button class="card unit"><div><div class="t">U4 · Food <span class="badge b-ok">완료 ✓</span></div><div class="d">단어 6개 · 문장 3개</div></div><div class="pct">100%</div><div class="prog"><i style="width:100%"></i></div></button>
+    <button class="card unit"><div><div class="t">U5 · School</div><div class="d">단어 6개 · 문장 3개</div></div><div class="pct">0%</div><div class="prog"><i style="width:0%"></i></div></button>`;
+}
+
+// ---------- 학습 ----------
+function renderLearn(){
+  const w = WORDS[learnIdx]; seen.add(w.id);
+  $('#fWord').textContent=w.word; $('#fMean').textContent=w.mean; $('#fEx').textContent=w.ex; $('#fPage').textContent='p.'+w.p;
+  $('#learnPage').textContent=`${learnIdx+1} / ${WORDS.length}`;
+  $('#learnDots').innerHTML = WORDS.map((x,i)=>`<i class="${i===learnIdx?'now':seen.has(x.id)?'done':''}"></i>`).join('');
+  $('#learnNext').textContent = learnIdx===WORDS.length-1 ? '문장 카드로' : '다음';
+  const all = WORDS.every(x=>seen.has(x.id));
+  $('#quizBtn').disabled = !all;
+  $('#learnHint').textContent = all ? '단어를 다 봤어요. 문장까지 보거나 바로 문제를 풀 수 있어요.' : '단어 카드를 다 보면 문제를 풀 수 있어요.';
+  $('#learnResult').className='result';
+}
+function learnMove(d){ learnIdx = Math.max(0, Math.min(WORDS.length-1, learnIdx+d)); renderLearn(); }
+function fakeTTS(){ const b=$('#ttsBtn'); b.classList.add('on'); b.textContent='🔊 재생 중'; setTimeout(()=>{b.classList.remove('on'); b.textContent='🔊 듣기';},1200); }
+function fakeRec(){
+  const b=$('#recBtn'), r=$('#learnResult');
+  b.classList.add('rec'); b.textContent='⏺ 녹음 중…'; r.className='result on'; r.textContent='따라 말해 보세요: '+WORDS[learnIdx].word;
+  setTimeout(()=>{ b.classList.remove('rec'); b.textContent='🎙 따라 말하기'; r.innerHTML='<span class="score">82점</span> 잘했어요! 🎉<br><small>들린 말: "'+WORDS[learnIdx].word+'" · 정답: "'+WORDS[learnIdx].word+'"</small>'; },1800);
+}
+
+// ---------- 문제 ----------
+let quiz=[], qIdx=0, answers=[];
+function makeQuiz(retry){
+  const pool=[...WORDS], pick=[];
+  const wrongs = WORDS.filter(w=>WRONG[student].includes(w.word));
+  if(wrongs.length){ pick.push(wrongs[0]); if(wrongs[1]) pick.push(wrongs[1]); }   // 오답 단어 먼저
+  while(pick.length<3){ const w=pool[Math.floor(Math.random()*pool.length)]; if(!pick.includes(w)) pick.push(w); }
+  return pick.map((w,i)=>{
+    const others=WORDS.filter(x=>x!==w).sort(()=>Math.random()-.5).slice(0,3);
+    const choices=[w,...others].sort(()=>Math.random()-.5).map(x=>x.word);
+    return {id:'q'+i, w, prompt:i%2? `${w.word} 은 무슨 뜻?`:`'${w.mean}'를 영어로?`, choices: i%2? [w,...others].sort(()=>Math.random()-.5).map(x=>x.mean):choices, answer: i%2? [w,...others].sort(()=>Math.random()-.5).indexOf(w):choices.indexOf(w.word)};
+  }).map(q=>{ if(q.prompt.includes('무슨 뜻')){ const arr=[q.w,...WORDS.filter(x=>x!==q.w).sort(()=>Math.random()-.5).slice(0,3)].sort(()=>Math.random()-.5); q.choices=arr.map(x=>x.mean); q.answer=arr.indexOf(q.w);} return q; });
+}
+function startQuiz(retry){
+  quiz=makeQuiz(retry); qIdx=0; answers=[];
+  $('#quizSrc').textContent = WRONG[student].length ? `학생 ${student}의 복습 단어(${WRONG[student].join(', ')})가 먼저 나와요` : `학생 ${student}은 오답 이력이 없어 Unit 단어에서 무작위`;
+  goScreen('quiz'); renderQ();
+}
+function renderQ(){
+  const q=quiz[qIdx];
+  $('#quizPage').textContent=`${qIdx+1} / ${quiz.length}`;
+  $('#quizDots').innerHTML=quiz.map((_,i)=>{const a=answers[i]; return `<i class="${i===qIdx?'now':a?(a.ok?'ok':'bad'):''}"></i>`}).join('');
+  $('#qPrompt').textContent=q.prompt;
+  $('#qChoices').innerHTML=q.choices.map((c,i)=>`<button class="choice" onclick="answer(${i})"><span class="k">${'ABCD'[i]}</span>${c}</button>`).join('');
+  $('#qResult').className='result'; $('#qNext').disabled=true; $('#qNext').textContent = qIdx===quiz.length-1?'결과 보기':'다음 문제';
+}
+function answer(i){
+  const q=quiz[qIdx]; if(answers[qIdx]) return;
+  const ok=i===q.answer; answers[qIdx]={ok,choice:i};
+  $$('#qChoices .choice').forEach((b,j)=>{ b.disabled=true; b.classList.add(j===q.answer?'ok':j===i?'bad':'dim'); });
+  const r=$('#qResult'); r.className='result on'+(ok?'':' bad'); r.innerHTML= ok?'정답이에요! 🎉':`아쉬워요. 정답은 <b>${q.choices[q.answer]}</b>`;
+  $('#qNext').disabled=false;
+  $('#quizDots').innerHTML=quiz.map((_,k)=>{const a=answers[k]; return `<i class="${k===qIdx?'now':a?(a.ok?'ok':'bad'):''}"></i>`}).join('');
+}
+function nextQ(){ if(qIdx<quiz.length-1){qIdx++; renderQ(); return;} finish(); }
+function finish(){
+  const ok=answers.filter(a=>a.ok).length, wrong=quiz.filter((q,i)=>!answers[i].ok);
+  // 오답 이력 갱신 (예시)
+  WRONG[student] = [...new Set([...wrong.map(q=>q.w.word), ...WRONG[student].filter(w=>!quiz.some((q,i)=>q.w.word===w && answers[i].ok))])];
+  goScreen('done');
+  $('#doneTitle').textContent= wrong.length?'다 풀었어요!':'완벽해요! 🎉';
+  $('#doneSub').textContent= wrong.length?`틀린 단어 ${wrong.length}개는 설명을 보고 다시 풀어봐요`:'이 Unit 단어는 다 아는 것 같아요';
+  $('#doneScore').textContent=`${ok} / ${quiz.length}`;
+  $('#doneList').innerHTML=quiz.map((q,i)=>`<div class="card wrong"><div class="mark ${answers[i].ok?'ok':'bad'}">${answers[i].ok?'○':'✕'}</div><div class="t">${q.w.word}</div><div class="d">${q.prompt}${answers[i].ok?'':' · 내 답: '+q.choices[answers[i].choice]}</div></div>`).join('');
+  $('#explainBtn').hidden=!wrong.length;
+}
+function goExplain(){
+  const wrong=quiz.filter((q,i)=>!answers[i].ok);
+  goScreen('explain');
+  $('#explainList').innerHTML=wrong.map(q=>`<div class="card explain"><div class="w">${q.w.word} <span class="d">${q.w.mean}</span></div><div class="text">${q.w.word}은 '${q.w.mean}'이에요. ${q.w.mean}는 ${q.w.word==='rabbit'?'귀가 길고 깡충깡충 뛰는 동물이에요.':'교재에 나온 동물이에요.'}</div><div class="srcbox">교재 <b>p.${q.w.p}</b> · ${q.w.ex}</div></div>`).join('');
+}
+
+// ---------- 기획 메모 ----------
+const NOTES = {
+  start: `<h3>시작 · 기획 포인트</h3><ol>
+    <li><b>로그인 없음.</b> 학생은 드롭다운으로 고른다. 데모용 A(오답 이력 있음) / B(처음) 두 명이면 "학생마다 문제가 다르다"를 보여줄 수 있다.</li>
+    <li><b>Level 카드에 Unit 수.</b> 데이터가 없는 Level은 "준비 중"으로 잠근다.</li></ol>
+    <div class="note"><b>확인 필요</b> Level 1·2·3 = 3~4학년 / 5학년 / 6학년이 맞나? 데이터팀이 Unit을 어느 학년 교재로 만드느냐에 달림.</div>`,
+  units: `<h3>Unit 목록 · 기획 포인트</h3><ol>
+    <li><b>진행률 = 학습한 단어 ÷ 전체 단어.</b> 문장은 세지 않는다 (기본안).</li>
+    <li><b>복습 배지.</b> 이 학생의 오답 단어가 이 Unit에 있으면 빨간 배지. 학생 B로 바꾸면 사라지는 걸 확인해 보세요.</li>
+    <li><b>완료 ✓ = 문제를 풀어서 오답 0.</b> U4가 예시.</li></ol>
+    <div class="note"><b>확인 필요</b> "학습함"의 기준: 카드를 한 번 보면 끝? 듣기까지 해야? 기본안은 "카드 표시 = 학습". 듣기를 조건에 넣으면 TTS 구현 전까지 진행률이 안 오른다.</div>
+    <div class="note"><b>확인 필요</b> 문장 카드도 진행률에 넣을지.</div>`,
+  learn: `<h3>학습 · 기획 포인트</h3><ol>
+    <li><b>카드 한 장에 단어·뜻·예문·교재 쪽수.</b> 쪽수는 골든 데이터의 source_page. 나중에 오답 설명의 "근거"와 같은 출처.</li>
+    <li><b>듣기 = TTS.</b> 한 번 만든 음원은 캐시. 두 번째부터 즉시.</li>
+    <li><b>따라 말하기 = 녹음 → 받아쓰기 → 원문과 비교 점수.</b> 발음 채점이 아니라 "제대로 들렸나" 점수. 눌러보면 82점 예시.</li>
+    <li><b>단어를 다 봐야 문제 버튼이 켜진다.</b> 문장 카드는 선택.</li></ol>
+    <div class="note"><b>확인 필요</b> 듣기·말하기가 필수인가 선택인가. 기본안: 선택. 필수로 하면 마이크 없는 환경에서 막힌다.</div>
+    <div class="note"><b>확인 필요</b> 말하기 통과 점수 70이 적당한가. TTS 담당이 테스트 후 조정.</div>`,
+  quiz: `<h3>문제 · 기획 포인트</h3><ol>
+    <li><b>3문제, 4지선다.</b> 유형은 두 가지: '뜻 → 영어', '영어 → 뜻'.</li>
+    <li><b>오답 단어가 1번 문제.</b> 학생 A는 rabbit이 먼저 나온다. 상단 회색 글씨에 이유가 표시됨.</li>
+    <li><b>즉시 채점.</b> 보기를 누르면 정답·오답 색이 바로 보이고 다음으로.</li>
+    <li><b>문제는 코드가 구성, AI는 문장 다듬기.</b> 그래서 AI가 죽어도 문제는 나온다.</li></ol>
+    <div class="note"><b>확인 필요</b> 문제 수 3개가 적당한가 (최대 5). 예문 빈칸 유형을 넣을지 (기본: 1차 제외).</div>
+    <div class="note"><b>확인 필요</b> 오답 단어를 몇 개까지 넣을지. 기본안: 문제 수의 절반(3문제면 2개)까지.</div>`,
+  done: `<h3>결과 · 기획 포인트</h3><ol>
+    <li><b>점수보다 "틀린 단어"가 주인공.</b> ✕ 표시된 단어가 다음 행동(오답 설명)으로 이어진다.</li>
+    <li><b>세 가지 출구.</b> 오답 설명 / 다시 풀기 / Unit 목록. 다시 풀기는 오답이 반영된 새 문제.</li></ol>
+    <div class="note decided"><b>결정됨</b> 오답을 낸 단어는 오답 목록에 누적. 연속 2회 정답이면 목록에서 제거. (design-quiz 7절)</div>`,
+  explain: `<h3>오답 설명 · 기획 포인트</h3><ol>
+    <li><b>초등 3학년이 읽을 수 있는 2~3문장.</b> 뜻 → 기억 힌트 → (선택) 학생 답과 비교.</li>
+    <li><b>근거 박스는 필수.</b> "교재 p.12 · The rabbit can jump." RAG가 찾아온 조각. 이게 "헛소리 안 한다"의 증거.</li>
+    <li><b>다시 풀기 → 이 단어가 1번 문제로.</b> 눌러서 확인해 보세요. 이게 데모의 핵심 장면.</li></ol>
+    <div class="note"><b>확인 필요</b> 설명에 영어 예문을 한국어로 번역해 같이 보여줄지 (기본: 영어 예문만 + 한국어 설명).</div>
+    <div class="note"><b>확인 필요</b> RAG가 근거를 못 찾았을 때: 교재 예문으로 대체(기본) vs 설명 자체를 안 보여줌.</div>`,
+};
+function renderNotes(n){ $('#notes-student').innerHTML = NOTES[n] || ''; }
+
+// ---------- 시작 ----------
+renderNotes('start');
+</script>
+</body>
+</html>
