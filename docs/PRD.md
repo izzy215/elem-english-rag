@@ -204,6 +204,38 @@ data/golden/chunks.jsonl  ──임베딩(조각당 1회)──▶  data/chroma/
 
 (2026-09-04 추가: FAISS → Chroma)
 
+### 6.4 청크 설계 — chunks.jsonl 을 어떻게 만드나 (RAG 담당 · 데이터팀 협의)
+
+우리 데이터는 CSV 라 **긴 글을 자르는 청킹이 없다.** words.csv · sentences.csv 의 행을 **조립**해 조각을 만든다. 조립 규칙이 곧 청킹 전략이며, 실험 대상이다.
+
+**조립 규칙 (기본값 = 전략 C)**
+
+| 전략 | 조각 단위 | 조각 텍스트 예 | 조각 수 (샘플 기준) |
+|---|---|---|---|
+| A. 단어 | words 1행 = 1조각 | `rabbit은 초등 영어 기본 어휘로 뜻은 '토끼'이다. 예문: The rabbit can jump. (교재 12쪽, Level 2 Unit 3 Animals)` | 20 |
+| B. 문장 | sentences 1행 = 1조각 | `[Level 2 Unit 3 Animals · 교재 12쪽] The rabbit can jump. — 토끼는 뛸 수 있어요.` | 9 |
+| **C. 단어 + 관련 문장** | words 1행 + 그 단어가 나오는 sentences | A 텍스트 + `이 단어가 쓰인 문장: The rabbit can jump. / I have a cat and a dog.` | 20 |
+| D. Unit 통째 | Unit 1개 = 1조각 | (비교용 나쁜 예) | 3 |
+
+**chunks.jsonl 한 줄 형식** (PRD 6.1 과 동일)
+```
+{"id":"c-0031","text":"rabbit은 초등 영어 기본 어휘로 …","level":2,"unit":"U3","source_page":12,"word_ids":["w-0031"],"strategy":"C"}
+```
+- `text` 에 **뜻 · 예문 · 쪽수 · Unit 이름을 모두 포함** — 검색 질문이 한국어("토끼")든 영어("rabbit")든 잡히게
+- `word_ids` 로 문제 생성(quiz.py)이 조각 ↔ 단어를 연결
+- `strategy` 는 실험 구분용. 서비스는 한 전략의 조각만 Chroma 에 넣는다
+
+**실험 절차** (RAG 담당 · `tests/build_index.py` · `tests/eval_rag.py`)
+1. A · B · C 각각 chunks.jsonl 생성 → Chroma 컬렉션 3개(`chunks_A` …)
+2. eval.csv 30문항으로 hit@3 · hit@1 측정 → `/rag/eval` 의 runs 에 기록
+3. 가장 높은 전략을 `chunks` 컬렉션으로 채택. 발표 그래프 = 이 표
+
+**평가셋 질문 유형** (eval.csv · 데이터팀 + RAG 담당): 한국어 뜻 → 단어 (10) · 영어 단어 → 뜻 (10) · 문장 빈칸/문법 (5) · Unit 주제 질문 (5). 각 행의 `expected_chunk_id` 는 전략 C 기준 id, A·B 는 word_ids 로 매핑해 채점.
+
+**PDF 를 쓰게 될 경우**: 데이터팀이 01_extracted 에서 CSV 로 변환. 서비스는 chunks.jsonl 만 읽으므로 변경 없음.
+
+(2026-09-04 추가)
+
 ## 7. 프롬프트 규칙 (`backend/prompts/*.txt`)
 
 | 파일 | 역할 | 반드시 포함 |
