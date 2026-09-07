@@ -1,6 +1,6 @@
 # 초등 영어학습 · RAG 맞춤 복습 (조별 프로젝트)
 
-기획: [docs/간단기획서.md](docs/간단기획서.md) · 한눈에 보기: [docs/elem-english-rag-overview.svg](docs/elem-english-rag-overview.svg)
+기획: [docs/plan-A/간단기획서.md](docs/plan-A/간단기획서.md) · 한눈에 보기: [docs/plan-A/overview.svg](docs/plan-A/overview.svg)
 
 ## 폴더 구조
 
@@ -29,7 +29,10 @@ project/
 │   ├─ golden/        데이터팀에서 받는 파일 (words.csv · sentences.csv · units.csv · chunks.jsonl · eval.csv)
 │   │   └─ _sample/   납품 전 임시 데이터 20단어 (golden/ 에 진짜 파일이 생기면 자동으로 무시됨)
 │   └─ student/       서버가 만드는 학생 로그 (quiz_log · wrong_words). git 제외
-├─ docs/              기획서 · 그림 · 회의록 · 정확도 리포트
+├─ docs/              기획 문서 — README.md 에 안내
+│   ├─ plan-A/        단어 4지선다 중심 (기획서 · PRD · 목업 · 설계서 · 데이터 계획)
+│   ├─ plan-B/        내 문장 고쳐주기 튜터 (기획서 · PRD · 목업 · 데이터 계획 · 다이어그램)
+│   └─ common/        아키텍처 흐름도 · 데이터 파이프라인 원본 그림
 ├─ tests/             평가셋 돌리는 스크립트 등
 ├─ .env.example       설정 항목 (복사해서 .env 로)
 └─ requirements.txt

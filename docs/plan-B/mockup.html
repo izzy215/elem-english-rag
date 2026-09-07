@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>초등 영어 · 내 문장 고쳐주기 튜터 — 화면 목업 B</title>
+<style>
+  :root{--bg:#F4F6F2;--surface:#FFFFFF;--ink:#1F2823;--muted:#69746C;--line:#DEE4DC;--primary:#14554A;--primary-soft:#E4EFEA;--accent:#E8A33D;--accent-soft:#FBF0DC;--danger:#C4553B;--danger-soft:#F7E4DE;--radius:14px}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',system-ui,sans-serif;line-height:1.5;padding:28px 20px 60px}
+  button{font:inherit;cursor:pointer} button:disabled{cursor:default;opacity:.45}
+  .wrap{max-width:1080px;margin:0 auto}
+  header h1{font-size:1.45rem;font-weight:800} header p.sub{color:var(--muted);font-size:.9rem;margin-top:4px}
+  .bar{display:flex;gap:8px;align-items:center;margin:18px 0 6px;flex-wrap:wrap}
+  .bar .tab{border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:9px 18px;border-radius:999px;font-size:.92rem;font-weight:600}
+  .bar .tab.on{background:var(--primary);border-color:var(--primary);color:#fff}
+  .bar .spacer{flex:1}
+  .toggle{display:flex;align-items:center;gap:8px;font-size:.85rem;font-weight:600;color:var(--muted);cursor:pointer;background:var(--surface);border:1px solid var(--line);padding:8px 14px;border-radius:999px}
+  .toggle input{accent-color:var(--accent);width:16px;height:16px}
+  .role-desc{color:var(--muted);font-size:.86rem;margin-bottom:18px}
+  .stage{display:none} .stage.on{display:block}
+  .grid{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
+  .phone{width:370px;flex:0 0 auto;background:var(--surface);border:1px solid var(--line);border-radius:30px;padding:14px 14px 12px;box-shadow:0 8px 24px rgba(31,40,35,.08)}
+  .statusbar{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);padding:0 10px 8px}
+  .screen{display:none;background:var(--bg);border-radius:20px;padding:16px 14px 18px;min-height:640px} .screen.on{display:block}
+  .topbar{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--muted);margin-bottom:12px}
+  .topbar .back{border:0;background:none;color:var(--primary);font-weight:700}
+  .topbar .crumb span{background:var(--primary-soft);color:var(--primary);padding:2px 8px;border-radius:999px;font-weight:600;font-size:.72rem;margin-right:4px}
+  .topbar .student{margin-left:auto;font-weight:700;color:var(--ink)}
+  .screen h2{font-size:1.2rem;font-weight:800} .screen .sub{color:var(--muted);font-size:.84rem;margin-top:2px}
+  .hint{color:var(--muted);font-size:.76rem;margin-top:8px}
+  label.field{display:block;font-size:.76rem;color:var(--muted);font-weight:600;margin:14px 0 6px}
+  select,input.txt,textarea.txt{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font:inherit;font-size:.95rem}
+  textarea.txt{min-height:64px;resize:none}
+  .cards{display:grid;gap:8px;margin-top:8px}
+  .card{width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;display:grid;gap:3px}
+  .card .t{font-weight:800;font-size:.95rem} .card .d{color:var(--muted);font-size:.78rem}
+  .card.level{grid-template-columns:auto 1fr;align-items:center;column-gap:12px}
+  .card.level .num{width:40px;height:40px;border-radius:11px;background:var(--primary);color:#fff;display:grid;place-items:center;font-weight:800;grid-row:span 2}
+  .badge{display:inline-block;font-size:.68rem;font-weight:700;padding:1px 8px;border-radius:999px}
+  .b-review{background:var(--danger-soft);color:var(--danger)} .b-ok{background:var(--primary-soft);color:var(--primary)} .b-todo{background:var(--accent-soft);color:#B07514}
+  .btn{width:100%;padding:12px;border:0;border-radius:12px;background:var(--primary);color:#fff;font-weight:700;font-size:.92rem;margin-top:12px}
+  .btn.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px} .row2 .btn{margin-top:8px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 11px;font-size:.78rem;font-weight:600;color:var(--ink);text-align:left}
+  .chip:hover{background:var(--primary-soft)}
+  /* 학습 카드 */
+  .flash{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px 14px;text-align:center;box-shadow:0 8px 24px rgba(31,40,35,.06)}
+  .flash .word{font-size:1.6rem;font-weight:800} .flash .mean{color:var(--primary);font-weight:700;font-size:.92rem} .flash .ex{color:var(--muted);font-size:.84rem}
+  .mini-row{display:flex;gap:6px;overflow-x:auto;padding:4px 0}
+  .mini{flex:0 0 auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:.8rem;min-width:110px}
+  .mini b{display:block;font-size:.9rem}
+  /* 튜터 */
+  .task{background:var(--primary-soft);border-radius:12px;padding:12px 14px;font-size:.88rem;color:#2C4A42}
+  .task b{color:var(--primary)}
+  .tools{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  .tool{padding:11px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-weight:700;font-size:.88rem}
+  .tool.rec{background:var(--danger);color:#fff;border-color:var(--danger)}
+  .heard{margin-top:10px;background:var(--surface);border:1.5px dashed var(--line);border-radius:12px;padding:10px 12px;font-size:.84rem}
+  .heard .lbl{font-size:.7rem;color:var(--muted);font-weight:700} .heard .s{font-size:1.05rem;font-weight:800;margin-top:2px}
+  .steps{margin-top:10px;display:grid;gap:5px;font-size:.78rem}
+  .step{display:flex;gap:8px;align-items:center;padding:6px 10px;border-radius:8px;background:var(--surface);color:var(--muted)}
+  .step.on{background:var(--accent-soft);color:#7A5210;font-weight:700} .step.done{color:var(--primary)}
+  .step i{width:18px;height:18px;border-radius:9px;background:var(--line);display:grid;place-items:center;font-style:normal;font-size:.7rem}
+  .step.done i{background:var(--primary);color:#fff} .step.on i{background:var(--accent);color:#fff}
+  .diag{margin-top:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+  .diag .type{font-size:.72rem;font-weight:700;color:var(--danger)} .diag .type.ok{color:var(--primary)}
+  .diag .fixed{font-size:1.05rem;font-weight:800;margin-top:2px}
+  .diag .fixed s{color:var(--danger);font-weight:600;margin-right:4px} .diag .fixed em{color:var(--primary);font-style:normal}
+  .diag .why{margin-top:6px;font-size:.86rem;line-height:1.5}
+  .src{margin-top:8px;font-size:.76rem;background:var(--primary-soft);border-radius:8px;padding:7px 10px;color:#2C4A42}
+  .src b{color:var(--primary)}
+  .ask{margin-top:10px}
+  .ask .lbl{font-size:.74rem;font-weight:700;color:var(--muted)}
+  .ans{margin-top:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:.86rem;display:none}
+  .ans.on{display:block}
+  /* 오답노트 */
+  .card.note{grid-template-columns:auto 1fr auto;column-gap:10px;align-items:start}
+  .card.note .mark{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-weight:800;grid-row:span 3;background:var(--danger-soft);color:var(--danger)}
+  .card.note .w{font-size:1rem;font-weight:800} .card.note .meta{font-size:.72rem;color:var(--muted);text-align:right;white-space:nowrap}
+  .card.note .my{grid-column:2/-1;font-size:.78rem} .card.note .my s{color:var(--danger)} .card.note .my em{color:var(--primary);font-style:normal;font-weight:700}
+  .card.note .srcline{grid-column:2/-1;font-size:.72rem;color:var(--muted)}
+  .overcome{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px} .overcome span{background:var(--primary-soft);color:var(--primary);font-size:.76rem;font-weight:700;padding:3px 10px;border-radius:999px}
+  /* 문제 (유형 연습) */
+  .q{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px 14px;margin-top:10px}
+  .q .sent{font-size:1rem;font-weight:800;text-align:center} .q .sent u{text-decoration:underline dotted var(--danger);text-underline-offset:3px}
+  .choices{display:grid;gap:7px;margin-top:10px}
+  .choice{padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);font-weight:700;text-align:left;display:flex;gap:9px;align-items:center}
+  .choice .k{width:22px;height:22px;border-radius:7px;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-size:.72rem}
+  .choice.ok{border-color:var(--primary);background:var(--primary-soft)} .choice.bad{border-color:var(--danger);background:var(--danger-soft)} .choice.dim{opacity:.5}
+  .result{margin-top:8px;font-size:.84rem;padding:9px 12px;border-radius:10px;background:var(--primary-soft);color:#2C4A42;display:none}
+  .result.on{display:block} .result.bad{background:var(--danger-soft);color:#5A2E24}
+  /* 관리자 */
+  .browser{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 8px 24px rgba(31,40,35,.08);flex:1;min-width:560px}
+  .chrome{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#EEF2EC;border-bottom:1px solid var(--line)}
+  .chrome .dots2 i{display:inline-block;width:10px;height:10px;border-radius:5px;background:#D5DBD3;margin-right:5px}
+  .chrome .url{flex:1;background:var(--surface);border-radius:6px;padding:4px 10px;font-size:.76rem;color:var(--muted)}
+  .admin{padding:20px 22px;display:grid;gap:14px}
+  .panel{border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .panel h3{font-size:.95rem;font-weight:800} .panel .d{color:var(--muted);font-size:.78rem;margin-bottom:10px}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .kpi{background:var(--bg);border-radius:10px;padding:10px;text-align:center} .kpi .num{font-size:1.4rem;font-weight:800;color:var(--primary)} .kpi .lbl{font-size:.7rem;color:var(--muted)}
+  .bars{display:grid;gap:7px;margin-top:10px}
+  .brow{display:grid;grid-template-columns:170px 1fr 44px;align-items:center;gap:10px;font-size:.8rem}
+  .brow .track{height:10px;border-radius:5px;background:var(--line);overflow:hidden} .brow .track i{display:block;height:100%;background:var(--primary)} .brow .track i.best{background:var(--accent)} .brow .v{text-align:right;font-weight:700}
+  table.mini{width:100%;border-collapse:collapse;font-size:.8rem} table.mini th,table.mini td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line)} table.mini th{font-size:.7rem;color:var(--muted)}
+  /* 메모 */
+  .notes{flex:1;min-width:300px;max-width:520px}
+  .notes h3{font-size:1rem;font-weight:800;margin-bottom:8px}
+  .notes ol{padding-left:18px;font-size:.88rem;display:grid;gap:8px} .notes li b{color:var(--primary)}
+  .note{background:var(--accent-soft);border-left:4px solid var(--accent);border-radius:8px;padding:10px 14px;font-size:.84rem;color:#5A3A08;margin-top:12px} .note b{color:#B07514}
+  .note.decided{background:var(--primary-soft);border-color:var(--primary);color:#2C4A42} .note.decided b{color:var(--primary)}
+  .note.rag{background:#E4EFEA;border-color:#14554A;color:#2C4A42} .note.rag b{color:#14554A}
+  body.no-notes .notes{display:none} body.no-notes .phone{margin:0 auto}
+  footer{margin-top:40px;color:var(--muted);font-size:.8rem;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>내 문장 고쳐주기 튜터 — 화면 목업 B</h1>
+    <p class="sub">방향 B: 학생이 <b>말하거나 쓴 문장</b>을 RAG가 규칙을 찾아 고쳐주고, 틀린 문법 유형이 오답노트에 쌓인다 · 서버 없이 이 파일만 · 데이터는 예시</p>
+  </header>
+  <div class="bar">
+    <button class="tab on" data-role="student" onclick="setRole('student')">학생 앱</button>
+    <button class="tab" data-role="admin" onclick="setRole('admin')">관리자 웹</button>
+    <span class="spacer"></span>
+    <label class="toggle"><input type="checkbox" id="notesToggle" checked onchange="document.body.classList.toggle('no-notes', !this.checked)"> 기획 메모 보기</label>
+  </div>
+  <div class="role-desc" id="roleDesc">모바일 · Unit 표현 익히기 → 내 문장 말하기/쓰기 → 고쳐주기 → 더 물어보기 → 오답노트</div>
+
+  <div class="stage on" id="stage-student">
+    <div class="grid">
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>●●●</span></div>
+
+        <!-- 시작 -->
+        <div class="screen on" data-screen="start">
+          <div class="topbar"><span class="student">학생 <b class="sName">A</b></span></div>
+          <h2>안녕! 오늘은 무슨 말을 해볼까? 👋</h2>
+          <p class="sub">이름을 고르고 Level을 선택하세요</p>
+          <label class="field">학생</label>
+          <select id="studentSel" onchange="setStudent(this.value)"><option value="A">학생 A (오답노트 있음)</option><option value="B">학생 B (처음)</option></select>
+          <label class="field">Level</label>
+          <div class="cards">
+            <button class="card level" disabled><div class="num">1</div><div class="t">Level 1 · 3~4학년</div><div class="d">준비 중</div></button>
+            <button class="card level" onclick="goScreen('units')"><div class="num">2</div><div class="t">Level 2 · 5학년</div><div class="d">Unit 3개</div></button>
+            <button class="card level" disabled><div class="num">3</div><div class="t">Level 3 · 6학년</div><div class="d">준비 중</div></button>
+          </div>
+          <button class="btn ghost" id="noteBtn" onclick="goScreen('notebook')">📒 내 오답노트</button>
+        </div>
+
+        <!-- Unit -->
+        <div class="screen" data-screen="units">
+          <div class="topbar"><button class="back" onclick="goScreen('start')">‹ 뒤로</button><span class="crumb"><span>Level 2</span></span><span class="student">학생 <b class="sName">A</b></span></div>
+          <h2>Level 2 · 5학년</h2>
+          <p class="sub">공부할 Unit을 고르세요</p>
+          <div class="cards" id="unitCards"></div>
+        </div>
+
+        <!-- 학습 (표현 익히기) -->
+        <div class="screen" data-screen="learn">
+          <div class="topbar"><button class="back" onclick="goScreen('units')">‹ 뒤로</button><span class="crumb"><span>Level 2</span><span>U3 Animals</span></span><span class="student">학생 <b class="sName">A</b></span></div>
+          <h2>표현 익히기</h2>
+          <p class="sub">오늘 쓸 단어와 문장 패턴을 먼저 봐요</p>
+          <label class="field">단어 8개 <span style="font-weight:500">(넘겨 보기)</span></label>
+          <div class="mini-row" id="wordRow"></div>
+          <label class="field">문장 패턴 3개</label>
+          <div class="flash" id="patCard"><div class="word">I <em style="color:var(--primary)">saw</em> a rabbit.</div><div class="mean">나는 토끼를 봤어요.</div><div class="ex">과거를 말할 땐 동사를 과거형으로</div></div>
+          <div class="tools"><button class="tool" onclick="fakeTTS(this)">🔊 듣기</button><button class="tool" onclick="goScreen('shadow')">🎙 따라 말하기</button></div>
+          <button class="btn ghost" style="margin-top:8px" onclick="nextPat()">다음 패턴</button>
+          <button class="btn" onclick="goScreen('tutor')">이 표현으로 말해보기 🎙</button>
+          <p class="hint">단어·패턴은 참고용. 바로 말해보기로 가도 돼요.</p>
+        </div>
+
+        <!-- 따라 말하기 (STT 점수) -->
+        <div class="screen" data-screen="shadow">
+          <div class="topbar"><button class="back" onclick="goScreen('learn')">‹ 뒤로</button><span class="crumb"><span>Level 2</span><span>U3 Animals</span></span><span class="student">학생 <b class="sName">A</b></span></div>
+          <h2>따라 말하기</h2>
+          <p class="sub">패턴 문장을 듣고 똑같이 말해봐요 · 얼마나 비슷하게 들렸는지 점수로</p>
+          <div class="flash" style="margin-top:10px"><div class="word" id="shTarget">I saw a rabbit.</div><div class="mean" id="shMean">나는 토끼를 봤어요.</div></div>
+          <div class="tools"><button class="tool" onclick="fakeTTS(this)">🔊 듣기</button><button class="tool" id="shRec" onclick="fakeShadow()">🎙 따라 말하기</button></div>
+          <div class="heard" id="shHeard" style="display:none"><div class="lbl">들린 문장 (STT)</div><div class="s" id="shHeardS"></div></div>
+          <div class="diag" id="shResult" style="display:none"></div>
+          <div class="row2"><button class="btn ghost" onclick="shadowNext()">다음 문장</button><button class="btn" onclick="goScreen('tutor')">이제 내 문장 말하기 →</button></div>
+          <p class="hint">점수 = 들린 문장과 원문의 단어 일치율. 발음 자체를 채점하는 게 아니라 "제대로 들렸나"예요.</p>
+        </div>
+
+        <!-- 튜터 (핵심) -->
+        <div class="screen" data-screen="tutor">
+          <div class="topbar"><button class="back" onclick="goScreen('learn')">‹ 뒤로</button><span class="crumb"><span>Level 2</span><span>U3 Animals</span></span><span class="student">학생 <b class="sName">A</b></span></div>
+          <h2>내 문장 말해보기</h2>
+          <div class="task" style="margin-top:8px">오늘의 미션 · <b>어제 동물원에서 본 것</b>을 영어로 한 문장 말해봐요<br><span style="font-size:.78rem;color:var(--muted)">힌트: rabbit · lion · saw · yesterday</span></div>
+          <div class="tools">
+            <button class="tool" id="recBtn" onclick="fakeRec()">🎙 말하기</button>
+            <button class="tool" onclick="toggleType()">⌨ 쓰기</button>
+          </div>
+          <div id="typeBox" style="display:none;margin-top:8px"><textarea class="txt" id="typeInput" placeholder="영어로 써 보세요" rows="2"></textarea></div>
+          <div class="chips" id="examples"></div>
+          <div class="heard" id="heard" style="display:none"><div class="lbl" id="heardLbl">들린 문장</div><div class="s" id="heardS"></div></div>
+          <button class="btn" id="fixBtn" onclick="runFix()" disabled>고쳐줘 ✨</button>
+          <div class="steps" id="steps" style="display:none">
+            <div class="step" id="st1"><i>1</i>문장 받기</div>
+            <div class="step" id="st2"><i>2</i>RAG: 우리 규칙 조각에서 관련 규칙 찾기</div>
+            <div class="step" id="st3"><i>3</i>AI: 찾은 규칙을 근거로 고치고 설명</div>
+          </div>
+          <div class="diag" id="diag" style="display:none"></div>
+          <div class="ask" id="ask" style="display:none">
+            <div class="lbl">더 물어보기 <span style="font-weight:500">(RAG가 우리 설명 조각에서 찾아 답해요)</span></div>
+            <div class="chips" id="askChips"></div>
+            <div class="ans" id="ans"></div>
+          </div>
+          <div class="row2" id="tutorNav" style="display:none"><button class="btn ghost" onclick="resetTutor()">다른 문장</button><button class="btn" onclick="goScreen('notebook')">오답노트 보기</button></div>
+        </div>
+
+        <!-- 오답노트 -->
+        <div class="screen" data-screen="notebook">
+          <div class="topbar"><button class="back" onclick="goScreen('start')">‹ 뒤로</button><span class="student">학생 <b class="sName">A</b></span></div>
+          <h2>📒 내 오답노트</h2>
+          <p class="sub" id="noteSub"></p>
+          <div class="cards" id="noteList"></div>
+          <div id="noteDone" style="margin-top:12px"></div>
+          <button class="btn ghost" onclick="goScreen('start')">시작으로</button>
+        </div>
+
+        <!-- 유형 연습 (객관식) -->
+        <div class="screen" data-screen="drill">
+          <div class="topbar"><button class="back" onclick="goScreen('notebook')">‹ 뒤로</button><span class="student">학생 <b class="sName">A</b></span></div>
+          <h2 id="drillTitle">과거시제 연습</h2>
+          <p class="sub">밑줄 친 곳을 어떻게 고칠까요?</p>
+          <div class="q"><div class="sent" id="drillSent"></div><div class="choices" id="drillChoices"></div><div class="result" id="drillResult"></div></div>
+          <div class="src" id="drillSrc" style="display:none"></div>
+          <button class="btn" id="drillNext" onclick="nextDrill()" disabled>다음</button>
+          <button class="btn ghost" onclick="goScreen('notebook')">오답노트로</button>
+        </div>
+      </div>
+      <div class="notes" id="notes-student"></div>
+    </div>
+  </div>
+
+  <!-- 관리자 -->
+  <div class="stage" id="stage-admin">
+    <div class="grid">
+      <div class="browser">
+        <div class="chrome"><span class="dots2"><i></i><i></i><i></i></span><span class="url">localhost:8000/admin.html</span></div>
+        <div class="admin">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div class="panel">
+              <h3>골든 데이터</h3><div class="d">데이터팀이 만든 것 (자체 제작)</div>
+              <table class="mini"><tr><th>파일</th><th>내용</th><th>개수</th></tr>
+                <tr><td>rules.jsonl</td><td>문법 규칙 설명 조각 (유형 6 × 상황별)</td><td><b>25</b></td></tr>
+                <tr><td>words.csv</td><td>단어 · 뜻 · 예문</td><td>40</td></tr>
+                <tr><td>patterns.csv</td><td>문장 패턴 · 뜻</td><td>20</td></tr>
+                <tr><td>errors.jsonl</td><td>오류 문장 예시 (평가·연습용)</td><td>40</td></tr>
+                <tr><td>eval.csv</td><td>평가: 문장 → 정답 규칙</td><td>30</td></tr></table>
+            </div>
+            <div class="panel">
+              <h3>RAG 정확도 — 문장 → 규칙 찾기</h3><div class="d">평가셋 30문장 · 상위 3개 안에 정답 규칙 조각</div>
+              <div class="kpis"><div class="kpi"><div class="num">87%</div><div class="lbl">hit@3</div></div><div class="kpi"><div class="num">70%</div><div class="lbl">hit@1</div></div><div class="kpi"><div class="num">30</div><div class="lbl">문장</div></div></div>
+              <div class="bars">
+                <div class="brow"><span>규칙 1개 = 1조각</span><div class="track"><i style="width:63%"></i></div><span class="v">63%</span></div>
+                <div class="brow"><span>규칙 + 예시 문장 묶음</span><div class="track"><i style="width:77%"></i></div><span class="v">77%</span></div>
+                <div class="brow"><span>규칙 + 예시 + 한국어 설명</span><div class="track"><i class="best" style="width:87%"></i></div><span class="v">87%</span></div>
+              </div>
+              <p class="hint">"이 문장이 어느 규칙에 걸리나"를 맞히는 시험. id가 없어서 진짜 검색이 필요한 곳</p>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>STT 정확도 — 아이 목소리로 얼마나 잘 받아쓰나</h3><div class="d">테스트 녹음 20개 (팀원·지인 아동 목소리) · 단어 오류율(WER) 낮을수록 좋음</div>
+            <div class="kpis"><div class="kpi"><div class="num">12%</div><div class="lbl">WER · Gemini STT</div></div><div class="kpi"><div class="num" style="color:var(--muted)">—</div><div class="lbl">WER · 자체 모델 (실험)</div></div><div class="kpi"><div class="num">20</div><div class="lbl">테스트 녹음</div></div></div>
+            <div class="bars">
+              <div class="brow"><span>Gemini 오디오 입력 (현재)</span><div class="track"><i class="best" style="width:88%"></i></div><span class="v">88%</span></div>
+              <div class="brow"><span>자체 STT 모델 (TTS 담당 실험)</span><div class="track"><i style="width:0%"></i></div><span class="v">—</span></div>
+            </div>
+            <p class="hint">TTS 담당의 자체 STT 실험 결과를 여기서 비교. 정확도가 Gemini와 비슷하면 교체, 아니면 실험 기록으로 발표</p>
+          </div>
+          <div class="panel">
+            <h3>학생 문장 로그 · 자주 걸리는 규칙</h3><div class="d">튜터에 들어온 문장과 진단 결과 (BigQuery 집계 후보)</div>
+            <table class="mini"><tr><th>규칙</th><th>걸린 횟수</th><th>학생 수</th><th>예시 문장</th></tr>
+              <tr><td>과거시제</td><td><b>14</b></td><td>2</td><td>I go to the zoo yesterday.</td></tr>
+              <tr><td>관사</td><td>9</td><td>2</td><td>I saw a elephant.</td></tr>
+              <tr><td>3인칭 단수</td><td>5</td><td>1</td><td>The lion eat meat.</td></tr></table>
+          </div>
+        </div>
+      </div>
+      <div class="notes" id="notes-admin">
+        <h3>관리자 · 기획 포인트</h3>
+        <ol>
+          <li><b>데이터의 주인공이 바뀜.</b> rules.jsonl(규칙 설명 조각)이 RAG 검색 대상이자 "교재". 단어·패턴은 조연.</li>
+          <li><b>정확도 시험이 의미 있어짐.</b> "이 문장이 어느 규칙에 걸리나"는 id가 없어서 검색으로만 답할 수 있음. 조각 조립 방식(규칙만 / +예시 / +한국어)을 비교.</li>
+          <li><b>학생 문장 로그</b>가 자연스럽게 쌓임 → BigQuery 집계 후보 (수업 요건).</li><li><b>STT 정확도 패널</b> — TTS 담당의 자체 STT 실험을 Gemini와 같은 잣대(WER)로 비교. 발표에서 "비교해 봤다"까지 말할 수 있음.</li>
+        </ol>
+        <div class="note rag"><b>RAG가 진짜 일하는 곳</b> ① 학생 문장 → 규칙 찾기 ② 더 물어보기 → 설명 조각 찾기. 단어 카드·오답노트 조회는 id 조회(DB)이며 RAG라고 부르지 않는다.</div>
+        <div class="note"><b>확인 필요</b> 소스 등록(검수 경고) 화면을 B에서도 유지할지. 자체 제작이면 데이터팀이 파일로 관리하므로 화면 없이 가도 됨 (기본안: 없음).</div>
+      </div>
+    </div>
+  </div>
+  <footer>목업 B · project/docs/mockup.html · 기존 목업(mockup.html)은 그대로 · 데이터는 전부 예시</footer>
+</div>
+
+<script>
+// ---------- 예시 데이터 ----------
+const WORDS=[['rabbit','토끼'],['lion','사자'],['elephant','코끼리'],['monkey','원숭이'],['zoo','동물원'],['see / saw','보다 / 봤다'],['big','큰'],['cute','귀여운']];
+const PATS=[
+  {en:'I <em>saw</em> a rabbit.',ko:'나는 토끼를 봤어요.',tip:'과거를 말할 땐 동사를 과거형으로'},
+  {en:'I saw <em>an</em> elephant.',ko:'나는 코끼리를 봤어요.',tip:'a/e/i/o/u 소리 앞엔 an'},
+  {en:'The lion <em>eats</em> meat.',ko:'사자는 고기를 먹어요.',tip:'he/she/it 주어면 동사에 -s'},
+];
+// 규칙 조각 = 데이터팀이 만드는 "교재" (RAG 검색 대상)
+const RULES={
+  past:{name:'과거시제',text:'yesterday, last week처럼 지난 일을 말할 때는 동사를 과거형으로 써요. go → went, see → saw, eat → ate. (규칙 조각 R-01 · Unit 3)'},
+  article:{name:'관사',text:'a, e, i, o, u 소리로 시작하는 단어 앞에는 a 대신 an을 써요. an elephant, an apple. (규칙 조각 R-03 · Unit 3)'},
+  third:{name:'3인칭 단수',text:'he, she, it, the lion처럼 한 명/한 마리가 주어이고 지금 일이면 동사 끝에 -s를 붙여요. The lion eats. (규칙 조각 R-02 · Unit 3)'},
+};
+// 예시 문장 (학생이 말했다고 가정) → 어느 규칙에 걸리는지는 RAG가 "검색"으로 찾는다는 설정
+const EX=[
+  {s:'I go to the zoo yesterday.',rule:'past',wrong:'go',fix:'went',fixed:'I went to the zoo yesterday.'},
+  {s:'I saw a elephant.',rule:'article',wrong:'a',fix:'an',fixed:'I saw an elephant.'},
+  {s:'The lion eat meat.',rule:'third',wrong:'eat',fix:'eats',fixed:'The lion eats meat.'},
+  {s:'I saw a cute rabbit.',rule:null,fixed:'I saw a cute rabbit.'},
+];
+const ASK={
+  past:[['왜 went예요?','go의 과거형은 규칙 없이 went로 바뀌어요. 이런 동사를 "불규칙 동사"라고 해요. see → saw, eat → ate도 같아요. (규칙 조각 R-01, R-05)'],['yesterday 대신 뭘 쓸 수 있어요?','last week, last night, two days ago처럼 지난 때를 나타내는 말이면 다 과거형과 함께 써요. (규칙 조각 R-01)'],['다른 예문 보여줘','I saw a lion at the zoo. / We ate pizza last night. / She went home. (예시 조각 E-12, E-14)']],
+  article:[['a랑 an 차이가 뭐예요?','다음 단어의 첫 소리가 a/e/i/o/u면 an, 아니면 a예요. 글자가 아니라 "소리"예요. an hour처럼요. (규칙 조각 R-03)'],['the는 언제 써요?','서로 아는 것, 하나뿐인 것을 말할 때 the를 써요. the zoo, the sun. (규칙 조각 R-04)']],
+  third:[['왜 -s를 붙여요?','한 명·한 마리(he, she, it)가 지금 하는 일이면 동사에 -s를 붙이는 게 영어 규칙이에요. (규칙 조각 R-02)'],['I나 you도 붙여요?','아니요. I, you, we, they는 -s 없이 그대로예요. I eat, they eat. (규칙 조각 R-02)']],
+};
+const NOTE={ A:{past:{count:2,last:'09-05',my:['I go to the zoo yesterday.'],fixed:['I went to the zoo yesterday.'],streak:0}, article:{count:1,last:'09-04',my:['I saw a elephant.'],fixed:['I saw an elephant.'],streak:0}, third:{count:1,last:'09-01',my:['The lion eat meat.'],fixed:['The lion eats meat.'],streak:2}}, B:{} };
+let student='A', patIdx=0, cur=null, typing=false;
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+
+function setRole(r){ $$('.bar .tab').forEach(b=>b.classList.toggle('on',b.dataset.role===r)); $$('.stage').forEach(s=>s.classList.toggle('on',s.id==='stage-'+r)); $('#roleDesc').textContent=r==='student'?'모바일 · Unit 표현 익히기 → 내 문장 말하기/쓰기 → 고쳐주기 → 더 물어보기 → 오답노트':'데스크톱 · 골든 데이터(규칙 조각 중심) · RAG 정확도(문장→규칙) · 학생 문장 로그'; }
+function goScreen(n){ $$('.phone .screen').forEach(s=>s.classList.toggle('on',s.dataset.screen===n)); renderNotes(n); if(n==='units') renderUnits(); if(n==='learn') renderLearn(); if(n==='notebook'||n==='start') renderNotebook(); if(n==='tutor') resetTutor(); if(n==='shadow') renderShadow(); }
+function setStudent(v){ student=v; $$('.sName').forEach(e=>e.textContent=v); renderNotebook(); }
+
+// Unit
+function renderUnits(){
+  const n=NOTE[student], active=Object.keys(n).filter(k=>n[k].streak<2).length;
+  $('#unitCards').innerHTML=`
+    <button class="card" onclick="goScreen('learn')"><div class="t">U3 · Animals ${active?`<span class="badge b-review">헷갈리는 규칙 ${active}</span>`:''}</div><div class="d">동물원에서 본 것 말하기 · 단어 8 · 패턴 3</div></button>
+    <button class="card"><div class="t">U4 · Food <span class="badge b-ok">완료 ✓</span></div><div class="d">좋아하는 음식 말하기</div></button>
+    <button class="card"><div class="t">U5 · School</div><div class="d">학교에서 하는 일 말하기</div></button>`;
+}
+// 학습
+function renderLearn(){ $('#wordRow').innerHTML=WORDS.map(w=>`<div class="mini"><b>${w[0]}</b>${w[1]}</div>`).join(''); renderPat(); }
+function renderPat(){ const p=PATS[patIdx]; $('#patCard').innerHTML=`<div class="word">${p.en}</div><div class="mean">${p.ko}</div><div class="ex">${p.tip}</div>`; }
+function nextPat(){ patIdx=(patIdx+1)%PATS.length; renderPat(); }
+function fakeTTS(b){ const t=b.textContent; b.textContent='🔊 재생 중'; setTimeout(()=>b.textContent=t,1000); }
+
+// 따라 말하기 (STT 점수) — speak.py 그대로. 목업은 결과를 흉내
+const SHADOW=[{t:'I saw a rabbit.',m:'나는 토끼를 봤어요.',heard:'I saw a rabbit',score:100},{t:'I saw an elephant.',m:'나는 코끼리를 봤어요.',heard:'I saw a elephant',score:80},{t:'The lion eats meat.',m:'사자는 고기를 먹어요.',heard:'the lion eat meat',score:67}];
+let shIdx=0;
+function renderShadow(){ const x=SHADOW[shIdx]; $('#shTarget').textContent=x.t; $('#shMean').textContent=x.m; $('#shHeard').style.display='none'; $('#shResult').style.display='none'; }
+function shadowNext(){ shIdx=(shIdx+1)%SHADOW.length; renderShadow(); }
+function fakeShadow(){ const b=$('#shRec'), x=SHADOW[shIdx]; b.classList.add('rec'); b.textContent='⏺ 녹음 중…'; setTimeout(()=>{ b.classList.remove('rec'); b.textContent='🎙 따라 말하기'; $('#shHeard').style.display='block'; $('#shHeardS').textContent=x.heard; const r=$('#shResult'); r.style.display='block'; const ok=x.score>=70; r.innerHTML=`<div class="type ${ok?'ok':''}">${ok?'✓ 잘 들렸어요':'✕ 한 번 더 해볼까요?'}</div><div class="fixed" style="color:${ok?'var(--primary)':'var(--danger)'}">${x.score}점</div><div class="why">원문: ${x.t}<br>들린 말: ${x.heard}${x.score<100?'<br><span style="color:var(--muted);font-size:.8rem">다른 부분: '+diffWords(x.t,x.heard)+'</span>':''}</div><div class="src">🎙 STT: Gemini 오디오 입력 (speak.py) · 점수: 단어 단위 일치율 · 통과 70</div>`; },1800); }
+function diffWords(a,b){ const A=a.toLowerCase().replace(/[^a-z ]/g,'').split(' '), B=b.toLowerCase().replace(/[^a-z ]/g,'').split(' '); return A.filter((w,i)=>B[i]!==w).map((w,i)=>`<s>${B[A.indexOf(w)]||'…'}</s>→<b>${w}</b>`).join(', ')||'없음'; }
+
+// 튜터
+function resetTutor(){
+  cur=null; typing=false; $('#typeBox').style.display='none'; $('#heard').style.display='none'; $('#fixBtn').disabled=true;
+  $('#steps').style.display='none'; $('#diag').style.display='none'; $('#ask').style.display='none'; $('#tutorNav').style.display='none'; $('#ans').className='ans';
+  $('#examples').innerHTML='<span class="hint" style="width:100%">🎙 를 누르면 녹음돼요. 목업에선 아래 예시 중 하나를 "말한 것"으로 고르세요</span>'+EX.map((e,i)=>`<button class="chip" onclick="pickEx(${i})">"${e.s}"</button>`).join('');
+}
+function fakeRec(){ const b=$('#recBtn'); b.classList.add('rec'); b.textContent='⏺ 녹음 중… (예시를 고르세요)'; setTimeout(()=>{b.classList.remove('rec'); b.textContent='🎙 말하기';},2500); }
+function toggleType(){ typing=!typing; $('#typeBox').style.display=typing?'block':'none'; if(typing){ $('#typeInput').focus(); $('#typeInput').oninput=()=>{ const v=$('#typeInput').value.trim(); if(v){ setHeard(v,'쓴 문장'); cur=detect(v); } }; } }
+function pickEx(i){ const e=EX[i]; setHeard(e.s,'들린 문장 (STT)'); cur=e; }
+function setHeard(s,lbl){ $('#heard').style.display='block'; $('#heardLbl').textContent=lbl; $('#heardS').textContent=s; $('#fixBtn').disabled=false; }
+// 타자 입력용 아주 단순한 감지 (목업): 실제론 RAG 검색 + Gemini
+function detect(v){ const l=v.toLowerCase(); if(/yesterday|last/.test(l)&&/\b(go|see|eat)\b/.test(l)) return {s:v,rule:'past',wrong:l.match(/\b(go|see|eat)\b/)[0],fix:{go:'went',see:'saw',eat:'ate'}[l.match(/\b(go|see|eat)\b/)[0]],fixed:v.replace(/\b(go|see|eat)\b/i,m=>({go:'went',see:'saw',eat:'ate'})[m.toLowerCase()])}; if(/\ba [aeiou]/.test(l)) return {s:v,rule:'article',wrong:'a',fix:'an',fixed:v.replace(/\ba (?=[aeiou])/i,'an ')}; if(/\b(the lion|he|she|it) (eat|go|see|like)\b/.test(l)) return {s:v,rule:'third',wrong:l.match(/\b(eat|go|see|like)\b/)[0],fix:l.match(/\b(eat|go|see|like)\b/)[0]+'s',fixed:v.replace(/\b(eat|go|see|like)\b/i,m=>m+'s')}; return {s:v,rule:null,fixed:v}; }
+async function runFix(){
+  if(!cur) return; $('#fixBtn').disabled=true; $('#steps').style.display='grid'; $('#diag').style.display='none'; $('#ask').style.display='none';
+  const st=['#st1','#st2','#st3']; st.forEach(s=>$(s).className='step');
+  for(let i=0;i<3;i++){ $(st[i]).className='step on'; await new Promise(r=>setTimeout(r,i===1?900:500)); $(st[i]).className='step done'; }
+  const d=$('#diag'); d.style.display='block';
+  if(!cur.rule){ d.innerHTML=`<div class="type ok">✓ 잘 썼어요!</div><div class="fixed">${cur.fixed}</div><div class="why">문법에 맞는 문장이에요. 다른 문장도 말해볼까요?</div><div class="src">📚 RAG 검색 결과: 걸리는 규칙 없음 (검색 점수 낮음 → "정상"으로 판단)</div>`; }
+  else { const r=RULES[cur.rule]; d.innerHTML=`<div class="type">✕ 헷갈린 규칙: ${r.name}</div><div class="fixed"><s>${cur.wrong}</s><em>${cur.fix}</em> → ${cur.fixed}</div><div class="why">${r.text.split(' (규칙')[0]}</div><div class="src">📚 <b>RAG가 찾은 근거</b> · ${r.text.match(/\((.*)\)/)[1]}<br><span style="color:var(--muted)">이 규칙을 찾을 때 검색 점수 0.91 · 2위 관사 0.42</span></div>`;
+    const n=NOTE[student]; n[cur.rule]=n[cur.rule]||{count:0,last:'',my:[],fixed:[],streak:0}; n[cur.rule].count++; n[cur.rule].last='오늘'; n[cur.rule].streak=0; if(!n[cur.rule].my.includes(cur.s)){n[cur.rule].my.push(cur.s); n[cur.rule].fixed.push(cur.fixed);} }
+  $('#ask').style.display='block'; $('#ans').className='ans';
+  const qs=cur.rule?ASK[cur.rule]:[['다른 문장도 만들어줘','I saw a big lion. / The monkey was cute. (예시 조각 E-20, E-21)']];
+  $('#askChips').innerHTML=qs.map((q,i)=>`<button class="chip" onclick="askQ('${cur.rule||'ok'}',${i})">${q[0]}</button>`).join('')+`<button class="chip" onclick="askFree()">⌨ 직접 물어보기</button>`;
+  $('#tutorNav').style.display='grid'; renderNotebook();
+}
+function askQ(rule,i){ const q=(rule==='ok'?[['다른 문장도 만들어줘','I saw a big lion. / The monkey was cute. (예시 조각 E-20, E-21)']]:ASK[rule])[i]; const a=$('#ans'); a.className='ans on'; a.innerHTML=`<div style="font-size:.74rem;color:var(--muted);font-weight:700">Q. ${q[0]}</div><div style="margin-top:4px">${q[1].split(' (규칙')[0].split(' (예시')[0]}</div><div class="src" style="margin-top:6px">📚 근거: ${(q[1].match(/\((.*)\)/)||['',''])[1]}</div>`; }
+function askFree(){ const a=$('#ans'); a.className='ans on'; a.innerHTML=`<input class="txt" placeholder="궁금한 걸 써 보세요 (예: went 발음이 뭐예요?)" onkeydown="if(event.key==='Enter'){this.parentNode.innerHTML='<div style=\\'font-size:.74rem;color:var(--muted);font-weight:700\\'>Q. '+this.value+'</div><div style=\\'margin-top:4px\\'>(목업) 실제 서비스에선 이 질문으로 우리 설명 조각을 검색해서 근거와 함께 답해요.</div>'}">`; a.querySelector('input').focus(); }
+
+// 오답노트 (문법 유형)
+function renderNotebook(){
+  const n=NOTE[student], active=Object.keys(n).filter(k=>n[k].streak<2), done=Object.keys(n).filter(k=>n[k].streak>=2);
+  $('#noteBtn').textContent=`📒 내 오답노트${active.length?` (${active.length})`:''}`;
+  $('#noteSub').textContent=active.length?`아직 헷갈리는 규칙 ${active.length}개 · 연습에서 연속 2번 맞히면 극복!`:'헷갈리는 규칙이 없어요 🎉';
+  $('#noteList').innerHTML=active.length?active.map(k=>{const e=n[k]; return `
+    <div class="card note"><div class="mark">✕</div><div class="w">${RULES[k].name}</div><div class="meta">${e.count}회 · ${e.last}</div>
+      <div class="my">내 문장: <s>${e.my[e.my.length-1]}</s><br>→ <em>${e.fixed[e.fixed.length-1]}</em></div>
+      <div class="srcline">📚 ${RULES[k].text.match(/\((.*)\)/)[1]}</div>
+      <button class="btn ghost" style="grid-column:2/-1;margin-top:6px;padding:9px" onclick="startDrill('${k}')">이 규칙 연습하기</button></div>`;}).join('')
+    :'<div class="card" style="text-align:center;color:var(--muted)">말하기에서 틀린 규칙이 여기에 모여요</div>';
+  $('#noteDone').innerHTML=done.length?`<div style="font-size:.8rem;color:var(--muted)"><b style="color:var(--ink)">극복한 규칙 ${done.length}</b> · 연속 2번 정답</div><div class="overcome">${done.map(k=>`<span>○ ${RULES[k].name}</span>`).join('')}</div>`:'';
+}
+// 유형 연습 (객관식 · 고칠 말 고르기)
+const DRILL={past:[{s:'I <u>go</u> to the zoo yesterday.',c:['went','goes','going','gone'],a:0},{s:'We <u>see</u> a lion last week.',c:['seen','saw','sees','seeing'],a:1}],article:[{s:'I saw <u>a</u> elephant.',c:['an','the','a','—'],a:0},{s:'She has <u>a</u> apple.',c:['the','a','an','—'],a:2}],third:[{s:'The lion <u>eat</u> meat.',c:['eats','ate','eating','eaten'],a:0},{s:'He <u>like</u> monkeys.',c:['liked','liking','likes','like'],a:2}]};
+let drillRule=null, drillIdx=0, drillOk=0;
+function startDrill(k){ drillRule=k; drillIdx=0; drillOk=0; $('#drillTitle').textContent=RULES[k].name+' 연습'; goScreen('drill'); renderDrill(); }
+function renderDrill(){ const q=DRILL[drillRule][drillIdx]; $('#drillSent').innerHTML=q.s; $('#drillChoices').innerHTML=q.c.map((c,i)=>`<button class="choice" onclick="answerDrill(${i})"><span class="k">${'ABCD'[i]}</span>${c}</button>`).join(''); $('#drillResult').className='result'; $('#drillSrc').style.display='none'; $('#drillNext').disabled=true; $('#drillNext').textContent=drillIdx===DRILL[drillRule].length-1?'끝':'다음'; }
+function answerDrill(i){ const q=DRILL[drillRule][drillIdx], ok=i===q.a; $$('#drillChoices .choice').forEach((b,j)=>{b.disabled=true; b.classList.add(j===q.a?'ok':j===i?'bad':'dim');}); const r=$('#drillResult'); r.className='result on'+(ok?'':' bad'); r.textContent=ok?'정답이에요! 🎉':`아쉬워요. 정답은 ${q.c[q.a]}`; $('#drillSrc').style.display='block'; $('#drillSrc').innerHTML=`📚 ${RULES[drillRule].text}`; if(ok) drillOk++; $('#drillNext').disabled=false; }
+function nextDrill(){ if(drillIdx<DRILL[drillRule].length-1){drillIdx++; renderDrill(); return;} const n=NOTE[student][drillRule]; if(n){ if(drillOk===DRILL[drillRule].length){ n.streak=Math.min(2,n.streak+1); } else n.streak=0; } goScreen('notebook'); }
+
+// 기획 메모
+const NOTES={
+  start:`<h3>시작 · 기획 포인트</h3><ol><li><b>B 방향의 한 줄.</b> "말하거나 쓴 내 문장을 고쳐주는 튜터". 학습 카드는 조연, 튜터가 주인공.</li><li><b>학생 A/B</b> 로 오답노트 차이를 보여줌. B는 비어 있음.</li></ol><div class="note decided"><b>기존 목업과 다른 점</b> 문제 풀기(4지선다) 화면이 사라지고 "내 문장 말해보기"가 그 자리. 4지선다는 오답노트의 "규칙 연습"으로만 남음.</div>`,
+  units:`<h3>Unit · 기획 포인트</h3><ol><li><b>Unit = 말하기 미션.</b> "동물원에서 본 것 말하기"처럼 상황이 Unit. 단어·패턴은 그 상황용 재료.</li><li><b>배지 = 헷갈리는 규칙 수.</b> 단어가 아니라 문법 규칙이 오답 단위.</li></ol><div class="note"><b>확인 필요</b> 진행률을 뭘로 셀지 — 말해본 문장 수? 극복한 규칙 수? (기본안: 말해본 문장 수 / 미션 목표 5문장)</div>`,
+  shadow:`<h3>따라 말하기 · 기획 포인트</h3><ol><li><b>STT 담당 팀원의 화면.</b> 패턴 문장을 듣고 따라 말하면 STT로 받아쓰고 원문과 단어 일치율로 점수. speak.py 그대로.</li><li><b>튜터(내 문장)와 다른 점.</b> 여기는 정답이 정해진 문장 = <b>채점</b>. 튜터는 정답 없는 내 문장 = <b>진단</b>. STT 한 기술로 화면 두 개.</li><li><b>자체 STT 모델 실험</b>은 이 화면과 관리자 'STT 정확도' 패널에서 Gemini와 비교. 화면·API는 그대로 두고 speak.py 안에서만 모델을 바꿔 끼움.</li></ol><div class="note"><b>확인 필요</b> 통과 70점 기준 · 아이 목소리 테스트 녹음 20개를 누가 모으나 (기본안: 팀원 3명 + 가족 아동)</div><div class="note"><b>확인 필요</b> 자체 모델 실험 범위: (a) 오픈소스 STT(예: Whisper) 돌려 비교 (b) 파인튜닝까지. 3주엔 (a)가 현실적.</div>`,
+  learn:`<h3>표현 익히기 · 기획 포인트</h3><ol><li><b>짧게.</b> 단어 8개 가로 스크롤, 문장 패턴 3개. 여기서 오래 머물지 않고 말하기로.</li><li><b>패턴 카드에 규칙 힌트</b> 한 줄 ("과거를 말할 땐 동사를 과거형으로") — 이게 규칙 조각의 요약.</li><li><b>🎙 따라 말하기</b> → STT 점수 화면 (TTS 담당 몫). 튜터로 가기 전 워밍업.</li></ol><div class="note"><b>확인 필요</b> 단어 카드 넘기기·듣기·따라 말하기(기존 목업 학습 화면)를 여기 그대로 둘지, 이렇게 줄일지.</div>`,
+  tutor:`<h3>내 문장 말해보기 · 기획 포인트 (핵심 화면)</h3><ol><li><b>입력 두 가지.</b> 🎙 말하기(STT, 팀원 구현 완료) 또는 ⌨ 쓰기. 목업에선 예시 4개 중 고르면 "말한 것"으로 침.</li><li><b>고쳐줘 → 3단계가 보임.</b> ① 문장 받기 ② <b>RAG: 규칙 조각 검색</b> ③ AI: 근거로 고치고 설명. 2번이 이 프로젝트의 RAG.</li><li><b>근거 박스에 검색 점수.</b> "과거시제 0.91 · 2위 관사 0.42" — 검색이 실제로 일어났다는 증거. 발표에서 이 숫자를 보여줌.</li><li><b>더 물어보기.</b> 추천 질문 버튼 + 직접 입력. 질문도 RAG로 설명 조각을 찾아 답함 (두 번째 RAG 입구).</li><li><b>틀린 규칙은 오답노트에</b> 자동 기록. 문장 원문과 고친 문장도 같이.</li></ol><div class="note rag"><b>RAG인 이유</b> 학생 문장에는 "어느 규칙"이라는 라벨이 없다. 그래서 검색으로 찾아야 한다. 4지선다 문제는 정답이 정해져 있어 검색이 필요 없었음.</div><div class="note"><b>확인 필요 ①</b> 한 문장에 오류가 2개면? (기본안: 가장 점수 높은 규칙 1개만 고치고 "하나 더 있어요" 표시)</div><div class="note"><b>확인 필요 ②</b> 문장이 문법은 맞는데 미션과 무관하면? (기본안: "잘 썼어요"만. 미션 판정은 2차)</div><div class="note"><b>확인 필요 ③</b> 초등학생이 직접 물어보기를 쓸까? 추천 질문 버튼을 기본으로, 입력창은 접어둘지.</div>`,
+  notebook:`<h3>오답노트 · 기획 포인트</h3><ol><li><b>단위가 "문법 규칙".</b> 단어가 아니라 과거시제·관사처럼 규칙별로 쌓임. 내 문장과 고친 문장을 같이 기록.</li><li><b>각 규칙에 근거(규칙 조각 id)</b>가 붙어 있어, 나중에 다시 봐도 설명을 꺼낼 수 있음.</li><li><b>"이 규칙 연습하기"</b> → 4지선다 2문제. 다 맞히면 streak+1, 연속 2번이면 극복.</li></ol><div class="note"><b>확인 필요</b> 단어 오답(뜻을 모름)도 여기 같이 둘지, 문법만 둘지. B 방향이면 문법만이 깔끔 (기본안).</div>`,
+  drill:`<h3>규칙 연습 · 기획 포인트</h3><ol><li><b>4지선다는 여기서만.</b> 밑줄 친 곳을 어떻게 고칠지 고르기. 기존 문제 화면 코드 재사용.</li><li><b>답 뒤에 규칙 조각 그대로 표시.</b> 오답노트의 근거와 같은 조각.</li></ol><div class="note decided"><b>결정됨</b> 문장 고치기 객관식 = "고칠 말 고르기" 형식 (앞서 합의한 객관식 B).</div>`,
+};
+function renderNotes(n){ $('#notes-student').innerHTML=NOTES[n]||''; }
+renderNotes('start'); renderNotebook();
+</script>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<svg viewBox="0 0 1120 800" xmlns="http://www.w3.org/2000/svg" font-family="'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#69746C"/></marker>
+    <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#14554A"/></marker>
+    <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#E8A33D"/></marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#C4553B"/></marker>
+  </defs>
+  <rect width="1120" height="800" fill="#F4F6F2"/>
+  <text x="40" y="36" font-size="20" font-weight="800" fill="#1F2823">아키텍처 흐름도 — 콘텐츠가 바뀌어도 시스템은 안 바뀌게</text>
+  <text x="40" y="56" font-size="12" fill="#69746C">왼쪽(콘텐츠)은 데이터팀이 바꿀 수 있음 · 가운데 "형식 계약"만 고정하면 · 오른쪽(시스템)은 그대로</text>
+
+  <!-- ===== 4 columns header ===== -->
+  <g font-size="11" font-weight="800">
+    <rect x="40" y="76" width="200" height="24" rx="6" fill="#FBF0DC"/><text x="140" y="93" fill="#B07514" text-anchor="middle">① 콘텐츠 · 바뀔 수 있음</text>
+    <rect x="270" y="76" width="150" height="24" rx="6" fill="#14554A"/><text x="345" y="93" fill="#fff" text-anchor="middle">② 형식 계약 · 고정</text>
+    <rect x="450" y="76" width="250" height="24" rx="6" fill="#E4EFEA"/><text x="575" y="93" fill="#14554A" text-anchor="middle">③ 저장소 + 서버 · 안 바뀜</text>
+    <rect x="730" y="76" width="350" height="24" rx="6" fill="#E4EFEA"/><text x="905" y="93" fill="#14554A" text-anchor="middle">④ 화면 · 안 바뀜</text>
+  </g>
+
+  <!-- ===== ① 콘텐츠 ===== -->
+  <rect x="40" y="112" width="200" height="330" rx="12" fill="#FFFFFF" stroke="#E8A33D" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="56" y="136" font-size="12" font-weight="800" fill="#1F2823">데이터팀 골든 데이터셋</text>
+  <text x="56" y="152" font-size="9.5" fill="#B07514">내용 · 양 · 소스 모두 바뀔 수 있음</text>
+
+  <rect x="56" y="164" width="168" height="58" rx="8" fill="#FBF0DC"/>
+  <text x="66" y="182" font-size="10.5" font-weight="700" fill="#1F2823">단어 · 문장 · Unit</text>
+  <text x="66" y="197" font-size="9.5" fill="#69746C">words / sentences / units</text>
+  <text x="66" y="211" font-size="9.5" fill="#69746C">교육부 800단어? 교과서? 미정</text>
+
+  <rect x="56" y="230" width="168" height="58" rx="8" fill="#FBF0DC"/>
+  <text x="66" y="248" font-size="10.5" font-weight="700" fill="#1F2823">문법 오류 문장 (샘플 100개)</text>
+  <text x="66" y="263" font-size="9.5" fill="#69746C">student_error · correct · context</text>
+  <text x="66" y="277" font-size="9.5" fill="#69746C">데이터팀이 만든 것 · 방향 미정</text>
+
+  <rect x="56" y="296" width="168" height="44" rx="8" fill="#FBF0DC"/>
+  <text x="66" y="314" font-size="10.5" font-weight="700" fill="#1F2823">평가셋 30문항</text>
+  <text x="66" y="329" font-size="9.5" fill="#69746C">eval.csv · RAG 시험지</text>
+
+  <text x="56" y="366" font-size="9.5" fill="#B07514" font-weight="700">지금 정할 필요 없는 것</text>
+  <text x="56" y="382" font-size="9.5" fill="#5A3A08">· 어떤 교재 · 몇 학년 · 몇 단어</text>
+  <text x="56" y="396" font-size="9.5" fill="#5A3A08">· 문법 문장을 몇 개 · 어떤 유형</text>
+  <text x="56" y="410" font-size="9.5" fill="#5A3A08">· Level ↔ 학년 매핑</text>
+  <text x="56" y="424" font-size="9.5" fill="#5A3A08">→ 데이터가 오면 파일만 교체</text>
+
+  <!-- arrow ① → ② -->
+  <line x1="240" y1="270" x2="268" y2="270" stroke="#E8A33D" stroke-width="2" marker-end="url(#ao)"/>
+
+  <!-- ===== ② 형식 계약 ===== -->
+  <rect x="270" y="112" width="150" height="330" rx="12" fill="#14554A"/>
+  <text x="345" y="136" font-size="12" font-weight="800" fill="#fff" text-anchor="middle">파일 형식 = 약속</text>
+  <text x="345" y="152" font-size="9.5" fill="#CFE3DC" text-anchor="middle">컬럼 이름과 id 규칙만 고정</text>
+  <g font-size="9.5" fill="#E4EFEA">
+    <rect x="282" y="164" width="126" height="52" rx="6" fill="#0F3F37"/>
+    <text x="290" y="180" font-weight="700" fill="#fff">words.csv</text>
+    <text x="290" y="194">id level unit word</text>
+    <text x="290" y="207">meaning example page</text>
+    <rect x="282" y="222" width="126" height="52" rx="6" fill="#0F3F37"/>
+    <text x="290" y="238" font-weight="700" fill="#fff">grammar.jsonl (신규)</text>
+    <text x="290" y="252">id level unit error_type</text>
+    <text x="290" y="265">error correct context</text>
+    <rect x="282" y="280" width="126" height="40" rx="6" fill="#0F3F37"/>
+    <text x="290" y="296" font-weight="700" fill="#fff">chunks.jsonl</text>
+    <text x="290" y="310">id text level unit page</text>
+    <rect x="282" y="326" width="126" height="40" rx="6" fill="#0F3F37"/>
+    <text x="290" y="342" font-weight="700" fill="#fff">eval.csv</text>
+    <text x="290" y="356">question expected_id</text>
+  </g>
+  <text x="345" y="386" font-size="9.5" fill="#CFE3DC" text-anchor="middle" font-weight="700">지금 정할 것 ①</text>
+  <text x="345" y="400" font-size="9.5" fill="#CFE3DC" text-anchor="middle">이 4개 파일의 컬럼</text>
+  <text x="345" y="414" font-size="9" fill="#CFE3DC" text-anchor="middle">"고정" = 합의로만 변경 (v2)</text>
+  <text x="345" y="427" font-size="9" fill="#CFE3DC" text-anchor="middle">바뀌면 golden.py·rag.py가 흡수</text>
+  <text x="345" y="440" font-size="9" fill="#FBF0DC" text-anchor="middle">화면은 새 종류가 올 때만 수정</text>
+
+  <!-- arrow ② → ③ -->
+  <line x1="420" y1="270" x2="448" y2="270" stroke="#14554A" stroke-width="2" marker-end="url(#ag)"/>
+
+  <!-- ===== ③ 저장소 + 서버 ===== -->
+  <rect x="450" y="112" width="250" height="330" rx="12" fill="#FFFFFF" stroke="#14554A" stroke-width="1.5"/>
+  <text x="466" y="136" font-size="12" font-weight="800" fill="#1F2823">서버 (FastAPI)</text>
+
+  <!-- storages -->
+  <g font-size="9.5">
+    <rect x="466" y="150" width="66" height="54" rx="8" fill="#E4EFEA"/>
+    <text x="499" y="168" font-weight="800" fill="#14554A" text-anchor="middle">Chroma</text>
+    <text x="499" y="182" fill="#2C4A42" text-anchor="middle">조각 벡터</text>
+    <text x="499" y="195" fill="#2C4A42" text-anchor="middle">검색 전용</text>
+    <rect x="540" y="150" width="70" height="54" rx="8" fill="#FBF0DC"/>
+    <text x="575" y="168" font-weight="800" fill="#B07514" text-anchor="middle">학생 DB</text>
+    <text x="575" y="182" fill="#5A3A08" text-anchor="middle">JSON 파일</text>
+    <text x="575" y="195" fill="#5A3A08" text-anchor="middle">오답노트 본체</text>
+    <rect x="618" y="150" width="66" height="54" rx="8" fill="#F4F6F2" stroke="#DEE4DC"/>
+    <text x="651" y="168" font-weight="800" fill="#1F2823" text-anchor="middle">음원 캐시</text>
+    <text x="651" y="182" fill="#69746C" text-anchor="middle">wav 파일</text>
+    <text x="651" y="195" fill="#69746C" text-anchor="middle">id로 연결</text>
+  </g>
+
+  <!-- api modules -->
+  <g font-size="9.5">
+    <rect x="466" y="216" width="218" height="26" rx="6" fill="#F4F6F2" stroke="#DEE4DC"/>
+    <text x="474" y="233" font-weight="700" fill="#1F2823">golden.py</text><text x="540" y="233" fill="#69746C">파일 읽기 → /levels /units /words</text>
+    <rect x="466" y="246" width="218" height="26" rx="6" fill="#E4EFEA"/>
+    <text x="474" y="263" font-weight="700" fill="#14554A">rag.py</text><text x="540" y="263" fill="#2C4A42">chunks → Chroma → /rag/search</text>
+    <rect x="466" y="276" width="218" height="26" rx="6" fill="#FBF0DC"/>
+    <text x="474" y="293" font-weight="700" fill="#B07514">quiz.py</text><text x="540" y="293" fill="#5A3A08">단어 고르기 · 문장 고치기 → /quiz</text>
+    <rect x="466" y="306" width="218" height="26" rx="6" fill="#FBF0DC"/>
+    <text x="474" y="323" font-weight="700" fill="#B07514">explain.py</text><text x="540" y="323" fill="#5A3A08">근거 + Gemini → /explain</text>
+    <rect x="466" y="336" width="218" height="26" rx="6" fill="#FBF0DC"/>
+    <text x="474" y="353" font-weight="700" fill="#B07514">student.py</text><text x="540" y="353" fill="#5A3A08">오답노트 읽기·쓰기 → /notebook</text>
+    <rect x="466" y="366" width="218" height="26" rx="6" fill="#F4F6F2" stroke="#DEE4DC"/>
+    <text x="474" y="383" font-weight="700" fill="#1F2823">tts.py · speak.py</text><text x="580" y="383" fill="#69746C">/tts/{id} · /speak  ✓ 완성</text>
+  </g>
+  <text x="466" y="412" font-size="9.5" fill="#14554A" font-weight="700">지금 정할 것 ②</text>
+  <text x="466" y="426" font-size="9.5" fill="#2C4A42">문제 유형 2종 지원 여부 · 오답노트 구조</text>
+
+  <!-- arrow ③ → ④ -->
+  <line x1="700" y1="270" x2="728" y2="270" stroke="#14554A" stroke-width="2" marker-end="url(#ag)"/>
+  <text x="714" y="260" font-size="9" fill="#14554A" text-anchor="middle">JSON</text>
+
+  <!-- ===== ④ 화면 ===== -->
+  <rect x="730" y="112" width="350" height="330" rx="12" fill="#FFFFFF" stroke="#14554A" stroke-width="1.5"/>
+  <text x="746" y="136" font-size="12" font-weight="800" fill="#1F2823">학생 앱 (HTML + JS) · 6화면 완성</text>
+
+  <g font-size="10">
+    <rect x="746" y="150" width="96" height="40" rx="8" fill="#F4F6F2" stroke="#DEE4DC"/><text x="794" y="168" font-weight="700" fill="#1F2823" text-anchor="middle">시작</text><text x="794" y="182" fill="#69746C" text-anchor="middle" font-size="9">학생 · Level</text>
+    <rect x="858" y="150" width="96" height="40" rx="8" fill="#F4F6F2" stroke="#DEE4DC"/><text x="906" y="168" font-weight="700" fill="#1F2823" text-anchor="middle">Unit 목록</text><text x="906" y="182" fill="#69746C" text-anchor="middle" font-size="9">진행률 · 복습 배지</text>
+    <rect x="970" y="150" width="96" height="40" rx="8" fill="#F4F6F2" stroke="#DEE4DC"/><text x="1018" y="168" font-weight="700" fill="#1F2823" text-anchor="middle">학습</text><text x="1018" y="182" fill="#69746C" text-anchor="middle" font-size="9">단어·문장 카드 🔊🎙</text>
+
+    <rect x="746" y="230" width="96" height="40" rx="8" fill="#E4EFEA" stroke="#14554A"/><text x="794" y="248" font-weight="700" fill="#14554A" text-anchor="middle">문제</text><text x="794" y="262" fill="#2C4A42" text-anchor="middle" font-size="9">단어 고르기 · 문장 고치기</text>
+    <rect x="858" y="230" width="96" height="40" rx="8" fill="#E4EFEA" stroke="#14554A"/><text x="906" y="248" font-weight="700" fill="#14554A" text-anchor="middle">오답 설명</text><text x="906" y="262" fill="#2C4A42" text-anchor="middle" font-size="9">근거 + AI 설명</text>
+    <rect x="970" y="230" width="96" height="40" rx="8" fill="#FBF0DC" stroke="#E8A33D"/><text x="1018" y="248" font-weight="700" fill="#B07514" text-anchor="middle">오답노트</text><text x="1018" y="262" fill="#5A3A08" text-anchor="middle" font-size="9">단어 + 문법 · 극복</text>
+
+    <rect x="746" y="310" width="320" height="34" rx="8" fill="#F4F6F2" stroke="#DEE4DC"/><text x="906" y="331" fill="#69746C" text-anchor="middle">관리자: 데이터 상태 · RAG 정확도 · 소스 등록 경고</text>
+  </g>
+  <!-- screen flow arrows -->
+  <g stroke="#69746C" stroke-width="1.3" marker-end="url(#a)" fill="none">
+    <line x1="842" y1="170" x2="856" y2="170"/><line x1="954" y1="170" x2="968" y2="170"/>
+    <path d="M1018 190 C1018 210, 794 210, 794 228"/>
+    <line x1="842" y1="250" x2="856" y2="250"/><line x1="954" y1="250" x2="968" y2="250"/>
+  </g>
+  <path d="M1018 270 C1018 296, 760 296, 794 272" fill="none" stroke="#C4553B" stroke-width="1.6" stroke-dasharray="5 3" marker-end="url(#ar)"/>
+  <text x="906" y="298" font-size="9" fill="#C4553B" text-anchor="middle" font-weight="700">다시 풀기 — 틀린 것 먼저</text>
+
+  <text x="746" y="374" font-size="9.5" fill="#14554A" font-weight="700">화면은 "형식"만 보고 그린다</text>
+  <text x="746" y="388" font-size="9.5" fill="#2C4A42">단어가 rabbit이든 giraffe든, 20개든 800개든 화면 코드는 동일</text>
+  <text x="746" y="402" font-size="9.5" fill="#2C4A42">문장 고치기도 "문제 유형" 하나 — 보기 4개면 같은 화면</text>
+  <text x="746" y="424" font-size="9.5" fill="#14554A" font-weight="700">지금 정할 것 ③  오답노트 화면 포함 · 문제 유형 2종</text>
+
+  <!-- ===== 핵심 루프 (아래) ===== -->
+  <text x="40" y="482" font-size="12" font-weight="800" fill="#1F2823">핵심 루프 — 데이터가 무엇이든 이 흐름은 같다</text>
+  <g font-size="10.5" font-weight="700">
+    <rect x="40" y="496" width="150" height="44" rx="10" fill="#FFFFFF" stroke="#DEE4DC"/><text x="115" y="515" fill="#1F2823" text-anchor="middle">학습 (카드)</text><text x="115" y="530" font-size="9" font-weight="500" fill="#69746C" text-anchor="middle">golden 파일 → 화면</text>
+    <rect x="222" y="496" width="150" height="44" rx="10" fill="#E4EFEA" stroke="#14554A"/><text x="297" y="515" fill="#14554A" text-anchor="middle">문제 풀기</text><text x="297" y="530" font-size="9" font-weight="500" fill="#2C4A42" text-anchor="middle">quiz.py: 오답 단어 먼저</text>
+    <rect x="404" y="496" width="150" height="44" rx="10" fill="#FBF0DC" stroke="#E8A33D"/><text x="479" y="515" fill="#B07514" text-anchor="middle">오답 기록</text><text x="479" y="530" font-size="9" font-weight="500" fill="#5A3A08" text-anchor="middle">student.py → 학생 DB</text>
+    <rect x="586" y="496" width="150" height="44" rx="10" fill="#E4EFEA" stroke="#14554A"/><text x="661" y="515" fill="#14554A" text-anchor="middle">RAG 근거 검색</text><text x="661" y="530" font-size="9" font-weight="500" fill="#2C4A42" text-anchor="middle">rag.py: 틀린 단어 → 조각</text>
+    <rect x="768" y="496" width="150" height="44" rx="10" fill="#E4EFEA" stroke="#14554A"/><text x="843" y="515" fill="#14554A" text-anchor="middle">AI 설명</text><text x="843" y="530" font-size="9" font-weight="500" fill="#2C4A42" text-anchor="middle">explain.py: 조각 + Gemini</text>
+    <rect x="950" y="496" width="130" height="44" rx="10" fill="#FBF0DC" stroke="#E8A33D"/><text x="1015" y="515" fill="#B07514" text-anchor="middle">오답노트</text><text x="1015" y="530" font-size="9" font-weight="500" fill="#5A3A08" text-anchor="middle">모아 보기 · 극복</text>
+  </g>
+  <g stroke="#69746C" stroke-width="1.5" marker-end="url(#a)"><line x1="190" y1="518" x2="220" y2="518"/><line x1="372" y1="518" x2="402" y2="518"/><line x1="554" y1="518" x2="584" y2="518"/><line x1="736" y1="518" x2="766" y2="518"/><line x1="918" y1="518" x2="948" y2="518"/></g>
+  <path d="M1015 540 C1015 580, 297 580, 297 542" fill="none" stroke="#C4553B" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ar)"/>
+  <text x="656" y="572" font-size="10" font-weight="700" fill="#C4553B" text-anchor="middle">다시 풀기 — 오답노트 단어가 1번 문제로 (학생마다 다름)</text>
+
+  <!-- ===== 정리 박스 ===== -->
+  <rect x="40" y="604" width="500" height="160" rx="12" fill="#E4EFEA"/>
+  <text x="60" y="630" font-size="12" font-weight="800" fill="#14554A">골든 데이터 확정 전에 정할 수 있는 것 (= 시스템 결정)</text>
+  <text x="60" y="654" font-size="10.5" fill="#2C4A42">① 파일 형식 4개의 컬럼 — 내용은 나중에 채워도 됨</text>
+  <text x="60" y="674" font-size="10.5" fill="#2C4A42">② 문제 유형을 "단어 고르기 + 문장 고치기" 2종으로 지원할지</text>
+  <text x="60" y="694" font-size="10.5" fill="#2C4A42">③ 오답노트 저장 구조 (학생별 · 단어 칸 + 문법 칸) 와 화면 포함 여부</text>
+  <text x="60" y="714" font-size="10.5" fill="#2C4A42">④ 극복 기준(연속 2회) · 오답 우선 출제 규칙</text>
+  <text x="60" y="742" font-size="10" fill="#14554A" font-weight="700">→ 이 4개는 데이터가 rabbit이든 giraffe든 똑같이 적용되므로 지금 정해도 안전</text>
+
+  <rect x="560" y="604" width="520" height="160" rx="12" fill="#FBF0DC"/>
+  <text x="580" y="630" font-size="12" font-weight="800" fill="#B07514">골든 데이터 확정 후에 정할 것 (= 콘텐츠 결정)</text>
+  <text x="580" y="654" font-size="10.5" fill="#5A3A08">· 어떤 교재 · 몇 학년 · Level ↔ 학년 매핑 · Unit 몇 개</text>
+  <text x="580" y="674" font-size="10.5" fill="#5A3A08">· 문법 오류 문장을 1차 데모에 실제로 넣을지 (형식 지원은 미리, 사용은 데이터 보고)</text>
+  <text x="580" y="694" font-size="10.5" fill="#5A3A08">· 평가셋 30문항의 실제 질문 · 청킹 전략 A/B/C 중 채택</text>
+  <text x="580" y="714" font-size="10.5" fill="#5A3A08">· 데모 시나리오의 구체 단어 (rabbit → 실제 데이터의 단어로)</text>
+  <text x="580" y="742" font-size="10" fill="#B07514" font-weight="700">→ 이건 데이터팀 납품(1주차 말) 후. 그때까지 임시 샘플로 개발</text>
+
+  <text x="40" y="788" font-size="10" fill="#69746C">범례: 노랑 점선 = 바뀔 수 있음 · 초록 = 고정/완성 · 빨간 점선 = 오답 반영 루프 · ✓ = 팀원이 이미 구현</text>
+</svg>

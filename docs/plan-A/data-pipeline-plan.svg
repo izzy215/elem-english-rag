@@ -1,0 +1,167 @@
+<svg viewBox="0 0 1120 720" xmlns="http://www.w3.org/2000/svg" font-family="'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#69746C"/></marker>
+    <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#14554A"/></marker>
+  </defs>
+  <rect width="1120" height="720" fill="#F4F6F2"/>
+  <text x="40" y="36" font-size="20" font-weight="800" fill="#1F2823">데이터 제작 계획 — 참고자료(재료)에서 우리 데이터셋(완성품)까지</text>
+  <text x="40" y="56" font-size="12" fill="#69746C">참고자료는 "가져다 쓰는 데이터"가 아니다. 단어를 고를 때 보는 목록일 뿐, 뜻 · 예문 · 설명 · 오류 문장 · 평가셋은 전부 우리가 쓴다</text>
+
+  <!-- ===== 재료 ===== -->
+  <rect x="40" y="80" width="200" height="270" rx="12" fill="#FFFFFF" stroke="#DEE4DC"/>
+  <text x="56" y="104" font-size="12" font-weight="800" fill="#69746C">재료 (참고만)</text>
+  <g font-size="9.5">
+    <rect x="56" y="116" width="168" height="48" rx="8" fill="#F4F6F2"/>
+    <text x="66" y="133" font-weight="700" fill="#1F2823">NCIC 초등 권장 어휘 800</text>
+    <text x="66" y="147" fill="#69746C">단어만 있음 · 뜻·예문 없음</text>
+    <text x="66" y="159" fill="#B07514">→ 단어 고를 때 "범위 체크"</text>
+    <rect x="56" y="172" width="168" height="40" rx="8" fill="#F4F6F2"/>
+    <text x="66" y="189" font-weight="700" fill="#1F2823">Cambridge YLE 주제표 · 교과서</text>
+    <text x="66" y="203" fill="#B07514">→ Unit 주제 고를 때 참고</text>
+    <rect x="56" y="220" width="168" height="48" rx="8" fill="#FBF0DC"/>
+    <text x="66" y="237" font-weight="700" fill="#1F2823">데이터팀 샘플 100개</text>
+    <text x="66" y="251" fill="#69746C">오류 문장 · 규칙 설명 · 피드백</text>
+    <text x="66" y="263" fill="#B07514">→ ③ ④ 의 출발점 (다시 씀)</text>
+  </g>
+  <text x="56" y="300" font-size="9.5" fill="#C4553B" font-weight="700">여기엔 완성된 데이터가 없다</text>
+  <text x="56" y="316" font-size="9.5" fill="#5A2E24">"소스가 있다" ≠ "데이터가 있다"</text>
+  <text x="56" y="332" font-size="9.5" fill="#5A2E24">오른쪽 6단계를 거쳐야 쓸 수 있음</text>
+
+  <line x1="240" y1="200" x2="268" y2="200" stroke="#69746C" stroke-width="2" marker-end="url(#a)"/>
+
+  <!-- ===== 6 steps ===== -->
+  <g font-size="9.5">
+    <!-- ① -->
+    <rect x="270" y="80" width="130" height="270" rx="10" fill="#FFFFFF" stroke="#14554A" stroke-width="1.5"/>
+    <rect x="270" y="80" width="130" height="30" rx="10" fill="#14554A"/><text x="335" y="100" font-size="11" font-weight="800" fill="#fff" text-anchor="middle">① 범위 정하기</text>
+    <text x="280" y="128" font-weight="700" fill="#1F2823">1일 · 데이터팀+팀장</text>
+    <text x="280" y="146" fill="#2C4A42">Level 2 고정</text>
+    <text x="280" y="160" fill="#2C4A42">Unit 3개 주제 선정</text>
+    <text x="280" y="174" fill="#2C4A42">Unit당 단어 20개를</text>
+    <text x="280" y="188" fill="#2C4A42">800 목록 안에서 고름</text>
+    <rect x="280" y="204" width="110" height="46" rx="6" fill="#E4EFEA"/>
+    <text x="335" y="220" font-weight="700" fill="#14554A" text-anchor="middle">출력</text>
+    <text x="335" y="234" fill="#2C4A42" text-anchor="middle">units.csv 3줄</text>
+    <text x="335" y="246" fill="#2C4A42" text-anchor="middle">단어 60개 목록</text>
+    <text x="280" y="272" fill="#69746C">끝 기준: 60개 전부</text>
+    <text x="280" y="285" fill="#69746C">초등 범위 확인됨</text>
+
+    <!-- ② -->
+    <rect x="410" y="80" width="130" height="270" rx="10" fill="#FFFFFF" stroke="#14554A" stroke-width="1.5"/>
+    <rect x="410" y="80" width="130" height="30" rx="10" fill="#14554A"/><text x="475" y="100" font-size="11" font-weight="800" fill="#fff" text-anchor="middle">② 단어·문장 쓰기</text>
+    <text x="420" y="128" font-weight="700" fill="#1F2823">2일 · 데이터팀</text>
+    <text x="420" y="146" fill="#2C4A42">단어마다 뜻 1 · 예문 1</text>
+    <text x="420" y="160" fill="#2C4A42">Unit마다 문장 10 · 뜻</text>
+    <text x="420" y="178" fill="#B07514" font-weight="700">Gemini 초안 →</text>
+    <text x="420" y="191" fill="#B07514" font-weight="700">사람이 한 줄씩 검수</text>
+    <rect x="420" y="204" width="110" height="46" rx="6" fill="#E4EFEA"/>
+    <text x="475" y="220" font-weight="700" fill="#14554A" text-anchor="middle">출력</text>
+    <text x="475" y="234" fill="#2C4A42" text-anchor="middle">words.csv 60</text>
+    <text x="475" y="246" fill="#2C4A42" text-anchor="middle">sentences.csv 30</text>
+    <text x="420" y="272" fill="#69746C">끝 기준: 빈칸 0 ·</text>
+    <text x="420" y="285" fill="#69746C">예문에 단어 포함 100%</text>
+
+    <!-- ③ -->
+    <rect x="550" y="80" width="130" height="270" rx="10" fill="#FFFFFF" stroke="#E8A33D" stroke-width="2"/>
+    <rect x="550" y="80" width="130" height="30" rx="10" fill="#E8A33D"/><text x="615" y="100" font-size="11" font-weight="800" fill="#3A2A08" text-anchor="middle">③ 설명 조각 쓰기</text>
+    <text x="560" y="128" font-weight="700" fill="#1F2823">2일 · 데이터팀 (핵심)</text>
+    <text x="560" y="146" fill="#2C4A42">RAG가 검색해 AI에게</text>
+    <text x="560" y="160" fill="#2C4A42">줄 "설명 문장" 조각</text>
+    <text x="560" y="178" fill="#2C4A42">단어 조각 60 (자동 조립)</text>
+    <text x="560" y="191" fill="#B07514" font-weight="700">규칙 조각 6~10 (사람)</text>
+    <rect x="560" y="204" width="110" height="46" rx="6" fill="#FBF0DC"/>
+    <text x="615" y="220" font-weight="700" fill="#B07514" text-anchor="middle">출력</text>
+    <text x="615" y="234" fill="#5A3A08" text-anchor="middle">chunks.jsonl</text>
+    <text x="615" y="246" fill="#5A3A08" text-anchor="middle">~100줄</text>
+    <text x="560" y="272" fill="#69746C">= 서비스의 "교재".</text>
+    <text x="560" y="285" fill="#69746C">샘플 context가 원형</text>
+
+    <!-- ④ -->
+    <rect x="690" y="80" width="130" height="270" rx="10" fill="#FFFFFF" stroke="#14554A" stroke-width="1.5"/>
+    <rect x="690" y="80" width="130" height="30" rx="10" fill="#14554A"/><text x="755" y="100" font-size="11" font-weight="800" fill="#fff" text-anchor="middle">④ 오류 문장 쓰기</text>
+    <text x="700" y="128" font-weight="700" fill="#1F2823">1일 · 데이터팀</text>
+    <text x="700" y="146" fill="#2C4A42">② 문장 30개에</text>
+    <text x="700" y="160" fill="#2C4A42">오류 유형 6개 적용</text>
+    <text x="700" y="174" fill="#2C4A42">→ 틀린 버전 · 정답 · 유형</text>
+    <text x="700" y="188" fill="#2C4A42">· 근거 규칙 조각 id</text>
+    <rect x="700" y="204" width="110" height="46" rx="6" fill="#E4EFEA"/>
+    <text x="755" y="220" font-weight="700" fill="#14554A" text-anchor="middle">출력</text>
+    <text x="755" y="234" fill="#2C4A42" text-anchor="middle">grammar.jsonl</text>
+    <text x="755" y="246" fill="#2C4A42" text-anchor="middle">60줄</text>
+    <text x="700" y="272" fill="#69746C">샘플 100개 중 Level 2</text>
+    <text x="700" y="285" fill="#69746C">단어인 것 재활용</text>
+
+    <!-- ⑤ -->
+    <rect x="830" y="80" width="130" height="270" rx="10" fill="#FFFFFF" stroke="#14554A" stroke-width="1.5"/>
+    <rect x="830" y="80" width="130" height="30" rx="10" fill="#14554A"/><text x="895" y="100" font-size="11" font-weight="800" fill="#fff" text-anchor="middle">⑤ 검수 (02_golden)</text>
+    <text x="840" y="128" font-weight="700" fill="#1F2823">1일 · 데이터팀 전원</text>
+    <text x="840" y="146" fill="#2C4A42">초등 단어만 · 뜻 1개</text>
+    <text x="840" y="160" fill="#2C4A42">id 중복 없음</text>
+    <text x="840" y="174" fill="#2C4A42">오류 문장이 정말 틀림</text>
+    <text x="840" y="188" fill="#2C4A42">두 사람 교차 검수</text>
+    <rect x="840" y="204" width="110" height="46" rx="6" fill="#E4EFEA"/>
+    <text x="895" y="220" font-weight="700" fill="#14554A" text-anchor="middle">출력</text>
+    <text x="895" y="234" fill="#2C4A42" text-anchor="middle">data/golden/ 납품</text>
+    <text x="895" y="246" fill="#2C4A42" text-anchor="middle">파일 5개</text>
+    <text x="840" y="272" fill="#69746C">끝 기준: 관리자 화면</text>
+    <text x="840" y="285" fill="#69746C">패널에 개수가 뜸</text>
+
+    <!-- ⑥ -->
+    <rect x="970" y="80" width="110" height="270" rx="10" fill="#FFFFFF" stroke="#14554A" stroke-width="1.5"/>
+    <rect x="970" y="80" width="110" height="30" rx="10" fill="#14554A"/><text x="1025" y="100" font-size="11" font-weight="800" fill="#fff" text-anchor="middle">⑥ 평가셋</text>
+    <text x="980" y="128" font-weight="700" fill="#1F2823">1일 · 데이터팀+RAG</text>
+    <text x="980" y="146" fill="#2C4A42">학생이 물어볼 법한</text>
+    <text x="980" y="160" fill="#2C4A42">질문 30 + 정답 조각 id</text>
+    <text x="980" y="174" fill="#2C4A42">유형 섞기 10·10·5·5</text>
+    <text x="980" y="188" fill="#C4553B">조각 문장 베끼기 금지</text>
+    <rect x="980" y="204" width="90" height="46" rx="6" fill="#E4EFEA"/>
+    <text x="1025" y="220" font-weight="700" fill="#14554A" text-anchor="middle">출력</text>
+    <text x="1025" y="234" fill="#2C4A42" text-anchor="middle">eval.csv 30</text>
+    <text x="980" y="272" fill="#69746C">→ RAG 실험 시작</text>
+    <text x="980" y="285" fill="#69746C">hit@3 숫자가 나옴</text>
+  </g>
+  <g stroke="#14554A" stroke-width="1.5" marker-end="url(#ag)">
+    <line x1="400" y1="200" x2="408" y2="200"/><line x1="540" y1="200" x2="548" y2="200"/><line x1="680" y1="200" x2="688" y2="200"/><line x1="820" y1="200" x2="828" y2="200"/><line x1="960" y1="200" x2="968" y2="200"/>
+  </g>
+
+  <!-- ===== 완성품 → 서비스 ===== -->
+  <text x="40" y="392" font-size="12" font-weight="800" fill="#1F2823">완성품이 서비스 어디에 들어가나</text>
+  <g font-size="10">
+    <rect x="40" y="404" width="170" height="52" rx="8" fill="#E4EFEA"/><text x="125" y="424" font-weight="800" fill="#14554A" text-anchor="middle">units · words · sentences</text><text x="125" y="440" fill="#2C4A42" text-anchor="middle">Unit 목록 · 단어/문장 카드 · 문제</text>
+    <rect x="230" y="404" width="170" height="52" rx="8" fill="#E4EFEA"/><text x="315" y="424" font-weight="800" fill="#14554A" text-anchor="middle">grammar.jsonl</text><text x="315" y="440" fill="#2C4A42" text-anchor="middle">문장 고치기 문제 · 오답노트(문법)</text>
+    <rect x="420" y="404" width="170" height="52" rx="8" fill="#FBF0DC"/><text x="505" y="424" font-weight="800" fill="#B07514" text-anchor="middle">chunks.jsonl</text><text x="505" y="440" fill="#5A3A08" text-anchor="middle">Chroma → 오답 설명의 근거</text>
+    <rect x="610" y="404" width="170" height="52" rx="8" fill="#E4EFEA"/><text x="695" y="424" font-weight="800" fill="#14554A" text-anchor="middle">eval.csv</text><text x="695" y="440" fill="#2C4A42" text-anchor="middle">관리자 정확도 그래프</text>
+    <rect x="800" y="404" width="280" height="52" rx="8" fill="#F4F6F2" stroke="#DEE4DC"/><text x="940" y="424" font-weight="800" fill="#1F2823" text-anchor="middle">납품 후 TTS 담당</text><text x="940" y="440" fill="#69746C" text-anchor="middle">단어 60 + 문장 30 음원 사전 생성 (캐시)</text>
+  </g>
+
+  <!-- ===== 일정 ===== -->
+  <rect x="40" y="480" width="640" height="150" rx="12" fill="#FFFFFF" stroke="#DEE4DC"/>
+  <text x="60" y="504" font-size="12" font-weight="800" fill="#1F2823">데이터팀 8일 일정 (개발팀은 그동안 임시 샘플로 개발 · 7일차에 파일 교체)</text>
+  <g font-size="10">
+    <g transform="translate(60,520)">
+      <rect x="0" y="0" width="70" height="30" rx="6" fill="#E4EFEA"/><text x="35" y="19" fill="#14554A" font-weight="700" text-anchor="middle">1일 ①</text>
+      <rect x="76" y="0" width="140" height="30" rx="6" fill="#E4EFEA"/><text x="146" y="19" fill="#14554A" font-weight="700" text-anchor="middle">2~3일 ②</text>
+      <rect x="222" y="0" width="140" height="30" rx="6" fill="#FBF0DC"/><text x="292" y="19" fill="#B07514" font-weight="700" text-anchor="middle">4~5일 ③</text>
+      <rect x="368" y="0" width="70" height="30" rx="6" fill="#E4EFEA"/><text x="403" y="19" fill="#14554A" font-weight="700" text-anchor="middle">6일 ④</text>
+      <rect x="444" y="0" width="70" height="30" rx="6" fill="#14554A"/><text x="479" y="19" fill="#fff" font-weight="700" text-anchor="middle">7일 ⑤ 납품</text>
+      <rect x="520" y="0" width="80" height="30" rx="6" fill="#E4EFEA"/><text x="560" y="19" fill="#14554A" font-weight="700" text-anchor="middle">8일 ⑥</text>
+    </g>
+    <text x="60" y="574" fill="#2C4A42">매일 끝나면 산출물 파일을 <tspan font-weight="700">data/golden/</tspan> 에 올린다 → 관리자 화면 "골든 데이터" 패널에서 개수 확인</text>
+    <text x="60" y="592" fill="#2C4A42">Gemini 초안 생성 프롬프트는 팀장이 제공 · 파일 형식 검증 스크립트는 RAG 담당이 제공</text>
+    <text x="60" y="610" fill="#C4553B" font-weight="700">양보다 정확: 애매한 항목은 뺀다. 60단어가 40단어가 되어도 검수된 것이 낫다</text>
+  </g>
+
+  <!-- ===== 역할 ===== -->
+  <rect x="700" y="480" width="380" height="150" rx="12" fill="#FFFFFF" stroke="#DEE4DC"/>
+  <text x="720" y="504" font-size="12" font-weight="800" fill="#1F2823">누가 뭘 하나</text>
+  <g font-size="10" fill="#2C4A42">
+    <text x="720" y="528"><tspan font-weight="700" fill="#1F2823">데이터팀</tspan>  ①~⑥ 작성 · 검수 — 본체</text>
+    <text x="720" y="548"><tspan font-weight="700" fill="#1F2823">팀장</tspan>  ① 같이 결정 · 진행 확인 · Gemini 프롬프트</text>
+    <text x="720" y="568"><tspan font-weight="700" fill="#1F2823">RAG 담당</tspan>  ③ 단어 조각 자동 조립 · ⑥ 채점 · 형식 검증</text>
+    <text x="720" y="588"><tspan font-weight="700" fill="#1F2823">TTS 담당</tspan>  납품 후 음원 사전 생성</text>
+    <text x="720" y="612" fill="#69746C">미정: Unit 3개 주제 · 오류 유형 10→6 · 문장 조각 포함 여부</text>
+  </g>
+
+  <text x="40" y="668" font-size="10" fill="#69746C">문서: docs/data-pipeline-plan.md · 카톡 그림의 00_original → 05_evaluation 을 우리 상황(자체 제작)에 맞게 풀어 쓴 것</text>
+  <text x="40" y="686" font-size="10" fill="#69746C">00 = 재료 · 01~02 = ①②⑤ · 03 = ③④ · 04 = chunks.jsonl · 05 = eval.csv</text>
+</svg>
