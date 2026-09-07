@@ -5,10 +5,11 @@ let words = [], pats = [], pi = 0;
 async function loadData() {
   const lv = state.level.level, unit = state.unit.unit;
   words = await api(`/api/words?level=${lv}&unit=${unit}`).catch(() => []);
+  // 1) 서버 /patterns → 2) 서버 /sentences (A 샘플, TTS 되는 id) → 3) 화면 sample-B patterns.csv (TTS 안 됨)
   try { pats = await api(`/api/patterns?level=${lv}&unit=${unit}`); }
   catch (_) {
-    await loadSampleB(); pats = SB.patterns.filter(p => p.unit === unit).map(p => ({ id: p.id, text: p.text, meaning: p.meaning, tip: p.tip, rule_id: p.rule_id }));
-    if (!pats.length) pats = (await api(`/api/sentences?level=${lv}&unit=${unit}`).catch(() => [])).map(s => ({ id: s.id, text: s.sentence, meaning: s.meaning, tip: '' }));
+    pats = (await api(`/api/sentences?level=${lv}&unit=${unit}`).catch(() => [])).map(s => ({ id: s.id, text: s.sentence, meaning: s.meaning, tip: '' }));
+    if (!pats.length) { await loadSampleB(); pats = SB.patterns.filter(p => p.unit === unit).map(p => ({ id: p.id, text: p.text, meaning: p.meaning, tip: p.tip, rule_id: p.rule_id, noAudio: true })); }
   }
   S.set({ words, patterns: pats });
 }
@@ -31,7 +32,8 @@ function renderPat() {
 function movePat(d) { if (!pats.length) return; pi = (pi + d + pats.length) % pats.length; renderPat(); }
 async function playPattern() {
   const p = pats[pi]; if (!p) return;
-  try { await playTTS(p.id, $('#patTts')); } catch (e) { showResult('#learnResult', /없음|404/.test(e.message) ? '이 패턴은 음원이 아직 없어요 (골든 데이터 납품 후)' : '듣기 실패: ' + esc(e.message), 'todo'); }
+  if (p.noAudio) { showResult('#learnResult', '이 패턴은 서버에 없는 화면 샘플이라 음원이 없어요 (서버 patterns.csv 반영 후 가능)', 'todo'); return; }
+  try { await playTTS(p.id, $('#patTts')); } catch (e) { showResult('#learnResult', /없음|404|Not Found/.test(e.message) ? '이 문장은 서버가 모르는 id예요 (음원 없음)' : '듣기 실패: ' + esc(e.message), 'todo'); }
 }
 (async function init() {
   if (!state) return; renderTopbar(); showHealth(); injectChat('learn');
