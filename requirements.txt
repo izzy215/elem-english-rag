@@ -11,3 +11,15 @@ streamlit>=1.45
 
 # RAG (RAG 담당)
 chromadb>=0.5
+
+# 발음 파형 비교 (파형분석에 필요해서 넣었습니다)
+librosa>=0.10
+soundfile>=0.12
+imageio-ffmpeg>=0.5
+numpy>=1.26
+# webrtcvad는 Windows + Python 3.14 조합에 사전 빌드 휠이 없어 컴파일 실패 → silero-vad로 대체
+torch>=2.0
+silero-vad>=6.0
+# pronunciation_score(발음 파형 비교)가 Whisper 인코더를 항상 내부적으로 써서 필수 설치.
+# STT_BACKEND=whisper(텍스트 인식을 Gemini 대신 로컬로 돌리는 옵션, 선택사항)도 같은 패키지를 씀.
+openai-whisper>=20231117
