@@ -3,38 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>초등 영어 · 학습</title>
+<title>초등 영어 · 표현 익히기</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Nunito:wght@600;800&family=Noto+Sans+KR:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
 <div class="app">
   <header class="topbar" id="topbar"></header>
   <main>
-    <!-- 4.3 학습: 단어 카드 → 문장 카드 -->
-    <div class="learn-top"><b id="learnTitle">Unit</b><span class="cnt" id="learnCnt">– / –</span></div>
-    <div class="phase"><span id="ph1"></span><span id="ph2"></span></div>
-    <div class="learn-top"><span id="learnPhase">단어</span><span id="learnPage"></span></div>
-
-    <div class="flash" id="flash">
-      <div class="word" id="fWord">불러오는 중…</div>
-      <div class="mean" id="fMean"></div>
-      <div class="ex" id="fEx"></div>
-      <div class="src" id="fSrc"></div>
-    </div>
-    <div class="dots" id="dots"></div>
-
-    <div class="tools">
-      <button class="tool" id="ttsBtn" onclick="playTTS()">🔊 듣기</button>
-      <button class="tool" id="recBtn" onclick="toggleRec()">🎙 따라 말하기</button>
-    </div>
-    <div class="result" id="result"></div>
-
-    <div class="nav">
-      <button class="btn ghost" id="prevBtn" onclick="prevCard()">이전</button>
-      <button class="btn" id="nextBtn" onclick="nextCard()">다음</button>
-    </div>
-    <button class="btn" id="quizBtn" onclick="goQuiz()" disabled>문제 풀기</button>
-    <p class="hint" id="learnHint">단어 카드를 다 보면 문장 카드로 넘어가고, 그다음 문제를 풀 수 있어요.</p>
+    <h1>표현 익히기</h1>
+    <p class="sub">오늘 쓸 단어와 문장 패턴을 먼저 봐요 · 탭하면 들려요</p>
+    <label class="field">단어 <span id="wordCnt" style="font-weight:500"></span></label>
+    <div class="mini-row" id="wordRow"></div>
+    <label class="field">문장 패턴 <span id="patPage" style="font-weight:500"></span></label>
+    <div class="flash" id="patCard"><div class="word">불러오는 중…</div></div>
+    <div class="dots" id="patDots"></div>
+    <div class="tools"><button class="tool" id="patTts" onclick="playPattern()">🔊 듣기</button><button class="tool" onclick="go('shadow.html')">🎙 따라 말하기</button></div>
+    <div class="result" id="learnResult"></div>
+    <div class="row2"><button class="btn ghost" onclick="movePat(-1)">이전</button><button class="btn ghost" onclick="movePat(1)">다음 패턴</button></div>
+    <button class="btn" onclick="go('tutor.html')">이 표현으로 말해보기 🎙</button>
+    <p class="hint">단어·패턴은 참고용이에요. 바로 말해보기로 가도 돼요.</p>
   </main>
   <div class="status" id="status"></div>
   <audio id="player"></audio>

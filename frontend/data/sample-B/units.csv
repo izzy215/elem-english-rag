@@ -1,0 +1,4 @@
+level,unit,title,mission,hint_words,rule_ids
+2,U3,Animals,어제 동물원에서 본 것을 영어로 한 문장 말해봐요,rabbit;lion;elephant;saw;yesterday,R-01;R-02;R-04
+2,U4,Food,좋아하는 음식을 영어로 말해봐요,pizza;banana;like;eat;want,R-02;R-03;R-08
+2,U5,School,지금 학교에서 하는 일을 영어로 말해봐요,read;play;friend;teacher;now,R-05;R-06

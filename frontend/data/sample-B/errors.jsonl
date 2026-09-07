@@ -1,0 +1,8 @@
+{"id":"E-0001","unit":"U3","rule_id":"R-01","error":"I go to the zoo yesterday.","correct":"I went to the zoo yesterday.","target":"go","fix":"went","distractors":["goes","going","gone"]}
+{"id":"E-0002","unit":"U3","rule_id":"R-01","error":"We see a lion last week.","correct":"We saw a lion last week.","target":"see","fix":"saw","distractors":["sees","seeing","seen"]}
+{"id":"E-0003","unit":"U3","rule_id":"R-02","error":"The lion eat meat.","correct":"The lion eats meat.","target":"eat","fix":"eats","distractors":["ate","eating","eaten"]}
+{"id":"E-0004","unit":"U3","rule_id":"R-04","error":"I saw a elephant.","correct":"I saw an elephant.","target":"a","fix":"an","distractors":["the","—","some"]}
+{"id":"E-0005","unit":"U4","rule_id":"R-03","error":"I have two cat.","correct":"I have two cats.","target":"cat","fix":"cats","distractors":["cates","cat's","caties"]}
+{"id":"E-0006","unit":"U4","rule_id":"R-08","error":"I want banana.","correct":"I want a banana.","target":"banana","fix":"a banana","distractors":["an banana","the bananas","bananas a"]}
+{"id":"E-0007","unit":"U5","rule_id":"R-05","error":"We are play soccer now.","correct":"We are playing soccer now.","target":"play","fix":"playing","distractors":["plays","played","to play"]}
+{"id":"E-0008","unit":"U5","rule_id":"R-06","error":"He are my friend.","correct":"He is my friend.","target":"are","fix":"is","distractors":["am","be","were"]}

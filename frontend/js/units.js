@@ -1,42 +1,20 @@
-/* 4.2 Unit 목록 — Unit 카드 + 진행률 → learn.html */
-
+/* Unit = 말하기 미션 목록. mission 문구는 서버 /units 에 있으면 그것, 없으면 sample-B units.csv */
 const state = requireState('level');
-
 async function renderUnits() {
   const lv = state.level.level;
-  const units = await api(`/api/units?level=${lv}`);
-  if (!units.length) {
-    $('#unitCards').innerHTML = '<div class="empty">이 Level에는 아직 Unit이 없어요.<br>데이터팀 납품 후 채워집니다.</div>';
-    return;
-  }
-  // 진행률은 Unit마다 따로 조회 (PRD 5.1 /progress)
-  const progress = await Promise.all(units.map(u =>
-    api(`/api/progress?student=${state.student}&level=${lv}&unit=${u.unit}`).catch(() => null)));
-  $('#unitCards').innerHTML = units.map((u, i) => {
-    const p = progress[i];
-    const pct = p && p.total ? Math.round(p.learned / p.total * 100) : 0;
-    const wrong = p && p.wrong_words && p.wrong_words.length;
-    return `
-    <button class="card unit" onclick='pickUnit(${JSON.stringify(u)})'>
-      <div>
-        <div class="t">${esc(u.unit)} · ${esc(u.title)}</div>
-        <div class="d">단어 ${u.words}개 · 문장 ${u.sentences}개${wrong ? ` · <span style="color:var(--danger)">복습할 단어 ${wrong}</span>` : ''}</div>
-      </div>
-      <div class="pct">${pct}%</div>
-      <div class="prog"><i style="width:${pct}%"></i></div>
-    </button>`;
+  const [units, nb] = await Promise.all([api(`/api/units?level=${lv}`), fetchNotebook(state.student)]);
+  await loadSampleB();
+  if (!units.length) { $('#unitCards').innerHTML = '<div class="empty">이 Level에는 아직 미션이 없어요.</div>'; return; }
+  $('#unitCards').innerHTML = units.map(u => {
+    const meta = unitMeta(u.unit) || {}; const mission = u.mission || meta.mission || `${u.title} 단어로 한 문장 말해봐요`;
+    const ruleIds = (u.rule_ids && u.rule_ids.length) ? u.rule_ids : (meta.rule_ids || '').split(';').filter(Boolean);
+    const wrong = nb.active.filter(e => ruleIds.includes(e.rule_id)).length;
+    const spoken = Object.keys(localStorage).filter(k => k.startsWith(`spoken_${state.student}_${u.unit}_`)).length;
+    return `<button class="card" onclick='pickUnit(${JSON.stringify({ unit: u.unit, title: u.title, mission, hint_words: (u.hint_words && u.hint_words.length) ? u.hint_words : (meta.hint_words || '').split(';').filter(Boolean), rule_ids: ruleIds })})'>
+      <div class="t">${esc(u.unit)} · ${esc(u.title)} ${wrong ? `<span class="badge b-review">헷갈리는 규칙 ${wrong}</span>` : ''}${spoken >= 5 ? '<span class="badge b-ok">완료 ✓</span>' : ''}</div>
+      <div class="d">🎯 ${esc(mission)}</div>
+      <div class="d">단어 ${u.words}개 · 말한 문장 ${spoken}</div></button>`;
   }).join('');
 }
-
-function pickUnit(u) {
-  S.set({ unit: { unit: u.unit, title: u.title }, words: null, sentences: null, quizResult: null });
-  go('learn.html');
-}
-
-(async function init() {
-  if (!state) return;
-  renderTopbar();
-  $('#unitsTitle').textContent = state.level.label;
-  showHealth();
-  await renderUnits();
-})();
+function pickUnit(u) { S.set({ unit: u, words: null, patterns: null, lastFix: null }); go('learn.html'); }
+(async function init() { if (!state) return; renderTopbar(); $('#unitsTitle').textContent = state.level.label; showHealth(); await renderUnits(); })();

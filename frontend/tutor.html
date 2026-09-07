@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>초등 영어 · 내 문장 말해보기</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Nunito:wght@600;800&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar" id="topbar"></header>
+  <main>
+    <h1>내 문장 말해보기</h1>
+    <div class="task" id="task">오늘의 미션 · <b id="mission"></b><br><span id="hintWords" style="font-size:.78rem;color:var(--muted)"></span></div>
+    <div class="tools"><button class="tool" id="recBtn" onclick="record()">🎙 말하기</button><button class="tool" id="typeBtn" onclick="toggleType()">⌨ 쓰기</button></div>
+    <div id="typeBox" style="display:none;margin-top:8px"><textarea class="txt" id="typeInput" placeholder="영어로 써 보세요" rows="2" oninput="onType()"></textarea></div>
+    <div class="heard" id="heard" style="display:none"><div class="lbl" id="heardLbl">들린 문장</div><div class="s" id="heardS"></div></div>
+    <div class="result" id="tNote"></div>
+    <button class="btn" id="fixBtn" onclick="runFix()" disabled>고쳐줘 ✨</button>
+    <div class="steps" id="steps" style="display:none">
+      <div class="step" id="st1"><i>1</i>문장 받기</div>
+      <div class="step" id="st2"><i>2</i>RAG: 우리 규칙 조각에서 관련 규칙 찾기</div>
+      <div class="step" id="st3"><i>3</i>AI: 찾은 규칙을 근거로 고치고 설명</div>
+    </div>
+    <div class="diag" id="diag" style="display:none"></div>
+    <div class="chips" id="askChips" style="display:none"></div>
+    <div class="row2" id="nav" style="display:none"><button class="btn ghost" onclick="reset()">다른 문장</button><button class="btn" onclick="go('notebook.html')">오답노트 보기</button></div>
+  </main>
+  <div class="status" id="status"></div>
+  <audio id="player"></audio>
+</div>
+<script src="js/common.js"></script>
+<script src="js/tutor.js"></script>
+</body>
+</html>

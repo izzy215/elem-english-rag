@@ -4,15 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>초등 영어 · 시작</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Nunito:wght@600;800&family=Noto+Sans+KR:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
 <div class="app">
   <header class="topbar" id="topbar"></header>
   <main>
-    <!-- 4.1 시작 -->
-    <h1>안녕! 오늘도 영어 연습하자 👋</h1>
-    <p class="sub">이름을 고르고 Level을 선택하세요</p>
+    <div class="hero">
+      <h1>안녕, <span id="heroName">A</span>! 오늘은 무슨 말을 해볼까?</h1>
+      <p class="sub">영어로 말하면 선생님이 고쳐줄게</p>
+      <div class="stat" id="heroStat"></div>
+    </div>
 
     <label class="field" for="studentSel">학생</label>
     <select id="studentSel" onchange="setStudent(this.value)">
@@ -22,8 +25,9 @@
 
     <label class="field">Level</label>
     <div class="cards" id="levelCards"><div class="empty">불러오는 중…</div></div>
-    <p class="hint">Level 1 = 3~4학년 · Level 2 = 5학년 · Level 3 = 6학년 (기본값, 데이터팀 납품 시 확정)</p>
-    <p class="hint" style="margin-top:28px;text-align:right"><a href="fix.html" style="color:var(--muted)">문장 고치기 (데이터팀 샘플) ›</a> &nbsp; <a href="admin.html" style="color:var(--muted)">관리자 화면 ›</a></p>
+
+    <button class="btn ghost" id="noteBtn" onclick="go('notebook.html')">📒 내 오답노트</button>
+    <p class="hint" style="text-align:right;margin-top:24px"><a href="admin.html" style="color:var(--muted)">관리자 화면 ›</a></p>
   </main>
   <div class="status" id="status"></div>
 </div>
