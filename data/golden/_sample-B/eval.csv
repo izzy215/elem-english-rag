@@ -1,0 +1,11 @@
+text,expected_rule_id,note
+I play with my dog yesterday.,R-01,과거시제 · 새 문장 (rules·errors와 겹치지 않음)
+My sister like cats.,R-02,3인칭단수
+There are three bird in the tree.,R-03,명사복수형
+I ate a orange.,R-04,관사 an
+She is eat lunch now.,R-05,현재진행형
+They is my friends.,R-06,be동사일치
+We are at the park yesterday.,R-07,과거의 be동사
+I have dog.,R-08,관사 a
+I saw a big lion at the zoo.,NONE,정상 문장 (오탐 측정)
+She likes bananas.,NONE,정상 문장

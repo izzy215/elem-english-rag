@@ -1,0 +1,8 @@
+id,level,unit,text,meaning,tip,rule_id
+p-0001,2,U3,I saw a rabbit.,나는 토끼를 봤어요.,과거를 말할 땐 동사를 과거형으로,R-01
+p-0002,2,U3,I saw an elephant.,나는 코끼리를 봤어요.,모음 소리 앞엔 an,R-04
+p-0003,2,U3,The lion eats meat.,사자는 고기를 먹어요.,he/she/it 주어면 동사에 -s,R-02
+p-0004,2,U4,I want a banana.,나는 바나나를 원해요.,하나면 앞에 a,R-08
+p-0005,2,U4,I have two apples.,나는 사과 두 개가 있어요.,둘 이상이면 -s,R-03
+p-0006,2,U5,I am reading a book.,나는 책을 읽고 있어요.,지금 하는 일은 be + -ing,R-05
+p-0007,2,U5,He is my friend.,그는 내 친구예요.,I am · you are · he is,R-06
