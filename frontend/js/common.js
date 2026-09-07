@@ -84,15 +84,40 @@ async function playTTS(itemId, btn, label = '🔊 듣기') {
     p.src = `/api/tts/${itemId}`; await p.play(); p.onended = () => { if (btn) { btn.classList.remove('on'); btn.textContent = label; } };
   } catch (e) { if (btn) { btn.classList.remove('on'); btn.textContent = label; } throw e; }
 }
-function recordOnce({ maxMs = 5000, onStart, onTick } = {}) {
-  return new Promise(async (resolve, reject) => {
-    let stream; try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { return reject(new Error('마이크를 사용할 수 없어요. 브라우저 권한을 확인하세요.')); }
-    const rec = new MediaRecorder(stream), chunks = [];
-    rec.ondataavailable = e => chunks.push(e.data);
-    rec.onstop = async () => { stream.getTracks().forEach(t => t.stop()); const blob = new Blob(chunks, { type: 'audio/webm' }); const b64 = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result.split(',')[1]); fr.readAsDataURL(blob); }); resolve({ blob, b64, stop: null }); };
-    rec.start(); onStart && onStart(() => rec.state === 'recording' && rec.stop());
-    setTimeout(() => rec.state === 'recording' && rec.stop(), maxMs);
-  });
+// 이 브라우저에서 녹음이 되는지. 안 되면 이유 문자열, 되면 null (카카오톡 인앱 브라우저 등은 마이크 API 가 없음)
+function micSupport() {
+  if (!window.isSecureContext) return '주소가 https 가 아니라 마이크를 쓸 수 없어요.';
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return '이 브라우저는 마이크를 지원하지 않아요. 카카오톡 안에서 열었다면 오른쪽 위 ⋮ → "다른 브라우저로 열기"(Chrome·Safari)로 열어 주세요.';
+  if (!window.MediaRecorder) return '이 브라우저는 녹음을 지원하지 않아요. Chrome 또는 Safari 최신 버전으로 열어 주세요.';
+  return null;
+}
+let REC = null;   // 지금 녹음 중인 것 (한 번에 하나만). REC.stop() 으로 끝낼 수 있다
+function stopRecording() { if (REC) REC.stop(); }
+function recordOnce({ maxMs = 5000, onStart } = {}) {
+  return new Promise((resolve, reject) => { (async () => {
+    if (REC) throw new Error('이미 녹음 중이에요. 버튼을 다시 눌러 먼저 끝내 주세요.');
+    const why = micSupport(); if (why) throw new Error(why);
+    let stream;
+    try {   // 인앱 브라우저는 권한 창이 안 뜨고 영원히 대기하는 경우가 있어 15초 제한
+      stream = await Promise.race([navigator.mediaDevices.getUserMedia({ audio: true }), new Promise((_, rj) => setTimeout(() => rj(new Error('timeout')), 15000))]);
+    } catch (e) { throw new Error(e.message === 'timeout' ? '마이크 권한 응답이 없어요. Chrome·Safari 에서 직접 열어 주세요.' : `마이크를 사용할 수 없어요. 브라우저 권한을 확인하세요. (${e.name || e.message})`); }
+    // 브라우저가 내는 포맷을 그대로 서버에 알려준다 (Chrome=webm, iPhone Safari=mp4)
+    const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'].find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
+    const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream), chunks = [];
+    const type = (rec.mimeType || mime || 'audio/webm').split(';')[0];
+    rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    const release = () => { stream.getTracks().forEach(t => t.stop()); REC = null; };   // 마이크 끄기 (브라우저 마이크 표시등도 꺼짐)
+    rec.onerror = e => { release(); reject(new Error('녹음 중 오류: ' + (e.error?.message || e.name || ''))); };
+    rec.onstop = async () => {
+      release();
+      const blob = new Blob(chunks, { type }); if (!blob.size) return reject(new Error('녹음된 소리가 없어요. 다시 눌러 말해 주세요.'));
+      const b64 = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result.split(',')[1]); fr.readAsDataURL(blob); });
+      resolve({ blob, b64, mime: type });
+    };
+    const stop = () => { if (rec.state === 'recording') rec.stop(); };
+    rec.start(); REC = { stop }; onStart && onStart(stop);
+    setTimeout(stop, maxMs);
+  })().catch(reject); });
 }
 // 느린 API 대기 중 잠금: 로딩바 + 메시지 표시, 화면의 모든 버튼 disabled (원래 disabled였던 건 그대로 둠)
 let BUSY = false;
@@ -105,11 +130,15 @@ function setBusy(on, msg = '') {
     else if (b.dataset.busyLock) { delete b.dataset.busyLock; b.disabled = false; }
   });
 }
-async function speak(b64, itemId = '', msg = '🎧 듣는 중… 잠깐만요') {   // 팀원 완성 API. item_id 없으면 받아쓰기(heard)만 의미 있음
+const SPEAK_TIMEOUT_MS = 90000;   // Cloudflare 터널은 100초 넘으면 끊으므로 그 전에 화면이 먼저 포기
+async function speak(b64, itemId = '', msg = '🎧 듣는 중… 잠깐만요', mime = 'audio/webm') {   // 팀원 완성 API. item_id 없으면 받아쓰기(heard)만 의미 있음
   if (BUSY) throw new Error('아직 앞 문장을 듣는 중이에요. 잠깐만 기다려 주세요.');
   setBusy(true, msg);
-  try { return await api('/api/speak', { method: 'POST', body: JSON.stringify({ student: S.get().student || 'A', item_id: itemId, audio_base64: b64, mime: 'audio/webm' }) }); }
-  finally { setBusy(false); }
+  const t0 = Date.now(), tick = setInterval(() => { const m = $('#loadmsg'); if (m) m.textContent = `${msg} (${Math.round((Date.now() - t0) / 1000)}초)`; }, 1000);
+  const ac = new AbortController(), timer = setTimeout(() => ac.abort(), SPEAK_TIMEOUT_MS);
+  try { return await api('/api/speak', { method: 'POST', signal: ac.signal, body: JSON.stringify({ student: S.get().student || 'A', item_id: itemId, audio_base64: b64, mime }) }); }
+  catch (e) { throw e.name === 'AbortError' ? new Error('서버 응답이 90초 넘게 없어요. 잠시 후 다시 해 주세요.') : e; }
+  finally { clearTimeout(timer); clearInterval(tick); setBusy(false); }
 }
 async function waveFromBlob(blob, bars = 26) {     // 실제 파형: 구간별 RMS
   try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const buf = await ctx.decodeAudioData(await blob.arrayBuffer()); const d = buf.getChannelData(0); const seg = Math.floor(d.length / bars); const out = []; for (let i = 0; i < bars; i++) { let s = 0; for (let j = i * seg; j < (i + 1) * seg; j++) s += d[j] * d[j]; out.push(Math.sqrt(s / seg)); } const m = Math.max(...out) || 1; return out.map(v => v / m); } catch (_) { return null; }
@@ -158,7 +187,7 @@ async function openChat(extra = {}) {
   renderSugg(sug.slice(0, 3)); $('#chat').classList.add('on'); $('#chatBg').classList.add('on');
 }
 function renderSugg(list) { $('#chatSugg').innerHTML = list.map(q => `<button onclick="askChat(${JSON.stringify(q)})">${esc(q)}</button>`).join(''); }
-function closeChat() { $('#chat').classList.remove('on'); $('#chatBg').classList.remove('on'); }
+function closeChat() { stopRecording(); $('#chat').classList.remove('on'); $('#chatBg').classList.remove('on'); }
 function faqMatch(q) {                             // 폴백: 질문 ↔ question+variants 단어 겹침
   const norm = t => t.toLowerCase().replace(/[?？.!,]/g, '').split(/\s+/).filter(Boolean);
   const qs = norm(q); let best = null, bs = 0;
@@ -175,7 +204,12 @@ async function askChat(q) {
   if (r.suggested && r.suggested.length) renderSugg(r.suggested); if (CHAT.turns >= 3) $('#chatSugg').innerHTML = `<button onclick="closeChat()">이제 돌아갈게요 ↩</button>`;
 }
 function sendChat() { const v = $('#chatIn').value.trim(); if (!v) return; $('#chatIn').value = ''; askChat(v); }
-async function chatMic() {
+async function chatMic() {           // 한 번 누르면 녹음 시작, 다시 누르면 끝 (5초 지나면 자동으로 끝)
   if (BUSY) return;
-  const btn = $('.inp .mic'); btn.textContent = '⏺'; try { const { b64 } = await recordOnce({ maxMs: 5000 }); btn.textContent = '…'; const r = await speak(b64, '', '🎧 듣는 중…'); if (r.heard) $('#chatIn').value = r.heard; else $('#chatIn').placeholder = '잘 안 들렸어요. 다시 말해볼까요?'; } catch (e) { $('#chatIn').placeholder = e.message; } finally { btn.textContent = '🎙'; }
+  if (REC) { stopRecording(); return; }
+  const btn = $('.inp .mic'), inp = $('#chatIn'), ph = inp.placeholder;
+  btn.textContent = '⏹'; btn.classList.add('rec'); inp.placeholder = '말하는 중… 다시 누르면 끝';
+  try { const { b64, mime } = await recordOnce({ maxMs: 5000 }); btn.textContent = '…'; btn.classList.remove('rec'); const r = await speak(b64, '', '🎧 듣는 중…', mime); if (r.heard) inp.value = r.heard; else inp.placeholder = '잘 안 들렸어요. 다시 말해볼까요?'; }
+  catch (e) { inp.placeholder = e.message; }
+  finally { btn.textContent = '🎙'; btn.classList.remove('rec'); if (inp.placeholder === '말하는 중… 다시 누르면 끝') inp.placeholder = ph; }
 }

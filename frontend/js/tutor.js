@@ -14,9 +14,9 @@ async function record() {
   const btn = $('#recBtn'); let stopFn = null; btn.classList.add('rec'); btn.textContent = '⏺ 녹음 중… (누르면 끝)'; btn.onclick = () => stopFn && stopFn();
   showResult('#tNote', '미션에 맞춰 영어로 한 문장 말해봐요');
   try {
-    const { b64 } = await recordOnce({ maxMs: 6000, onStart: s => stopFn = s });
+    const { b64, mime } = await recordOnce({ maxMs: 6000, onStart: s => stopFn = s });
     btn.classList.remove('rec'); btn.textContent = '🎙 말하기'; btn.onclick = record; showResult('#tNote', '듣는 중… (몇 초 걸려요)');
-    const r = await speak(b64, '', '🎧 듣는 중… 잠깐만요'); // item_id 없이 → heard 만 사용
+    const r = await speak(b64, '', '🎧 듣는 중… 잠깐만요', mime); // item_id 없이 → heard 만 사용
     if (r.error) { showResult('#tNote', '잘 안 들렸어요: ' + esc(r.error), 'bad'); return; }
     if (!r.heard) { showResult('#tNote', '잘 안 들렸어요. 한 번 더 말해볼까요?', 'bad'); return; }
     hideResult('#tNote'); setText(r.heard.replace(/\s+$/, '') + (/[.!?]$/.test(r.heard) ? '' : '.'), 'stt');
@@ -46,4 +46,5 @@ async function runFix() {
   const u = state.unit; $('#mission').textContent = u.mission || `${u.title} 단어로 한 문장 말해봐요`;
   const hint = (u.hint_words && u.hint_words.length) ? u.hint_words : (S.get().words || []).slice(0, 4).map(w => w.word);
   $('#hintWords').textContent = hint.length ? '힌트: ' + hint.join(' · ') : ''; reset();
+  const why = micSupport(); if (why) { showResult('#tNote', '🎙 ' + esc(why) + ' ⌨ 쓰기는 돼요.', 'todo'); $('#recBtn').disabled = true; }
 })();

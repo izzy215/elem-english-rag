@@ -30,10 +30,10 @@ async function record() {
   let stopFn = null; btn.classList.add('rec'); btn.textContent = '⏺ 녹음 중… (누르면 끝)'; btn.onclick = () => stopFn && stopFn();
   showResult('#shNote', '따라 말해 보세요: ' + esc(p.text));
   try {
-    const { blob, b64 } = await recordOnce({ maxMs: 5000, onStart: s => stopFn = s });
+    const { blob, b64, mime } = await recordOnce({ maxMs: 5000, onStart: s => stopFn = s });
     btn.classList.remove('rec'); btn.textContent = '🎙 따라 말하기'; btn.onclick = record;
     showResult('#shNote', '채점 중… (몇 초 걸려요)');
-    const [myWave, r] = await Promise.all([waveFromBlob(blob), speak(b64, p.id, '🎧 채점 중… 잠깐만요')]);
+    const [myWave, r] = await Promise.all([waveFromBlob(blob), speak(b64, p.id, '🎧 채점 중… 잠깐만요', mime)]);
     if (!teacherWave) await (teacherWaveP || loadTeacherWave(p));   // 듣기를 안 눌렀어도 선생님 파형은 그린다
     $('#shWave').style.display = 'block'; drawWave($('#wvT'), teacherWave); drawWave($('#wvM'), myWave);
     $('#wvTTxt').textContent = teacherWave ? p.text : '(선생님 음원 없음)'; $('#wvMTxt').textContent = r.heard || '';
@@ -51,4 +51,5 @@ async function record() {
   if (!pats.length) { const lv = state.level.level, unit = state.unit.unit; pats = (await api(`/api/sentences?level=${lv}&unit=${unit}`).catch(() => [])).map(s => ({ id: s.id, text: s.sentence, meaning: s.meaning })); }
   if (!pats.length) { await loadSampleB(); pats = SB.patterns.filter(p => p.unit === state.unit.unit).map(p => ({ ...p, noAudio: true })); }
   pi = S.get().patIdx || 0; if (pi >= pats.length) pi = 0; render();
+  const why = micSupport(); if (why) { showResult('#shNote', '🎙 ' + esc(why), 'todo'); $('#shRec').disabled = true; }
 })();
