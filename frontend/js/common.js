@@ -159,12 +159,13 @@ function detectRule(text) {
   return null;
 }
 async function fixSentence(text, ctx) {             // 서버 /fix 우선, 없으면 폴백
-  try { return { ...(await api('/api/fix', { method: 'POST', body: JSON.stringify({ student: S.get().student, level: ctx.level, unit: ctx.unit, text, source: ctx.source }) })), mode: 'server' }; }
-  catch (_) {
+  try { const r = await api('/api/fix', { method: 'POST', body: JSON.stringify({ student: S.get().student, level: ctx.level, unit: ctx.unit, text, source: ctx.source }) }); return { ...r, mode: r.mode || 'server' }; }
+  catch (e) {
+    if (e.status && e.status !== 404 && e.status !== 405) throw e;   // 서버 /fix 는 있는데 실패(할당량 등) → 화면 임시 진단으로 덮지 않고 그대로 보여준다
     await loadSampleB(); const d = detectRule(text); const logId = 'L-' + Date.now();
-    if (!d) return { ok: true, rule: null, wrong: null, fix: null, fixed: text, why: '문법에 맞는 문장이에요. 다른 문장도 말해볼까요?', source: null, suggested_questions: ['다른 예문 보여줘', 'saw는 무슨 뜻이에요?'], log_id: logId, mode: 'fallback' };
+    if (!d) return { ok: true, rule: null, wrong: null, fix: null, fixed: text, why: '문법에 맞는 문장이에요. 다른 문장도 말해볼까요?', source: null, suggested_questions: ['다른 예문 보여줘', 'saw는 무슨 뜻이에요?'], log_id: logId, mode: 'local' };
     const r = ruleOf(d.rule_id) || { id: d.rule_id, type: d.rule_id, text: '' };
-    return { ok: false, rule: { id: r.id, name: r.type, score: 0.9 }, runner_up: null, wrong: d.wrong, fix: d.fix, fixed: d.fixed, why: (r.text || '').split(/\s*(?:틀린\s*)?예\s*:/)[0], source: { chunk_id: r.id, text: r.text }, more_errors: false, suggested_questions: SB.faq.filter(f => f.rule_ids.includes(r.id)).slice(0, 2).map(f => f.question).concat(['다른 예문 보여줘']), log_id: logId, mode: 'fallback' };
+    return { ok: false, rule: { id: r.id, name: r.type, score: 0.9 }, runner_up: null, wrong: d.wrong, fix: d.fix, fixed: d.fixed, why: (r.text || '').split(/\s*(?:틀린\s*)?예\s*:/)[0], source: { chunk_id: r.id, text: r.text }, more_errors: false, suggested_questions: SB.faq.filter(f => f.rule_ids.includes(r.id)).slice(0, 2).map(f => f.question).concat(['다른 예문 보여줘']), log_id: logId, mode: 'local' };
   }
 }
 
@@ -175,7 +176,7 @@ function injectChat(screen) {
   document.body.insertAdjacentHTML('beforeend', `<button class="fab" id="chatFab" onclick="openChat()">🙋</button><div class="sheet-bg" id="chatBg" onclick="closeChat()"></div>
     <div class="sheet" id="chat"><div class="hd"><div class="t">🙋 물어보기 <button onclick="closeChat()">✕</button></div><div class="ctx" id="chatCtx"></div></div>
     <div class="msgs" id="chatMsgs"></div><div class="sugg" id="chatSugg"></div>
-    <div class="inp"><input id="chatIn" placeholder="궁금한 걸 써 보세요" onkeydown="if(event.key==='Enter') sendChat()"><button class="mic" onclick="chatMic()">🎙</button><button onclick="sendChat()">보내기</button></div></div>`);
+    <div class="inp"><input id="chatIn" placeholder="궁금한 걸 써 보세요" onkeydown="if(event.key==='Enter') sendChat()"><button onclick="sendChat()">보내기</button></div></div>`);
   CHAT.screen = screen;
 }
 async function openChat(extra = {}) {
@@ -204,12 +205,3 @@ async function askChat(q) {
   if (r.suggested && r.suggested.length) renderSugg(r.suggested); if (CHAT.turns >= 3) $('#chatSugg').innerHTML = `<button onclick="closeChat()">이제 돌아갈게요 ↩</button>`;
 }
 function sendChat() { const v = $('#chatIn').value.trim(); if (!v) return; $('#chatIn').value = ''; askChat(v); }
-async function chatMic() {           // 한 번 누르면 녹음 시작, 다시 누르면 끝 (5초 지나면 자동으로 끝)
-  if (BUSY) return;
-  if (REC) { stopRecording(); return; }
-  const btn = $('.inp .mic'), inp = $('#chatIn'), ph = inp.placeholder;
-  btn.textContent = '⏹'; btn.classList.add('rec'); inp.placeholder = '말하는 중… 다시 누르면 끝';
-  try { const { b64, mime } = await recordOnce({ maxMs: 5000 }); btn.textContent = '…'; btn.classList.remove('rec'); const r = await speak(b64, '', '🎧 듣는 중…', mime); if (r.heard) inp.value = r.heard; else inp.placeholder = '잘 안 들렸어요. 다시 말해볼까요?'; }
-  catch (e) { inp.placeholder = e.message; }
-  finally { btn.textContent = '🎙'; btn.classList.remove('rec'); if (inp.placeholder === '말하는 중… 다시 누르면 끝') inp.placeholder = ph; }
-}

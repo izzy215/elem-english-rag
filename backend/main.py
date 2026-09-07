@@ -13,13 +13,14 @@
   rag.py      A. RAG 검색 · 검수 경고 · 평가                                 RAG 팀원
   quiz.py     B. 문제 생성 · 채점                                            팀장
   explain.py  C. 오답 설명                                                  팀장
+  tutor.py    내 문장 고쳐주기 /fix (B안 핵심)                                팀장
 """
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from backend import explain, golden, quiz, rag, speak, tts
+from backend import explain, golden, quiz, rag, speak, tts, tutor
 from backend.config import settings
 
 ROOT = Path(__file__).resolve().parent.parent          # project/
@@ -39,7 +40,7 @@ async def no_cache(request, call_next):
 
 
 # 담당자별 라우터 — 새 기능은 파일 하나 만들고 여기 한 줄 추가
-for r in (golden.router, tts.router, speak.router, rag.router, quiz.router, explain.router):
+for r in (golden.router, tts.router, speak.router, rag.router, quiz.router, explain.router, tutor.router):
     app.include_router(r, prefix="/api")
 
 
