@@ -5,10 +5,10 @@ D. TTS (PRD 5.2)   담당: TTS 팀원
 
     GET /api/tts/{item_id}
     → 200: audio/wav 바이너리 (그대로 <audio src="/api/tts/{item_id}"> 나 fetch 로 재생)
-    → 404: {"detail": "단어/문장 없음"}   item_id 가 golden 데이터(words.csv/sentences.csv)에 없을 때
+    → 404: {"detail": "단어/문장 없음"}   item_id 가 golden 데이터(words.csv/patterns.csv)에 없을 때
     → 500: GEMINI_API_KEY 미설정
 
-    item_id 는 words.csv/sentences.csv 의 id (예: "w-0031", "s-0012").
+    item_id 는 words.csv/patterns.csv 의 id (예: "w-0031", "s-0012").
     최초 호출은 음성 생성 때문에 몇 초 걸릴 수 있고, 이후 같은 id는 캐시라 즉시 응답할겁니다
 """
 import wave

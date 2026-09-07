@@ -6,7 +6,7 @@ E. 말하기 평가 (PRD 5.2)   담당: TTS 팀원
     POST /api/speak
     body: {"student": "A", "item_id": "s-0012", "audio_base64": "...", "mime": "audio/webm"}
       - student: 학생 id
-      - item_id: words.csv/sentences.csv 의 id — 이걸로 정답 원문을 서버가 알아서 찾음
+      - item_id: words.csv/patterns.csv 의 id — 이걸로 정답 원문을 서버가 알아서 찾음
       - audio_base64: 녹음한 오디오를 base64 로 인코딩한 문자열 (브라우저 MediaRecorder 결과 등)
       - mime: 오디오 포맷. 생략하면 "audio/webm"
 
@@ -88,12 +88,15 @@ def _get_whisper_model():
     return _whisper_model
 
 
-def whisper_stt(audio_base64: str, mime: str) -> str:
-    """STT_BACKEND=whisper 일 때만 쓰는 로컬 STT. API 할당량 없이 테스트/튜닝하려는 용도."""
+def whisper_stt(audio_base64: str, mime: str, language: str = "en") -> str:
+    """로컬 Whisper STT. API 할당량 없이 테스트/튜닝하려는 용도(STT_BACKEND=whisper)로 만들었지만,
+    language 를 받게 해서 다른 화면(예: 한국어로 질문하는 챗봇)에서도 그대로 가져다 쓸 수 있게 했다.
+    language=None 이면 Whisper 가 알아서 언어를 감지한다(약간 느리고 가끔 틀림 — 언어를 알면 지정 권장).
+    """
     audio_bytes = base64.b64decode(audio_base64)
     ext = ".webm" if "webm" in mime else ".wav"
     audio, _ = _decode_to_wav_array(audio_bytes, ext)
-    result = _get_whisper_model().transcribe(audio, language="en", fp16=False)
+    result = _get_whisper_model().transcribe(audio, language=language, fp16=False)
     return result["text"].strip()
 
 
