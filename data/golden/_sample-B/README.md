@@ -11,6 +11,29 @@ plan-B(내 문장 고쳐주기 튜터)용. 데이터팀은 **이 형식 그대�
 | `words.csv` | 단어 | id · level · unit · word · meaning · example | 40 |
 | `patterns.csv` | 문장 패턴 | id · level · unit · text · meaning · tip · rule_id | 20 |
 | `errors.jsonl` | 오류 예시 (연습·데모) | id · unit · rule_id · error · correct · target · fix · distractors | 40 |
+| `faq.jsonl` | 물어보기 챗 질문·답 조각 (RAG 검색 대상) | id · unit · question · variants · answer · rule_ids · example | 30 |
+
+## faq.jsonl 한 줄 해설 — 물어보기 챗의 "교재"
+
+학생이 🙋 물어보기 챗에 던지는 질문에 답할 때 RAG가 검색하는 조각. rules.jsonl 이 "규칙 설명"이라면 faq.jsonl 은 "질문에 대한 답".
+
+```
+{"id":"F-01",                        F-번호
+ "unit":"U3",                        주로 나오는 Unit. 어디서나 물을 법하면 "ALL"
+ "question":"왜 went예요?",           대표 질문 (챗의 '추천 질문' 버튼에 그대로 씀)
+ "variants":["go 과거가 뭐예요",      같은 뜻의 다른 표현들. 검색 본문에 함께 넣어 "삐뚤빼뚤한 질문"도 잡히게 (깔때기)
+             "갔다를 영어로 뭐라고 해요"],
+ "answer":"go의 과거형은 규칙 없이…", 초등 3학년 말투 2~3문장. 이 밖의 내용은 챗이 말하지 않음 (목줄)
+ "rule_ids":["R-01"],                근거 규칙. 답 밑에 📚 로 표시. 규칙과 무관한 단어 질문이면 []
+ "example":"I went to the zoo yesterday."}   예문 1개 (선택)
+```
+
+쓰는 법
+- **question 은 아이 말투로.** "과거형 불규칙 동사의 활용은?" ✕ → "왜 went예요?" ○
+- **variants 3개 이상.** 같은 질문을 다르게 묻는 방식. 이게 많을수록 검색이 잘 됨
+- 답은 rules 의 내용과 어긋나면 안 됨 (rule_ids 로 연결해 검수)
+- 30개 구성 안: 규칙 질문 15 · 단어 뜻 질문 10 · "다른 예문 보여줘" 같은 요청 5
+- 데이터팀 샘플의 `feedback` 이 출발점 — 규칙별로 자주 나오는 질문을 뽑아 정리
 
 ## 규칙
 

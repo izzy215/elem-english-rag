@@ -1,6 +1,6 @@
 # PRD-B v0.1 — 내 문장 고쳐주기 튜터
 
-작성 2026-09-06 · 팀장 · 상태: **B안 검토용** (A안 = ../plan-A/PRD.md)
+작성 2026-09-06 · 팀장 · 상태: **v1.0 확정 (2026-09-07)** · A안은 ../archive/plan-A/
 근거: [간단기획서-B](간단기획서.md) · [mockup.html](mockup.html) · [data-pipeline-plan-B](data-pipeline-plan.md)
 
 목적: 3명이 동시에 착수할 수 있게 **화면 · API 계약 · 데이터 형식**을 고정한다. 미정은 기본값으로 착수.
@@ -61,10 +61,20 @@
 | ⌨ 쓰기 | 입력창 | — |
 | [고쳐줘] | 3단계 표시(받기 → RAG 검색 → AI 설명) 후 진단 | `POST /fix` |
 | 진단 카드 | 규칙명 · ~~틀린 말~~ 고친 말 · 고친 문장 · 설명 · 근거(조각 id · 점수 · 2위) · 🔊 고친 문장 듣기 | `GET /tts/{id}` (고친 문장은 `POST /tts/text`, 미정) |
-| 더 물어보기 | 추천 질문 3 (서버가 줌) + 직접 입력 → 답 + 근거 | `POST /ask` |
+| 🙋 물어보기 | 시트 열기 (3.8) | — |
 | [다른 문장] / [오답노트] | 초기화 / 이동 | — |
 
 상태 표시: 30초 넘으면 "규칙 전부 참고 모드로 전환" (RAG 실패 폴백).
+
+### 3.8 물어보기 챗 시트 (Unit 안 5화면 공통 · TTS 팀원)
+| 요소 | 동작 | API |
+|---|---|---|
+| 🙋 버튼 | 표현 익히기 · 따라 말하기 · 튜터 · 오답노트 · 연습 화면 오른쪽 아래. 시작 · Unit 목록엔 없음 | — |
+| 문맥 칩 | Unit · (튜터) 직전 진단 규칙 · (오답노트) 헷갈리는 규칙 수 | 화면 상태 |
+| 추천 질문 3 | 화면·문맥에 따라 다름. 서버가 줌 | `POST /ask` 응답의 `suggested` 또는 `GET /ask/suggest?screen=&context=` |
+| 입력 · 🎙 | 직접 입력, 음성은 STT(heard)만 사용 | `POST /speak` |
+| 답 | 2~3문장 + 📚 근거 id. 조각 밖 질문은 "그건 영어 공부랑 조금 다른 것 같아" | `POST /ask` |
+| 턴 제한 | 3턴 후 "돌아갈게요" 버튼 (미정) | — |
 
 ### 3.5 오답노트 `notebook.html`
 | 요소 | 동작 | API |
@@ -130,13 +140,16 @@ POST /fix
    처리: rag.search(text, kind=rule) → 1위 score ≥ threshold 면 그 조각만 프롬프트에 넣어 Gemini(JSON 강제) → 오답노트 기록 + 문장 로그
    폴백: 검색 실패/타임아웃 → 규칙 조각 전부(≤30)를 프롬프트에 넣어 생성, 응답에 "mode":"fallback"
 
-POST /ask
-{"student":"A","log_id":"L-...","question":"왜 went예요?"}
-→ {"answer":"go의 과거형은 규칙 없이 went로 바뀌어요…","source":[{"chunk_id":"R-01"},{"chunk_id":"R-05"}]}
-   처리: rag.search(question, kind=all, k=3) → 조각들 + 직전 진단(log_id) 을 프롬프트에 → Gemini
+POST /ask                                    담당: TTS 팀원 (chat.py)
+{"student":"A","question":"왜 went예요?",
+ "context":{"screen":"tutor","unit":"U3","log_id":"L-...","rule_id":"R-01"}}
+→ {"answer":"go의 과거형은 규칙 없이 went로 바뀌어요…","source":[{"chunk_id":"R-01"},{"chunk_id":"R-05"}],
+   "suggested":["yesterday 대신 뭘 쓸 수 있어요?","다른 예문 보여줘"],"offtopic":false}
+   처리: rag.search(question, kind=all(rules·faq·patterns), k=3) → 1위 < threshold 면 offtopic=true(정중 거절) → 조각 + context(직전 진단·오답노트 요약) 를 prompts/ask.txt 에 → Gemini
+   대화 이력은 세션 내 최근 3턴만 프롬프트에 포함
 ```
 
-### 4.4 오답노트 · 연습 — 팀장 · `student.py`, `drill.py`
+### 4.4 오답노트 · 연습 — `student.py`(TTS 팀원) · `drill.py`(팀장)
 ```
 GET /notebook?student=A
 → {"active":[{"rule_id":"R-01","name":"과거시제","count":3,"last":"2026-09-10","streak":0,
@@ -179,6 +192,7 @@ GET /health → {"ok":true,"api_key":true,"model":"...","golden":{"rules":25,"wo
 | `patterns.csv` | 문장 패턴 | id · level · unit · text · meaning · tip · rule_id |
 | `errors.jsonl` | 오류 예시 | id(E-0012) · unit · rule_id · error · correct · target · fix · distractors[] |
 | `eval.csv` | 평가 | text(학생 문장) · expected_rule_id · note. **정상 문장 5개는 expected="NONE"** |
+| `faq.jsonl` | 물어보기 챗 답변 조각 | id(F-01) · unit · question · answer · rule_ids[] · 검색 대상(kind=faq) |
 | `units.csv` | Unit | level · unit · title · mission · hint_words · rule_ids |
 
 조각 텍스트 예 (R-01):
@@ -252,4 +266,6 @@ drill_log.jsonl     {"ts":"...","student":"A","rule_id":"R-01","correct":true}
 | 오류 2개 처리 | 1위만 + more_errors |
 | 고친 문장 듣기 | `/tts/text` 추가 (TTS 담당 합의) |
 | 단어 4지선다 | △ 시간 남으면 |
+| 챗 턴 제한 · 추천 질문 출처 | 3턴 · faq.jsonl 에서 |
+| BigQuery 주간 리포트 | 11일차 여유 시. sentence_log → 집계 → Gemini 리포트 문장 (관리자 패널) |
 | 표현 익히기 범위 | 단어 8 + 패턴 3 (축소) |

@@ -12,6 +12,7 @@
 | `rules.jsonl` ★ | 규칙 설명 조각 (유형 6 × 상황별 3~5) | **25** | RAG 검색 대상 · 고쳐주기 근거 · 오답노트 · 연습 해설 | 1 |
 | `units.csv` | Unit(미션) | 3 | Unit 목록 · 튜터 미션 | 1 |
 | `eval.csv` | 학생 문장 → 정답 규칙 (+정상 문장 5) | 30 | RAG 정확도 | 2 |
+| `faq.jsonl` | 물어보기 챗 질문·답 조각 | 30 | 챗 답변 근거 · 추천 질문 | 2 |
 | `errors.jsonl` | 오류 예시 (연습 · 데모) | 40 | 규칙 연습 · 데모 예시 버튼 | 2 |
 | `patterns.csv` | 문장 패턴 · 규칙 힌트 | 20 | 표현 익히기 · 듣기 | 3 |
 | `words.csv` | 단어 · 뜻 · 예문 | 40 | 표현 익히기 | 3 |
@@ -42,6 +43,12 @@
 - **출력**: 두 파일
 - **끝 기준**: errors 의 오류가 실제로 그 규칙 위반 · eval 문장이 조각 문장과 겹치지 않음
 
+### ③-1 FAQ 조각 — 데이터팀 · 1일
+- `faq.jsonl` 30: 학생이 물을 법한 질문 + 초등 말투 답 2~3문장 + 근거 rule_ids. 샘플의 `feedback` 이 출발점
+- 질문 표현은 다양하게 ("왜 went예요", "go 과거가 뭐야") — 챗의 깔때기 실험 재료
+- 형식: `id · unit · question(대표) · variants[](같은 뜻 다른 표현 3+) · answer(초등 말투 2~3문장) · rule_ids[] · example`. 구성 안: 규칙 질문 15 · 단어 뜻 10 · 요청형("다른 예문") 5
+- 예시와 컬럼 해설: [data/golden/_sample-B/README.md](../../data/golden/_sample-B/README.md)
+
 ### ④ 패턴 · 단어 — 데이터팀 · 1.5일
 - `patterns.csv` 20: Unit마다 6~7 문장 패턴. 각 패턴에 `rule_id` 와 한 줄 힌트
 - `words.csv` 40: Unit마다 13개. NCIC 800 안에서 (범위 체크)
@@ -62,7 +69,7 @@
 | 2~3 | ② ★ | rules.jsonl 25 |
 | 4~5 | ③ | errors.jsonl 40 · eval.csv 30 |
 | 6 | ④ | patterns.csv 20 · words.csv 40 |
-| 7 | ⑤ 검수 → **납품** | data/golden/ |
+| 7 | ⑤ 검수 → **납품** | data/golden/ (rules · faq · errors · eval · units · patterns · words) |
 | 8 | ⑥ | 조립 실험 결과 (hit@3) |
 
 개발팀은 1일차부터 **임시 규칙 6개**(팀장이 30분 작성)로 개발. 7일차 교체.
