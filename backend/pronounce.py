@@ -6,6 +6,8 @@ speak.py 가 내부적으로만 쓰는 헬퍼 모듈. 새 API 엔드포인트는
 사용법:
     from backend.pronounce import pronunciation_score
     score = pronunciation_score(ref_wav_path, audio_base64, mime)  # 0~100
+    level = pronunciation_level(score)                             # "상"/"중"/"하"
+
 
 그냥 "소리 형태가 얼마나 비슷한가" 정도의 참고 지표.
 - 완전히 다른 문장/단어 : 확실히 구분 (정확 21~26 vs 오답 28~33대)
@@ -21,53 +23,36 @@ from pathlib import Path
 import imageio_ffmpeg
 import librosa
 import numpy as np
-import torch
-import whisper
-from silero_vad import collect_chunks, get_speech_timestamps, load_silero_vad
 
 _FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
-_ENCODER_FRAME_RATE = 50  # whisper 인코더는 30초를 1500프레임으로 인코딩 = 초당 50프레임
 
-_whisper_encoder = None
+# CMVN 정규화된 MFCC의 DTW 거리(대략 3.7~4.7 범위)를 0~100 점수로 바꾸는 값.
+# distance=3.7 -> 약 85점, distance=4.7 -> 약 15점 이 되도록 두 점을 직선으로 잇는 방식.
+# torch 버전보다 훨씬 적은 데이터로 잡은 값이라 실측하며 재조정이 필요하다.
+BASELINE = 344.0
+SCALE = 70.0
 
-
-def _get_whisper_encoder():
-    global _whisper_encoder
-    if _whisper_encoder is None:
-        _whisper_encoder = whisper.load_model("base")
-    return _whisper_encoder
-
-# 실제 목소리 16개(정확 8개 distance 21.4~26.0, 오답 8개 distance 28.4~33.3)로
-# 튜닝한 값. score = BASELINE - distance*SCALE, 두 그룹 경계값(21.4→약 87점, 33.3→약 8점)
-# 두 점을 직선으로 잇는 방식으로 계산. 데이터가 더 쌓이면 재조정 필요.
-BASELINE = 230.0
-SCALE = 6.667
-
-_vad_model = None
+LEVEL_HIGH = 70   # score 이상 → 상
+LEVEL_MID = 50    # score 이상 → 중, 미만 → 하
 
 
-def _get_vad_model():
-    global _vad_model
-    if _vad_model is None:
-        _vad_model = load_silero_vad()
-    return _vad_model
-
-
-def _vad_trim(y: np.ndarray, sr: int) -> np.ndarray:
-    """webrtcvad 대신 쓰는 신경망 기반 음성 구간 검출 (librosa.effects.trim 대체).
-    음성 구간만 남기고 앞뒤 무음 제거. 음성 구간이 없으면 길이 0 반환.
-    """
-    audio = torch.from_numpy(y.astype(np.float32))
-    model = _get_vad_model()
-    timestamps = get_speech_timestamps(audio, model, sampling_rate=sr)
-    if not timestamps:
-        return y[:0]
-    return collect_chunks(timestamps, audio).numpy()
+def pronunciation_level(score: int) -> str:
+    """0~100 점수를 "상/중/하" 3단계로 바꾼다. text 채점이 통과(passed=True)했을 때만 쓴다 —
+    미세한 발음 차이는 신뢰도가 낮아서, 숫자 그대로 보여주는 대신 큰 단계로만 표현한다."""
+    if score >= LEVEL_HIGH:
+        return "상"
+    if score >= LEVEL_MID:
+        return "중"
+    return "하"
 
 
 def _decode_to_wav_array(audio_bytes: bytes, ext: str):
-    """webm/opus 등 soundfile 이 못 읽는 포맷을 ffmpeg로 wav(16kHz mono)로 변환한 뒤 로드.
+    """webm/opus 등 soundfile 이 못 읽는 포맷을 ffmpeg로 wav(16kHz mono)로 변환한 뒤 로드한다.
 
+    soundfile(libsndfile)이 webm 을 직접 못 읽고("Format not recognised"), librosa 의
+    ffmpeg 자동 폴백도 이번 버전 조합에서는 안 걸려서, ffmpeg 변환을 직접 호출한다.
+    Windows 에서는 NamedTemporaryFile 을 연 채로 다른 프로세스가 못 열기 때문에
+    delete=False 로 만들고 핸들을 닫은 뒤 쓰고, 끝나면 직접 지운다.
     """
     src = tempfile.NamedTemporaryFile(suffix=ext, delete=False)
     dst = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
@@ -85,18 +70,18 @@ def _decode_to_wav_array(audio_bytes: bytes, ext: str):
         Path(dst.name).unlink(missing_ok=True)
 
 
-def _features_whisper(y: np.ndarray, sr: int) -> np.ndarray:
-    """직접 만든 MFCC 대신, 이미 로드된 Whisper 인코더의 은닉 표현을 특징으로 씀.
-    Whisper 인코더는 30초를 1500프레임으로 인코딩 = 초당 50프레임. librosa dtw 는 (특징, 시간) 축 순서를 기대.
+def _cmvn(mfcc: np.ndarray) -> np.ndarray:
+    """켑스트럼 평균-분산 정규화. 계수별로 시간축 평균 0·분산 1로 맞춘다.
+
     """
-    duration_sec = len(y) / sr
-    mel = whisper.log_mel_spectrogram(y.astype(np.float32))
-    mel = whisper.pad_or_trim(mel, whisper.audio.N_FRAMES)
-    model = _get_whisper_encoder()
-    with torch.no_grad():
-        emb = model.encoder(mel.unsqueeze(0))[0].numpy()  # [1500, 512]
-    n_frames = max(1, min(emb.shape[0], int(duration_sec * _ENCODER_FRAME_RATE) + 2))
-    return emb[:n_frames].T  # [512, n_frames] — librosa dtw 는 (특징, 시간) 축 순서를 기대
+    mean = mfcc.mean(axis=1, keepdims=True)
+    std = mfcc.std(axis=1, keepdims=True) + 1e-8
+    return (mfcc - mean) / std
+
+
+def _features(y: np.ndarray, sr: int) -> np.ndarray:
+    mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
+    return _cmvn(mfcc)
 
 
 def pronunciation_score(ref_wav_path: str, audio_base64: str, mime: str) -> int:
@@ -106,15 +91,16 @@ def pronunciation_score(ref_wav_path: str, audio_base64: str, mime: str) -> int:
 
     ref, _ = librosa.load(ref_wav_path, sr=16000)
 
-    ref = _vad_trim(ref, sr)
-    student = _vad_trim(student, sr)
+    ref, _ = librosa.effects.trim(ref)
+    student, _ = librosa.effects.trim(student)
 
     if len(ref) == 0 or len(student) == 0:
         return 0
 
-    feat_ref = _features_whisper(ref, sr)
-    feat_stu = _features_whisper(student, sr)
+    feat_ref = _features(ref, sr)
+    feat_stu = _features(student, sr)
 
     D, _ = librosa.sequence.dtw(feat_ref, feat_stu)
     distance = D[-1, -1] / max(D.shape)
     return int(np.clip(BASELINE - distance * SCALE, 0, 100))
+
