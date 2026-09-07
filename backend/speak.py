@@ -27,7 +27,6 @@ STT_BACKEND 환경변수: 기본값 "gemini"(서비스용, PRD 5.2). 테스트/�
 """
 import base64
 import difflib
-import os
 import re
 
 from fastapi import APIRouter
@@ -37,13 +36,11 @@ from pydantic import BaseModel
 
 from backend import golden
 from backend.config import settings
-from backend.pronounce import _decode_to_wav_array, pronunciation_score
+from backend.pronounce import pronunciation_level, pronunciation_score
 from backend.tts import ensure_tts
 
-STT_BACKEND = os.environ.get("STT_BACKEND", "gemini")
-
 router = APIRouter(tags=["speak"])
-#통과 기준 주어진 단어나 문장 대비 70% 이상 유사하면 통과로 간주합니다
+# 통과 기준: 주어진 단어나 문장 대비 70% 이상 유사하면 통과로 간주합니다
 PASS_SCORE = 70
 
 
@@ -77,26 +74,6 @@ def gemini_stt(audio_base64: str, mime: str) -> str:
     return (response.text or "").strip()
 
 
-_whisper_model = None
-
-
-def _get_whisper_model():
-    global _whisper_model
-    if _whisper_model is None:
-        import whisper
-        _whisper_model = whisper.load_model("base")
-    return _whisper_model
-
-
-def whisper_stt(audio_base64: str, mime: str) -> str:
-    """STT_BACKEND=whisper 일 때만 쓰는 로컬 STT. API 할당량 없이 테스트/튜닝하려는 용도."""
-    audio_bytes = base64.b64decode(audio_base64)
-    ext = ".webm" if "webm" in mime else ".wav"
-    audio, _ = _decode_to_wav_array(audio_bytes, ext)
-    result = _get_whisper_model().transcribe(audio, language="en", fp16=False)
-    return result["text"].strip()
-
-
 def _normalize(text: str) -> list[str]:
     return re.sub(r"[^\w\s]", "", text.lower()).split()
 
@@ -114,24 +91,23 @@ def speak(body: SpeakIn):
     item = golden.find_item(body.item_id)
     expected = item["text"] if item else ""
 
-    if STT_BACKEND != "whisper" and not settings.has_api_key:
+    if not settings.has_api_key:
         return {"heard": "", "expected": expected, "score": 0, "passed": False, "error": "GEMINI_API_KEY 미설정"}
 
     try:
-        if STT_BACKEND == "whisper":
-            heard = whisper_stt(body.audio_base64, body.mime)
-        else:
-            heard = gemini_stt(body.audio_base64, body.mime)
+        heard = gemini_stt(body.audio_base64, body.mime)
     except Exception as e:
         return {"heard": "", "expected": expected, "score": 0, "passed": False, "error": str(e)}
 
     score = similarity(heard, expected)
     result = {"heard": heard, "expected": expected, "score": score, "passed": score >= PASS_SCORE}
 
-    try:
-        ref_path = ensure_tts(body.item_id, expected)
-        result["pronunciation_score"] = pronunciation_score(str(ref_path), body.audio_base64, body.mime)
-    except Exception:
-        pass  # 참고용 지표라 실패해도 전체 응답은 그대로 반환
+    if result["passed"]:
+        try:
+            ref_path = ensure_tts(body.item_id, expected)
+            raw = pronunciation_score(str(ref_path), body.audio_base64, body.mime)
+            result["pronunciation_level"] = pronunciation_level(raw)
+        except Exception:
+            pass  # 참고용 지표라 실패해도 전체 응답은 그대로 반환
 
     return result
