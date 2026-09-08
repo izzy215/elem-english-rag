@@ -21,7 +21,8 @@ import json
 
 from fastapi import APIRouter
 
-from backend.tutor import STUDENT_DIR, find_rule
+from backend import golden
+from backend.tutor import STUDENT_DIR
 
 router = APIRouter(tags=["student"])
 
@@ -61,7 +62,7 @@ def notebook_summary(student: str, max_examples: int = 3) -> dict:
 
     active, overcome = [], []
     for rule_id, entry in book.items():
-        rule = find_rule(rule_id) or {}
+        rule = golden.find_rule(rule_id) or {}
         # 최근 것부터: log_ids 는 오래된 → 최신 순으로 쌓이므로 뒤집는다
         examples = []
         for log_id in reversed(entry.get("log_ids", [])):

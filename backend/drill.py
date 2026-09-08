@@ -10,7 +10,7 @@ POST /api/drill/answer {student, drill_id, question_id, choice}
 판정: 한 묶음(count 문제)을 전부 맞히면 notebook streak +1, 하나라도 틀리면 0. streak 2 = 극복 (PRD 7)
 기록: data/student/drill_log.jsonl (한 문제당 한 줄), notebook.json 의 streak
 
-규칙·오답노트 파일 읽고 쓰는 함수는 tutor.py 것을 같이 쓴다 (골든 데이터 공통 함수가 golden.py 로 옮겨지면 같이 옮긴다).
+규칙·오류 예시 읽기는 golden.py (공통), 오답노트 파일 경로·자물쇠는 tutor.py 것을 같이 쓴다.
 Gemini 를 쓰지 않는다.
 """
 from __future__ import annotations
@@ -23,7 +23,8 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from backend.tutor import STUDENT_DIR, _golden_path, _lock, find_rule
+from backend import golden
+from backend.tutor import STUDENT_DIR, _lock
 
 router = APIRouter(tags=["drill"])
 
@@ -35,14 +36,6 @@ _MAX_DRILLS = 500
 # ─────────────────────────────────────────────
 # 데이터
 # ─────────────────────────────────────────────
-def errors() -> list[dict]:
-    path = _golden_path("errors.jsonl")
-    if not path.exists():
-        return []
-    with path.open(encoding="utf-8") as f:
-        return [json.loads(line) for line in f if line.strip()]
-
-
 def _log(row: dict) -> None:
     STUDENT_DIR.mkdir(parents=True, exist_ok=True)
     with _lock, (STUDENT_DIR / "drill_log.jsonl").open("a", encoding="utf-8") as f:
@@ -69,8 +62,8 @@ def _update_streak(student: str, rule_id: str, all_correct: bool) -> int:
 # ─────────────────────────────────────────────
 @router.get("/drill")
 def get_drill(student: str, rule: str, count: int = 2):
-    rule_doc = find_rule(rule)
-    pool = [e for e in errors() if e.get("rule_id") == rule]
+    rule_doc = golden.find_rule(rule)
+    pool = [e for e in golden.errors() if e.get("rule_id") == rule]
     if not pool:
         raise HTTPException(404, f"{rule} 의 연습 문제가 없음 (errors.jsonl)")
     picked = random.sample(pool, min(count, len(pool)))
@@ -114,7 +107,7 @@ def answer(body: AnswerIn):
 
     correct = body.choice == q["answer"]
     q["answered"] = correct
-    rule_doc = find_rule(drill["rule_id"]) or {}
+    rule_doc = golden.find_rule(drill["rule_id"]) or {}
     _log({
         "ts": datetime.now().isoformat(timespec="seconds"), "student": body.student, "drill_id": body.drill_id,
         "rule_id": drill["rule_id"], "error_id": q["error_id"], "choice": q["choices"][body.choice] if 0 <= body.choice < len(q["choices"]) else None,

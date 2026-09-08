@@ -12,12 +12,11 @@ POST /api/fix  {student, level, unit, text, source}
 RAG 담당의 /rag/search 가 완성되면 _search_rule() 을 채워 "rag" 모드(1위 조각만 넣기)로 바꾼다.
 화면(frontend/js/tutor.js)은 이 응답 형식을 이미 기다리고 있다. 필드 이름을 바꾸면 화면도 같이 바꿔야 한다.
 
-데이터 위치: data/golden/rules.jsonl · units.csv 가 있으면 그것, 없으면 data/golden/_sample-B/ 의 샘플.
+데이터 읽기는 전부 golden.py (TTS 팀원 소유, 공통): rules() · find_rule() · find_unit(). 골든/샘플 선택도 거기서 한다.
 학생 DB: data/student/sentence_log.jsonl, notebook.json (PRD 5.2 형식, gitignore)
 """
 from __future__ import annotations
 
-import csv
 import json
 import re
 import threading
@@ -27,47 +26,15 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from backend import llm
+from backend import golden, llm
 from backend.config import settings
 
 ROOT = Path(__file__).resolve().parent.parent          # project/
-GOLDEN = ROOT / "data" / "golden"
-SAMPLE_B = GOLDEN / "_sample-B"
 STUDENT_DIR = ROOT / "data" / "student"
 PROMPT_FILE = Path(__file__).parent / "prompts" / "fix_fallback.txt"
 
 router = APIRouter(tags=["tutor"])
 _lock = threading.Lock()
-
-
-# ─────────────────────────────────────────────
-# 데이터 읽기 (골든 → 없으면 샘플 B)
-# ─────────────────────────────────────────────
-def _golden_path(name: str) -> Path:
-    return GOLDEN / name if (GOLDEN / name).exists() else SAMPLE_B / name
-
-
-def rules() -> list[dict]:
-    path = _golden_path("rules.jsonl")
-    if not path.exists():
-        return []
-    with path.open(encoding="utf-8") as f:
-        return [json.loads(line) for line in f if line.strip()]
-
-
-def find_rule(rule_id: str | None) -> dict | None:
-    return next((r for r in rules() if r["id"] == rule_id), None) if rule_id else None
-
-
-def unit_info(level: int, unit: str) -> dict:
-    path = _golden_path("units.csv")
-    if not path.exists():
-        return {}
-    with path.open(encoding="utf-8-sig", newline="") as f:
-        for row in csv.DictReader(f):
-            if str(row.get("level")) == str(level) and row.get("unit") == unit:
-                return row
-    return {}
 
 
 # ─────────────────────────────────────────────
@@ -153,10 +120,10 @@ def fix(body: FixIn):
     if not settings.has_api_key:
         raise HTTPException(500, "GEMINI_API_KEY 가 설정되어 있지 않음")
 
-    all_rules = rules()
+    all_rules = golden.rules()
     if not all_rules:
         raise HTTPException(500, "rules.jsonl 이 없음 (data/golden/ 또는 _sample-B/)")
-    unit = unit_info(body.level, body.unit)
+    unit = golden.find_unit(body.level, body.unit) or {}
 
     # 모드: RAG 검색이 되면 1위 조각만, 아니면 전체 규칙 (지금은 항상 fallback)
     hit = _search_rule(text)
@@ -166,7 +133,7 @@ def fix(body: FixIn):
     prompt = _render(
         PROMPT_FILE.read_text(encoding="utf-8"),
         mission=unit.get("mission") or "(미션 없음 — 미션 확인은 ok=true 로)",
-        hint_words=", ".join((unit.get("hint_words") or "").split(";")) or "(없음)",
+        hint_words=", ".join(unit.get("hint_words") or []) or "(없음)",
         all_rules=_rules_block(candidates),
         sentence=text,
     )
@@ -178,7 +145,7 @@ def fix(body: FixIn):
     llm_info = out.pop("_llm", {})
 
     print(f"[fix] {llm_info.get('backend')}:{llm_info.get('model')} {llm_info.get('ms')}ms 응답: {json.dumps(out, ensure_ascii=False)}", flush=True)
-    rule = find_rule(out.get("rule_id")) if not out.get("ok") else None
+    rule = golden.find_rule(out.get("rule_id")) if (not out.get("ok") and out.get("rule_id")) else None
     ok = bool(out.get("ok")) or rule is None                 # 목록에 없는 id 를 지어내면 ok 로 취급 (근거 없는 지적 금지)
     raw_fixed = (out.get("fixed") or text).strip()
     fixed = raw_fixed

@@ -23,7 +23,6 @@
 from __future__ import annotations
 
 import argparse
-import csv
 import json
 import sys
 import time
@@ -33,16 +32,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from backend import llm, tutor                                    # noqa: E402
+from backend import golden, llm, tutor                            # noqa: E402
 from backend.config import settings                               # noqa: E402
 
 OUT_DIR = ROOT / "data" / "rag_eval"
 
 
 def load_eval() -> list[dict]:
-    path = tutor._golden_path("eval.csv")
-    with path.open(encoding="utf-8-sig", newline="") as f:
-        rows = list(csv.DictReader(f))
+    rows = golden.eval_set()
     for r in rows:
         r["expected_rule_id"] = (r.get("expected_rule_id") or "").strip()
         r["is_normal"] = r["expected_rule_id"] in ("", "NONE")
@@ -51,11 +48,11 @@ def load_eval() -> list[dict]:
 
 def build_prompt(text: str, rules: list[dict], level: int = 2, unit: str = "U3") -> str:
     """tutor.fix() 와 똑같은 폴백 프롬프트 (규칙 전부). RAG 가 붙으면 candidates 를 검색 결과로 바꿔 'rag' 조건도 비교할 수 있다."""
-    unit_row = tutor.unit_info(level, unit)
+    unit_row = golden.find_unit(level, unit) or {}
     return tutor._render(
         tutor.PROMPT_FILE.read_text(encoding="utf-8"),
         mission=unit_row.get("mission") or "(미션 없음 — 미션 확인은 ok=true 로)",
-        hint_words=", ".join((unit_row.get("hint_words") or "").split(";")) or "(없음)",
+        hint_words=", ".join(unit_row.get("hint_words") or []) or "(없음)",
         all_rules=tutor._rules_block(rules),
         sentence=text,
     )
@@ -70,7 +67,7 @@ def run_one(text: str, backend: str, rules: list[dict]) -> dict:
         if info.get("fallback_from"):                            # 혹시라도 대체됐으면 실패로 취급
             raise llm.LLMError(f"{backend} 실패 → {info.get('backend')} 로 대체됨 (비교 실험에선 무효)")
         rule_id = None if out.get("ok") else out.get("rule_id")
-        if rule_id and not tutor.find_rule(rule_id):
+        if rule_id and not golden.find_rule(rule_id):
             rule_id = f"?{rule_id}"                                # 목록에 없는 id 를 지어냄
         return {"backend": backend, "model": info.get("model"), "ms": info.get("ms", int((time.time() - t0) * 1000)),
                 "ok": bool(out.get("ok")), "rule_id": rule_id, "fixed": out.get("fixed"), "full_fixed": out.get("full_fixed"),
@@ -103,7 +100,7 @@ def main() -> None:
     rows = load_eval()
     if args.limit:
         rows = rows[: args.limit]
-    rules = tutor.rules()
+    rules = golden.rules()
     print(f"eval {len(rows)}문장 × {backends} · 규칙 {len(rules)}개 · 모델 " + ", ".join(f"{b}={llm._model_of(b)}" for b in backends), flush=True)
 
     results = []
