@@ -33,9 +33,12 @@ class Settings:
     audio_cache_dir: Path
     # LLM 제공자 (backend/llm.py)
     llm_backend: str = "gemini"
+    anthropic_api_key: str = ""
+    claude_model: str = "claude-opus-5"
     llm_local_url: str = ""
     llm_local_model: str = ""
     llm_local_api_key: str = ""
+    llm_endpoints: dict = None          # {이름: {url, key, model}} — OpenAI 호환 엔드포인트 여러 개 (LLM_ENDPOINTS=groq,teacher + LLM_GROQ_URL …)
     llm_timeout: float = 30.0
     llm_fallback: bool = True
 
@@ -48,6 +51,18 @@ def _get(key: str, default: str = "") -> str:
     return os.environ.get(key, default).strip()
 
 
+def _endpoints() -> dict:
+    """LLM_ENDPOINTS=groq,teacher 처럼 이름을 나열하면 이름마다 LLM_<이름>_URL / _KEY / _MODEL 을 읽는다.
+    LLM_LOCAL_URL 이 있으면 'local' 이름으로도 등록 (예전 설정 호환)."""
+    out = {}
+    for name in [n.strip().lower() for n in _get("LLM_ENDPOINTS").split(",") if n.strip()]:
+        key = name.upper()
+        out[name] = {"url": _get(f"LLM_{key}_URL"), "key": _get(f"LLM_{key}_KEY"), "model": _get(f"LLM_{key}_MODEL")}
+    if _get("LLM_LOCAL_URL") and "local" not in out:
+        out["local"] = {"url": _get("LLM_LOCAL_URL"), "key": _get("LLM_LOCAL_API_KEY"), "model": _get("LLM_LOCAL_MODEL", "qwen2.5:7b-instruct")}
+    return out
+
+
 settings = Settings(
     gemini_api_key=_get("GEMINI_API_KEY"),
     gemini_model=_get("GEMINI_MODEL", "gemini-3.6-flash"),
@@ -57,11 +72,14 @@ settings = Settings(
     learner_name=_get("LEARNER_NAME", "지수"),
     audio_cache_dir=ROOT / _get("AUDIO_CACHE_DIR", "audio_cache"),
     llm_backend=_get("LLM_BACKEND", "gemini").lower(),
+    anthropic_api_key=_get("ANTHROPIC_API_KEY"),
+    claude_model=_get("LLM_CLAUDE_MODEL", "claude-opus-5"),
     llm_local_url=_get("LLM_LOCAL_URL"),
     llm_local_model=_get("LLM_LOCAL_MODEL", "qwen2.5:7b-instruct"),
     llm_local_api_key=_get("LLM_LOCAL_API_KEY"),
     llm_timeout=float(_get("LLM_TIMEOUT", "30") or 30),
     llm_fallback=_get("LLM_FALLBACK", "1") not in ("0", "false", "no"),
+    llm_endpoints=_endpoints(),
 )
 
 

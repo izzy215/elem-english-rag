@@ -17,9 +17,11 @@
 ```
 tutor.py /fix ─┐                       .env: LLM_BACKEND=gemini | local
 ask.py   /ask ─┴─▶ backend/llm.py ─┬─ gemini  (지금 쓰는 것, 그대로)
-                   generate_json()  └─ local   ──HTTP──▶ 선생님 서버  Ollama(또는 vLLM)  OpenAI 호환 /v1/chat/completions
-                                        │                                └─ qwen2.5:7b-instruct 등
-                                        └─ local 실패 시 gemini 로 폴백 (LLM_FALLBACK=1)
+                   generate_json()  ├─ claude  (Anthropic API · 비교 실험용, ANTHROPIC_API_KEY 필요, 무료 등급 없음)
+                                    └─ <이름>  ──HTTP──▶ OpenAI 호환 엔드포인트 (이름 여러 개 등록: LLM_ENDPOINTS=teacher,groq,…)
+                                        │             ├─ teacher: 선생님 서버 Ollama/vLLM  qwen2.5:7b-instruct 등
+                                        │             └─ groq / mistral / openrouter …: 무료 티어 있는 공개 모델 API
+                                        └─ gemini 아닌 백엔드 실패 시 gemini 로 폴백 (LLM_FALLBACK=1)
 ```
 
 - 호출부는 백엔드를 모른다. `.env` 한 줄로 바꾼다. 응답에 `llm: {backend, model, ms, fallback_from}`이 붙고 sentence_log에도 기록되므로 어느 모델이 답했는지 나중에 셀 수 있다.
@@ -51,23 +53,24 @@ curl http://<서버IP>:11434/v1/chat/completions -H "Content-Type: application/j
 완료 기준: 위 curl이 `{"ok":false,"rule_id":"R-01",...}` 모양의 **JSON만** 돌려준다 (앞뒤 설명 없이). 응답 시간 기록.
 
 ### 작업 3. 우리 서버에서 연결 (TTS 팀원 → 팀장 확인)
-`.env`에 세 줄 추가 후 파이참 서버 재시작:
+`.env`에 네 줄 추가 후 파이참 서버 재시작 (`teacher` 라는 이름으로 등록. Groq 등 다른 OpenAI 호환 API 도 같은 방식으로 이름만 늘리면 됨):
 ```
-LLM_BACKEND=local
-LLM_LOCAL_URL=http://<서버IP>:11434/v1
-LLM_LOCAL_MODEL=qwen2.5:7b-instruct
+LLM_ENDPOINTS=teacher
+LLM_TEACHER_URL=http://<서버IP>:11434/v1
+LLM_TEACHER_MODEL=qwen2.5:7b-instruct
+LLM_BACKEND=teacher
 ```
-- [ ] 튜터 화면에서 "I go to the zoo yesterday."로 [고쳐줘] → 파이참 콘솔 `[fix] local:qwen2.5:7b-instruct 1234ms 응답: {...}` 확인
-- [ ] 서버를 끈 상태로 다시 → 콘솔 `[llm] local 실패 → gemini 대체` 가 찍히고 화면은 정상 진단 (폴백 동작)
+- [ ] 튜터 화면에서 "I go to the zoo yesterday."로 [고쳐줘] → 파이참 콘솔 `[fix] teacher:qwen2.5:7b-instruct 1234ms 응답: {...}` 확인
+- [ ] 서버를 끈 상태로 다시 → 콘솔 `[llm] teacher 실패 → gemini 대체` 가 찍히고 화면은 정상 진단 (폴백 동작)
 - [ ] `LLM_BACKEND=gemini`로 되돌려 두기 (주 경로)
 
-완료 기준: 위 세 가지 캡처. `/fix` 응답의 `llm.backend`가 각각 local / gemini(fallback_from: local) / gemini.
+완료 기준: 위 세 가지 캡처. `/fix` 응답의 `llm.backend`가 각각 teacher / gemini(fallback_from: teacher) / gemini.
 
 ### 작업 4. 비교 실험 (팀장 + TTS 팀원)
-`tests/eval_fix.py` (팀장이 만듦): eval.csv 10문장을 **같은 프롬프트·같은 규칙 조각**으로 Gemini와 로컬에 각각 보내 표로 만든다.
+`tests/eval_fix.py` (만들어 둠, `--backend gemini,claude,teacher,groq` 또는 `all`): eval.csv 10문장을 **같은 프롬프트·같은 규칙 조각**으로 Gemini·Claude·로컬에 각각 보내 표로 만든다.
 
-| 문장 | 정답 규칙 | Gemini 규칙 / 고침 / ms | 로컬 규칙 / 고침 / ms |
-|---|---|---|---|
+| 문장 | 정답 규칙 | Gemini | Claude | 선생님 서버 7B | Groq 70B (무료) |
+|---|---|---|---|---|---|
 
 - [ ] 규칙 적중(rule_id 일치), 고친 문장 일치, 정상 문장 2개 오교정 여부, 평균 응답 시간
 - [ ] 모델 1개 더(후보 2) 돌려 보면 발표 표가 풍성해짐 (선택)
