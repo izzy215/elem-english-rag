@@ -386,7 +386,7 @@ candidates = search_rules(text: str, k: int = 3) -> list[dict]
 - 반환: `score` 내림차순 정렬된 리스트. 각 항목 `{"id": "R-01", "type": "과거시제", "text": "...(원본 규칙 전체 본문)...", "unit": "U3", "score": 0.4367}`
   - `score = round(1 - cosine_distance, 4)`. **오류 확률이나 정확도가 아니라 유사도**(높을수록 관련 있음). 위·아래 경계값 없음(이론상 -1~1이지만 실측 분포는 3절 참고).
   - 저장 건수(현재 8개)를 넘는 `k`를 요청해도 초과 반환하지 않음 — `len(candidates)`가 `k`보다 작을 수 있음(예: `k=10`인데 저장 8개면 8개만 옴).
-- **예외**: 색인이 없거나 manifest가 가리키는 컬렉션을 열 수 없으면 `backend.indexing.IndexUnavailableError`(→ `RuntimeError` 서브클래스)를 던짐. `tutor.py`는 이걸 캐치해서 `mode="fallback"`(전체 규칙)으로 전환해야 함 — 현재 `/api/rag/search`는 이 예외를 503으로 매핑하지만, `tutor.py`는 HTTP를 안 타므로 직접 `except indexing.IndexUnavailableError` 로 잡아야 함.
+- **예외**: 색인이 없음·manifest가 가리키는 컬렉션을 열 수 없음·임베딩 실패·질의 실패 — 검색 과정에서 어디가 실패하든 전부 `backend.indexing.IndexUnavailableError`(→ `RuntimeError` 서브클래스) 하나로 정규화되어 던져짐(2026-09-09 코드 리뷰에서 임베딩·질의 실패가 정규화 안 되던 걸 발견해 수정 완료 — 수정 전엔 컬렉션 접근 실패만 이 예외로 잡혔음). `tutor.py`는 이 예외 하나만 캐치해서 `mode="fallback"`(전체 규칙)으로 전환하면 됨 — 현재 `/api/rag/search`는 이 예외를 503으로 매핑하지만, `tutor.py`는 HTTP를 안 타므로 직접 `except indexing.IndexUnavailableError` 로 잡아야 함.
 - **호출 시간**: 외부 API 호출이 아니라 로컬 모델 추론(all-MiniLM-L6-v2, CPU). 규칙 8개 기준 실측 수십 ms 이내. 다만 프로세스 시작 후 첫 호출은 모델 로딩(초 단위)이 걸릴 수 있음 — 서버 기동 시 `search_rules("warmup")` 한 번 미리 불러 두는 걸 권장(선택 사항, 필수 아님).
 
 ### 2. `/api/rag/search` · `/api/rag/eval` 실제 요청·응답·오류 예시

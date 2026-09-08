@@ -71,6 +71,25 @@ flowchart TD
 ### 기존 파일 중 수정한 것
 - **`backend/rag.py`** — 유일하게 기존 코드를 수정. `/search`(스텁→실구현), `/eval`(스텁→저장결과 읽기)만 바꿨고 `/check`는 그대로 둠(범위 밖)
 
+### 코드 리뷰 (2026-09-09, `/code-review ultra` 로컬 실행)
+
+10건 발견, 우선순위 상위 3건 수정 완료 · 나머지 7건 미수정.
+
+| # | 내용 | 상태 |
+|---|---|---|
+| 1 | `--validate-only`가 rules.jsonl/errors.jsonl의 잘못된 JSON에 크래시함 | ✅ 수정 — 이제 파일명과 함께 오류로 보고하고 정상 종료 |
+| 2 | `search_rules()`가 컬렉션 접근 실패만 `IndexUnavailableError`로 정규화, 임베딩·질의 실패는 원본 예외 그대로 샘 | ✅ 수정 — 검색 과정 전체를 하나의 예외로 정규화(→ 팀장 인계문서·work order 관련 문구도 갱신) |
+| 3 | `build_index()`에서 `col.add()` 실패 시 고아 Chroma 컬렉션이 정리 안 됨 | ✅ 수정 — 실패 시 즉시 삭제 |
+| 4 | `eval_rag.py`의 결과 파일 쓰기가 비원자적이라 `/rag/eval` 조회와 경합 가능 | ⬜ 미수정 |
+| 5 | `rules.jsonl`에 빈 줄이 있으면 오류 보고의 줄 번호가 틀어짐 | ⬜ 미수정 |
+| 6 | `search_rules()`가 매 요청마다 새 Chroma 클라이언트 생성(비효율) | ⬜ 미수정 |
+| 7 | `build_index()`가 rules.jsonl을 두 번 읽음(비효율) | ⬜ 미수정 |
+| 8 | `embedding._get_ef()` 싱글턴이 동시 요청에 스레드 안전하지 않음 | ⬜ 미수정 (경미) |
+| 9 | 동시에 두 `--rebuild`를 돌리면 서로의 새 컬렉션을 지울 수 있음 | ⬜ 미수정 (희귀 상황) |
+| 10 | `--rebuild --check-embedding` 동시 지정 시 `--rebuild`가 조용히 무시됨 | ⬜ 미수정 (경미) |
+
+세 건 모두 실패 상황을 실제로 재현해 수정 확인, `--validate-only`/`--rebuild`/실제 검색/`eval_rag` 회귀 없음 확인. 커밋 `c026273`.
+
 ### 건드리지 않은 것 (명시적 제외)
 `backend/tutor.py`, `backend/ask.py`, `frontend/**`(HTML/JS/CSS), `backend/config.py`, `backend/golden.py`, `backend/llm.py` — 전부 읽기만 하고 수정 안 함
 
