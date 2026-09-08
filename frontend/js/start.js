@@ -2,7 +2,7 @@
 async function refreshHero() {
   const st = S.get().student; $('#heroName').textContent = st;
   const nb = await fetchNotebook(st);
-  const spoken = Object.keys(localStorage).filter(k => k.startsWith(`spoken_${st}_`)).length;
+  const spoken = nb.stats ? nb.stats.spoken : Object.keys(localStorage).filter(k => k.startsWith(`spoken_${st}_`)).length;   // 서버 /notebook 이 주면 서버 수치
   $('#heroStat').innerHTML = `<span>🗣 말한 문장 ${spoken}</span><span>📒 헷갈리는 규칙 ${nb.active.length}</span><span>🌳 극복 ${nb.overcome.length}</span>`;
   $('#noteBtn').textContent = `📒 내 오답노트${nb.active.length ? ` (${nb.active.length})` : ''}`;
 }

@@ -172,6 +172,7 @@ def fix(body: FixIn):
         all_rules=_rules_block(candidates),
         sentence=text,
     )
+    print(f"[fix] student={body.student} unit={body.unit} mode={mode} candidates={[r['id'] for r in candidates]} text={text!r}", flush=True)
     try:
         out = _ask_gemini(prompt)
     except json.JSONDecodeError:
@@ -179,6 +180,7 @@ def fix(body: FixIn):
     except Exception as e:                                   # 할당량·네트워크 등
         raise HTTPException(502, f"Gemini 호출 실패: {e}")
 
+    print(f"[fix] gemini 응답: {json.dumps(out, ensure_ascii=False)}", flush=True)
     rule = find_rule(out.get("rule_id")) if not out.get("ok") else None
     ok = bool(out.get("ok")) or rule is None                 # 목록에 없는 id 를 지어내면 ok 로 취급 (근거 없는 지적 금지)
     fixed = (out.get("fixed") or text).strip()
@@ -209,4 +211,5 @@ def fix(body: FixIn):
     })
     if rule:
         _notebook_add(body.student, rule["id"], log_id)
+    print(f"[fix] 결과: ok={ok} rule={rule['id'] if rule else None} fixed={result['fixed']!r} more_errors={result['more_errors']} mission_ok={result['mission']['ok']} log_id={log_id}", flush=True)
     return result

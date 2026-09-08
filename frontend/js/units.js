@@ -9,7 +9,7 @@ async function renderUnits() {
     const meta = unitMeta(u.unit) || {}; const mission = u.mission || meta.mission || `${u.title} 단어로 한 문장 말해봐요`;
     const ruleIds = (u.rule_ids && u.rule_ids.length) ? u.rule_ids : (meta.rule_ids || '').split(';').filter(Boolean);
     const wrong = nb.active.filter(e => ruleIds.includes(e.rule_id)).length;
-    const spoken = Object.keys(localStorage).filter(k => k.startsWith(`spoken_${state.student}_${u.unit}_`)).length;
+    const spoken = nb.stats ? (nb.stats.by_unit[u.unit] || 0) : Object.keys(localStorage).filter(k => k.startsWith(`spoken_${state.student}_${u.unit}_`)).length;
     return `<button class="card" onclick='pickUnit(${JSON.stringify({ unit: u.unit, title: u.title, mission, hint_words: (u.hint_words && u.hint_words.length) ? u.hint_words : (meta.hint_words || '').split(';').filter(Boolean), rule_ids: ruleIds })})'>
       <div class="t">${esc(u.unit)} · ${esc(u.title)} ${wrong ? `<span class="badge b-review">헷갈리는 규칙 ${wrong}</span>` : ''}${spoken >= 5 ? '<span class="badge b-ok">완료 ✓</span>' : ''}</div>
       <div class="d">🎯 ${esc(mission)}</div>
