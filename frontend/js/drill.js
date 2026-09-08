@@ -27,5 +27,5 @@ async function answer(i) {
   showResult('#drillResult', correct ? '정답이에요! 🎉' : `아쉬워요. 정답은 ${esc(q.choices[ans])}`, correct ? '' : 'bad');
   $('#drillSrc').style.display = 'block'; $('#drillSrc').innerHTML = `📚 ${esc(ruleText)}`; if (correct) okCount++; $('#drillNext').disabled = false;
 }
-function next() { if (qi < qs.length - 1) { qi++; render(); return; } if (local) NB.drillResult(student, state.drillRule, okCount === qs.length); go('notebook.html'); }
+function next() { if (qi < qs.length - 1) { qi++; render(); return; } NB.drillResult(student, state.drillRule, okCount === qs.length); go('notebook.html'); }   // 로컬 오답노트도 같이 갱신 (서버 /notebook 생기면 화면은 서버 것을 씀)
 (async function init() { if (!state) return; renderTopbar({ crumbs: false }); showHealth(); injectChat('drill'); await load(); })();
