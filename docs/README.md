@@ -34,6 +34,8 @@
 | 데이터 제작 계획 | data-pipeline-plan.md / .svg | data-pipeline-plan.md (규칙 조각 중심) |
 | 설계서 | design-screens · design-quiz · design-backlog | (작성 예정: design-tutor · design-chat · design-rag) |
 | 다이어그램 | overview.svg | diagrams.md (유스케이스 · 시퀀스 4 · Mermaid) |
+| 로컬 LLM 연동 (선생님 GPU 서버) | — | local-llm-plan.md (llm.py 스위치 · Ollama · 비교 실험 · TTS 팀원) |
+| RAG 작업지시서 | — | ../rag-implementation-work-order.md (RAG 팀원) |
 | 골든 데이터 샘플 | data/golden/_sample | data/golden/_sample-B |
 
 ## 보는 순서

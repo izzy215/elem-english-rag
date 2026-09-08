@@ -25,10 +25,9 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
-from google import genai
-from google.genai import types
 from pydantic import BaseModel
 
+from backend import llm
 from backend.config import settings
 
 ROOT = Path(__file__).resolve().parent.parent          # project/
@@ -39,14 +38,6 @@ PROMPT_FILE = Path(__file__).parent / "prompts" / "fix_fallback.txt"
 
 router = APIRouter(tags=["tutor"])
 _lock = threading.Lock()
-_client: genai.Client | None = None
-
-
-def _get_client() -> genai.Client:
-    global _client
-    if _client is None:
-        _client = genai.Client(api_key=settings.gemini_api_key)
-    return _client
 
 
 # ─────────────────────────────────────────────
@@ -92,19 +83,9 @@ def _rules_block(rule_list: list[dict]) -> str:
     return "\n".join(f"- [{r['id']}] {r['type']}: {r['text']}" for r in rule_list)
 
 
-def _ask_gemini(prompt: str) -> dict:
-    """JSON 만 받는다. 모델이 코드펜스를 붙여도 벗겨서 파싱."""
-    resp = _get_client().models.generate_content(
-        model=settings.gemini_model,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            temperature=0.2,
-        ),
-    )
-    text = (resp.text or "").strip()
-    text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text)
-    return json.loads(text)
+def _ask_llm(prompt: str) -> dict:
+    """JSON 만 받는다. 어느 모델(Gemini/로컬)을 쓸지는 backend/llm.py 와 .env 의 LLM_BACKEND 가 정한다."""
+    return llm.generate_json(prompt)
 
 
 def _single_fix(text: str, wrong: str | None, fix: str | None) -> str | None:
@@ -191,13 +172,12 @@ def fix(body: FixIn):
     )
     print(f"[fix] student={body.student} unit={body.unit} mode={mode} candidates={[r['id'] for r in candidates]} text={text!r}", flush=True)
     try:
-        out = _ask_gemini(prompt)
-    except json.JSONDecodeError:
-        raise HTTPException(502, "Gemini 응답을 JSON 으로 읽지 못함")
-    except Exception as e:                                   # 할당량·네트워크 등
-        raise HTTPException(502, f"Gemini 호출 실패: {e}")
+        out = _ask_llm(prompt)
+    except llm.LLMError as e:                                # 할당량·네트워크·JSON 파싱
+        raise HTTPException(502, str(e))
+    llm_info = out.pop("_llm", {})
 
-    print(f"[fix] gemini 응답: {json.dumps(out, ensure_ascii=False)}", flush=True)
+    print(f"[fix] {llm_info.get('backend')}:{llm_info.get('model')} {llm_info.get('ms')}ms 응답: {json.dumps(out, ensure_ascii=False)}", flush=True)
     rule = find_rule(out.get("rule_id")) if not out.get("ok") else None
     ok = bool(out.get("ok")) or rule is None                 # 목록에 없는 id 를 지어내면 ok 로 취급 (근거 없는 지적 금지)
     raw_fixed = (out.get("fixed") or text).strip()
@@ -224,13 +204,14 @@ def fix(body: FixIn):
         "mission": {"ok": bool(mission.get("ok", True)), "nudge": mission.get("nudge") or ""},
         "log_id": log_id,
         "mode": mode,
+        "llm": llm_info,                                       # {"backend","model","ms","fallback_from"} — 비교 실험·관리자용
     }
 
     _log_sentence({
         "log_id": log_id, "ts": datetime.now().isoformat(timespec="seconds"), "student": body.student,
         "level": body.level, "unit": body.unit, "text": text, "source": body.source,
         "rule_id": rule["id"] if rule else None, "ok": ok, "fixed": result["fixed"],
-        "mission_ok": result["mission"]["ok"], "mode": mode,
+        "mission_ok": result["mission"]["ok"], "mode": mode, "llm": llm_info.get("backend"), "llm_ms": llm_info.get("ms"),
     })
     if rule:
         _notebook_add(body.student, rule["id"], log_id)

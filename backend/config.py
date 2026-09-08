@@ -31,6 +31,13 @@ class Settings:
     app_title: str
     learner_name: str
     audio_cache_dir: Path
+    # LLM 제공자 (backend/llm.py)
+    llm_backend: str = "gemini"
+    llm_local_url: str = ""
+    llm_local_model: str = ""
+    llm_local_api_key: str = ""
+    llm_timeout: float = 30.0
+    llm_fallback: bool = True
 
     @property
     def has_api_key(self) -> bool:
@@ -49,6 +56,12 @@ settings = Settings(
     app_title=_get("APP_TITLE", "에코"),
     learner_name=_get("LEARNER_NAME", "지수"),
     audio_cache_dir=ROOT / _get("AUDIO_CACHE_DIR", "audio_cache"),
+    llm_backend=_get("LLM_BACKEND", "gemini").lower(),
+    llm_local_url=_get("LLM_LOCAL_URL"),
+    llm_local_model=_get("LLM_LOCAL_MODEL", "qwen2.5:7b-instruct"),
+    llm_local_api_key=_get("LLM_LOCAL_API_KEY"),
+    llm_timeout=float(_get("LLM_TIMEOUT", "30") or 30),
+    llm_fallback=_get("LLM_FALLBACK", "1") not in ("0", "false", "no"),
 )
 
 
