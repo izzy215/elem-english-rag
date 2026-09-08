@@ -176,7 +176,7 @@ function injectChat(screen) {
   document.body.insertAdjacentHTML('beforeend', `<button class="fab" id="chatFab" onclick="openChat()">🙋</button><div class="sheet-bg" id="chatBg" onclick="closeChat()"></div>
     <div class="sheet" id="chat"><div class="hd"><div class="t">🙋 물어보기 <button onclick="closeChat()">✕</button></div><div class="ctx" id="chatCtx"></div></div>
     <div class="msgs" id="chatMsgs"></div><div class="sugg" id="chatSugg"></div>
-    <div class="inp"><input id="chatIn" placeholder="궁금한 걸 써 보세요" onkeydown="if(event.key==='Enter') sendChat()"><button onclick="sendChat()">보내기</button></div></div>`);
+    <div class="inp"><input id="chatIn" placeholder="궁금한 걸 써 보세요" onkeydown="if(event.key==='Enter') sendChat()"><button class="mic" onclick="chatMic()">🎙</button><button onclick="sendChat()">보내기</button></div></div>`);
   CHAT.screen = screen;
 }
 async function openChat(extra = {}) {
@@ -203,5 +203,14 @@ async function askChat(q) {
   m.insertAdjacentHTML('beforeend', `<div class="msg bot ${r.offtopic ? 'warn' : ''}">${esc(r.answer)}${r.source && r.source.length ? `<div class="src">📚 근거 · ${r.source.map(s => esc(s.chunk_id)).join(' · ')}</div>` : (r.offtopic ? `<div class="src">검색 점수 낮음 → 조각 밖 답변 안 함</div>` : '')}${r.fallback ? `<div class="src" style="opacity:.7">서버 /ask 구현 전 · FAQ 샘플로 임시 답변</div>` : ''}</div>`);
   m.scrollTop = m.scrollHeight; CHAT.turns++;
   if (r.suggested && r.suggested.length) renderSugg(r.suggested); if (CHAT.turns >= 3) $('#chatSugg').innerHTML = `<button onclick="closeChat()">이제 돌아갈게요 ↩</button>`;
+}
+async function chatMic() {           // 한 번 누르면 녹음 시작, 다시 누르면 끝 (5초 지나면 자동으로 끝). STT 가 영어 전용이라 영어 질문만 받아쓴다
+  if (BUSY) return;
+  if (REC) { stopRecording(); return; }
+  const btn = $('.inp .mic'), inp = $('#chatIn'), ph = inp.placeholder;
+  btn.textContent = '⏹'; btn.classList.add('rec'); inp.placeholder = '말하는 중… 다시 누르면 끝';
+  try { const { b64, mime } = await recordOnce({ maxMs: 5000 }); btn.textContent = '…'; btn.classList.remove('rec'); const r = await speak(b64, '', '🎧 듣는 중…', mime); if (r.heard) inp.value = r.heard; else inp.placeholder = '잘 안 들렸어요. 다시 말해볼까요?'; }
+  catch (e) { inp.placeholder = e.message; }
+  finally { btn.textContent = '🎙'; btn.classList.remove('rec'); if (inp.placeholder === '말하는 중… 다시 누르면 끝') inp.placeholder = ph; }
 }
 function sendChat() { const v = $('#chatIn').value.trim(); if (!v) return; $('#chatIn').value = ''; askChat(v); }

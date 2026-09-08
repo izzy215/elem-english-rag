@@ -141,3 +141,5 @@ body.busy button{cursor:wait}
 .inp{display:flex;gap:6px;padding:8px 12px 14px;background:#F7F8F5}
 .inp input{flex:1;padding:11px 13px;border:1.5px solid var(--line);border-radius:14px;font:inherit;font-size:.9rem}
 .inp button{border:0;border-radius:14px;padding:0 14px;background:var(--primary);color:#fff;font-weight:800}
+.inp button.mic{background:#fff;border:1.5px solid var(--line);color:var(--ink)}
+.inp button.mic.rec{background:var(--danger);border-color:var(--danger);color:#fff;animation:pulse 1s infinite}
