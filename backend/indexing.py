@@ -59,7 +59,11 @@ def validate() -> ValidationReport:
     data_dir = golden._dir()  # noqa: SLF001 — 검증 스크립트라 내부 선택 경로를 그대로 노출해 보고한다
     report = ValidationReport(data_dir=str(data_dir), using_sample=golden.using_sample())
 
-    rules = golden.rules()
+    try:
+        rules = golden.rules()
+    except (ValueError, OSError) as exc:
+        report.errors.append(f"rules.jsonl — 읽기/파싱 실패(잘못된 JSON 가능성): {exc}")
+        return report
     report.rule_count = len(rules)
 
     # ── rules.jsonl: 필수 필드 · 중복 ID · 빈 본문 (파일명·행 번호로 보고) ──
@@ -82,7 +86,12 @@ def validate() -> ValidationReport:
     eval_rows = golden.eval_set()
     report.eval_total = len(eval_rows)
     wrong_examples = {r.get("wrong_example", "").strip() for r in rules if r.get("wrong_example")}
-    error_texts = {e.get("error", "").strip() for e in golden.errors() if e.get("error")}
+    try:
+        error_rows = golden.errors()
+    except (ValueError, OSError) as exc:
+        report.errors.append(f"errors.jsonl — 읽기/파싱 실패(잘못된 JSON 가능성): {exc}")
+        error_rows = []
+    error_texts = {e.get("error", "").strip() for e in error_rows if e.get("error")}
 
     for i, row in enumerate(eval_rows, start=1):
         text = (row.get("text") or "").strip()
@@ -165,16 +174,20 @@ def build_index() -> dict:
     client = _chroma_client()
     name = f"{COLLECTION_PREFIX}{datetime.now().strftime('%Y%m%d_%H%M%S%f')}"
     col = client.create_collection(name, metadata={"hnsw:space": "cosine"})
-    col.add(
-        ids=[r["id"] for r in rules],
-        embeddings=vectors,
-        documents=[r["text"] for r in rules],
-        metadatas=[
-            {"type": r["type"], "unit": r.get("unit", ""), "source_file": "rules.jsonl", "source_line": i}
-            for i, r in enumerate(rules, start=1)
-        ],
-    )
-    actual = col.count()
+    try:
+        col.add(
+            ids=[r["id"] for r in rules],
+            embeddings=vectors,
+            documents=[r["text"] for r in rules],
+            metadatas=[
+                {"type": r["type"], "unit": r.get("unit", ""), "source_file": "rules.jsonl", "source_line": i}
+                for i, r in enumerate(rules, start=1)
+            ],
+        )
+        actual = col.count()
+    except Exception:
+        client.delete_collection(name)   # 저장 도중 실패한 컬렉션을 고아로 남기지 않음
+        raise
     if actual != len(rules):
         client.delete_collection(name)   # 절반만 들어간 컬렉션을 남기지 않음
         raise RuntimeError(f"색인 건수 불일치: 저장 {actual} vs 원본 {len(rules)} — 활성 색인 전환하지 않음")

@@ -34,17 +34,20 @@ class CheckIn(BaseModel):
 
 def search_rules(text: str, k: int = 3) -> list[dict]:
     """id, type, text, unit, score(=1-cosine_distance) 후보를 score 내림차순으로 반환.
-    색인이 없거나 열 수 없으면 indexing.IndexUnavailableError 를 그대로 올린다(호출부가 503으로 매핑)."""
+    색인이 없거나 검색 도중 실패하면(컬렉션 접근·임베딩·질의 전부 포함) indexing.IndexUnavailableError
+    로 정규화해서 올린다 — 호출부(HTTP 계층의 503 매핑, tutor.py의 폴백 전환)가 이 예외 하나만
+    잡으면 되도록 하기 위함. 원인 예외는 `raise ... from e`로 보존된다."""
     manifest = indexing.load_manifest()
     client = indexing._chroma_client()  # noqa: SLF001 — indexing 모듈이 Chroma 연결의 유일한 소유자라 그대로 재사용
     try:
         col = client.get_collection(manifest["active_collection"])
+        n = max(1, min(k, manifest["count"]))   # 저장 건수를 넘는 후보 수를 요청해도 초과 반환하지 않음
+        qvec = embedding.embed_query(text)
+        res = col.query(query_embeddings=[qvec], n_results=n)
+    except indexing.IndexUnavailableError:
+        raise
     except Exception as e:
-        raise indexing.IndexUnavailableError(f"manifest 가 가리키는 컬렉션을 열 수 없음: {e}") from e
-
-    n = max(1, min(k, manifest["count"]))   # 저장 건수를 넘는 후보 수를 요청해도 초과 반환하지 않음
-    qvec = embedding.embed_query(text)
-    res = col.query(query_embeddings=[qvec], n_results=n)
+        raise indexing.IndexUnavailableError(f"검색 실패(컬렉션 접근·임베딩·질의 중): {e}") from e
     if not res["ids"] or not res["ids"][0]:
         return []
     out = []
