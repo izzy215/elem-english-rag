@@ -1,0 +1,30 @@
+{"id":"R-01","type":"명령문","unit":"U1","text":"상대방에게 행동을 요청하거나 지시할 때는 동사원형으로 문장을 시작해요. 주어(You)는 쓰지 않아요. 예: Sit down, please. Open the door. 틀린 예: You sit down.","short":"행동을 지시할 땐 동사원형으로 시작","examples":["Sit down, please.","Open the door."],"wrong_example":"You sit down."}
+{"id":"R-02","type":"be동사 현재형(1인칭)","unit":"U1","text":"내 이름이나 상태를 말할 때 'I' 뒤에는 항상 be동사 'am'을 써요. 줄여서 'I'm'으로 쓰기도 해요. 예: I am happy. I'm Seven. 틀린 예: I is happy."}
+{"id":"R-03","type":"be동사 현재형(2인칭)","unit":"U1","text":"너의 이름이나 상태를 말할 때 'You' 뒤에는 be동사 'are'를 써요. 줄여서 'You're'라고 해요. 예: You are a student. 틀린 예: You is a student."}
+{"id":"R-04","type":"지시대명사(가까운 것)","unit":"U2","text":"내 주변에 가까이 있는 한 개의 물건을 가리키며 '이것은 ~야'라고 할 때는 'This is ~'를 써요. 예: This is a pencil. 틀린 예: This are a pencil."}
+{"id":"R-05","type":"지시대명사(멀리 있는 것)","unit":"U2","text":"조금 멀리 떨어져 있는 한 개의 물건을 가리키며 '저것은 ~야'라고 할 때는 'That is ~'를 써요. 예: That is a clock. 틀린 예: That is clock."}
+{"id":"R-06","type":"셀 수 있는 명사의 단수형","unit":"U2","text":"셀 수 있는 물건이 하나 있을 때는 앞에 'a'나 'an'을 꼭 붙여야 해요. 자음 앞엔 a, 모음(a,e,i,o,u) 앞엔 an을 써요. 예: I have an apple. 틀린 예: I have apple."}
+{"id":"R-07","type":"셀 수 있는 명사의 복수형","unit":"U2","text":"물건이 두 개 이상 여러 개 있을 때는 단어 끝에 '-s'나 '-es'를 붙여서 여러 개임을 나타내요. 예: 두 개의 사과는 'two apples'가 돼요. 예: I like apples. 틀린 예: I like apple."}
+{"id":"R-08","type":"소유격 표현","unit":"U2","text":"'누구의 것'인지 나타낼 때 '나의'는 my, '너의'는 your를 사용해 명사 앞에 놓아요. 예: This is my bag. Is this your umbrella? 틀린 예: This is me bag."}
+{"id":"R-09","type":"현재진행형","unit":"U3","text":"지금 눈앞에서 하고 있는 행동을 말할 때는 'be동사 + 동사원형-ing' 모양을 써요. 예: 나는 지금 노래하는 중이야를 말할 땐 I am singing. 틀린 예: I singing."}
+{"id":"R-10","type":"현재진행형 의문문","unit":"U3","text":"상대방이 지금 무언가를 하고 있는지 물어볼 때는 be동사를 맨 앞으로 보내서 'Are you 동사-ing?'로 질문해요. 예: Are you studying? 틀린 예: You are studying?"}
+{"id":"R-11","type":"과거시제(규칙 변화)","unit":"U4","text":"지난 일이나 과거에 했던 행동을 말할 때는 동사 뒤에 '-ed'를 붙여요. 예: 나는 어제 축구를 했다를 말할 땐 I played soccer yesterday. 틀린 예: I play soccer yesterday."}
+{"id":"R-12","type":"과거시제(불규칙 변화)","unit":"U4","text":"과거를 말할 때 go->went, see->saw, eat->ate처럼 모양이 완전히 바뀌는 동사들이 있어요. '-ed'를 붙이면 안 돼요. 예: I went to the park. 틀린 예: I goed to the park."}
+{"id":"R-13","type":"과거시제 부정문","unit":"U4","text":"과거에 '~하지 않았다'고 말할 때는 동사 앞에 'didn't'를 쓰고, 그 뒤의 동사는 원래 모양(동사원형)으로 되돌려요. 예: I didn't watch TV. 틀린 예: I didn't watched TV."}
+{"id":"R-14","type":"미래 표현(will)","unit":"U5","text":"앞으로 할 일이나 계획을 말할 때는 동사 앞에 'will'을 붙여요. will 뒤에는 항상 원래 모양의 동사가 와야 해요. 예: I will help you. 틀린 예: I will helping you."}
+{"id":"R-15","type":"미래 계획(be going to)","unit":"U5","text":"이미 결정된 계획이나 예정된 일을 말할 때는 'be동사 + going to + 동사원형'을 사용해요. 예: I am going to watch a movie. 틀린 예: I going to watch a movie."}
+{"id":"R-16","type":"능력 표현(can)","unit":"U6","text":"무언가를 '할 수 있다'고 능력을 말할 때는 동사 앞에 'can'을 써요. can 뒤의 동사는 항상 원래 모양이어야 해요. 예: He can swim well. 틀린 예: He can swims well."}
+{"id":"R-17","type":"능력 부정 표현(can't)","unit":"U6","text":"할 수 없는 일을 말할 때는 'cannot' 또는 줄임말 'can't'를 동사 앞에 붙여요. 예: I can't fly. 틀린 예: I don't can fly."}
+{"id":"R-18","type":"허락 구하기(May I ~?)","unit":"U6","text":"상대방에게 정중하게 허락을 구할 때는 'May I + 동사원형 ~?' 구문을 사용해요. 예: 화장실에 가도 되나요?는 May I go to the restroom? 틀린 예: May I going to the restroom?"}
+{"id":"R-19","type":"의문사 Who","unit":"U7","text":"어떤 사람이 '누구'인지 물어볼 때는 문장 맨 앞에 의문사 'Who'를 써요. 예: 저 사람은 누구니?는 Who is that? 틀린 예: That is who?"}
+{"id":"R-20","type":"의문사 What","unit":"U7","text":"물건이나 이름 등이 '무엇'인지 물어볼 때는 문장 맨 앞에 'What'을 사용해요. 예: 이게 뭐야?는 What is this? 틀린 예: This is what?"}
+{"id":"R-21","type":"의문사 Where","unit":"U7","text":"장소나 위치가 '어디'인지 물어볼 때는 문장 맨 앞에 'Where'를 써요. 예: 내 공이 어디 있지?는 Where is my ball? 틀린 예: My ball is where?"}
+{"id":"R-22","type":"의문사 When","unit":"U7","text":"날짜나 생일, 시간 등이 '언제'인지 물어볼 때는 문장 맨 앞에 'When'을 써요. 예: 네 생일은 언제니?는 When is your birthday? 틀린 예: Your birthday is when?"}
+{"id":"R-23","type":"위치 전치사","unit":"U8","text":"물건이 어디 위에(on), 안에(in), 아래에(under), 앞에(in front of) 있는지 나타낼 때는 명사 앞에 전치사를 놓아요. 예: It is on the desk. 틀린 예: It is the desk on."}
+{"id":"R-24","type":"제안하기(Let's)","unit":"U9","text":"친구에게 '~하자'라고 제안할 때는 'Let's' 뒤에 동사원형을 붙여요. Let's 뒤에는 to나 -ing를 붙이지 않아요. 예: 같이 놀자!는 Let's play together. 틀린 예: Let's to play together."}
+{"id":"R-25","type":"형용사 비교급","unit":"U10","text":"두 대상을 비교하여 '더 ~한'을 표현할 때는 형용사 뒤에 '-er'을 붙이고 기준이 되는 대상 앞에 'than'을 써요. 예: It is bigger than an apple. 틀린 예: It is bigger an apple."}
+{"id":"R-26","type":"일반동사 의문문(현재형)","unit":"U11","text":"be동사가 없는 문장에서 상대방에게 질문을 할 때는 문장 맨 앞에 'Do'를 붙여요. 예: 너 김치 좋아하니?는 Do you like Kimchi? 틀린 예: You like Kimchi?"}
+{"id":"R-27","type":"일반동사 3인칭 단수 현재형","unit":"U11","text":"주어가 나(I), 너(You)가 아닌 제3자 한 명(He, She, It)이고 현재 상태를 말할 때는 동사 끝에 '-s'나 '-es'를 붙여요. 예: She likes apples. 틀린 예: She like apples."}
+{"id":"R-28","type":"감정/상태 표현","unit":"U1","text":"배고프거나, 기쁘거나, 슬픈 상태를 표현할 때는 'be동사 + 형용사' 형태로 말해요. 형용사 혼자서는 문장의 서술어가 될 수 없어요. 예: I am hungry. 틀린 예: I hungry."}
+{"id":"R-29","type":"빈도부사 위치","unit":"U12","text":"'얼마나 자주' 하는지 나타내는 말(always, usually, sometimes, never)은 일반동사의 앞에, be동사의 뒤에 위치해요. 예: I always clean my room. 틀린 예: I clean always my room."}
+{"id":"R-30","type":"기수와 서수","unit":"U12","text":"날짜나 순서를 말할 때는 하나, 둘(one, two)이 아니라 첫 번째, 두 번째(first, second)인 서수를 사용해야 해요. 예: 5월 1일은 May first라고 읽어요. 틀린 예: May one."}
