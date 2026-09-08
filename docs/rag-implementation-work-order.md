@@ -261,7 +261,7 @@ def search_rules(text: str, k: int = 3) -> list[dict]:
 ### 7.1 검증 및 색인 생성
 
 ```powershell
-Set-Location C:\elem-english-rag
+Set-Location (git rev-parse --show-toplevel)
 python -m backend.indexing --validate-only
 python -m backend.indexing --rebuild
 ```
