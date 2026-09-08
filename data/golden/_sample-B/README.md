@@ -1,17 +1,19 @@
 # 골든 데이터 샘플 B — 컬럼 정의 + 예시 몇 줄
 
 plan-B(내 문장 고쳐주기 튜터)용. 데이터팀은 **이 형식 그대로 채워서** `data/golden/` 에 납품한다.
-파일 6개. 우선순위: ① rules.jsonl + eval.csv (RAG 실험) → ② units · patterns · words (화면) → ③ errors.jsonl (규칙 연습)
+파일 7개. 우선순위: ① rules.jsonl + eval.csv (RAG 실험) → ② units · patterns · words (화면) → ③ errors.jsonl (규칙 연습) → ④ faq.jsonl (물어보기 챗)
 
-| 파일 | 한 줄 = | 컬럼 | 목표량 |
-|---|---|---|---|
-| `rules.jsonl` ★ | 규칙 설명 조각 (RAG 검색 대상) | id · type · unit · text · short · examples · wrong_example | 25 |
-| `eval.csv` | 평가: 학생 문장 → 정답 규칙 | text · expected_rule_id · note | 30 (정상 문장 5 = NONE) |
-| `units.csv` | Unit = 말하기 미션 | level · unit · title · mission · hint_words · rule_ids | 3 |
-| `words.csv` | 단어 | id · level · unit · word · meaning · example | 40 |
-| `patterns.csv` | 문장 패턴 | id · level · unit · text · meaning · tip · rule_id | 20 |
-| `errors.jsonl` | 오류 예시 (연습·데모) | id · unit · rule_id · error · correct · target · fix · distractors | 40 |
-| `faq.jsonl` | 물어보기 챗 질문·답 조각 (RAG 검색 대상) | id · unit · question · variants · answer · rule_ids · example | 30 |
+**임베딩(Chroma 색인) 대상은 rules.jsonl 하나 (나중에 faq.jsonl 은 별도 컬렉션).** eval.csv 는 시험지라 색인에 넣지 않고, 검색이 맞는지 채점할 때만 쓴다. errors · patterns · words · units 도 색인 대상이 아니다.
+
+| 파일 | 한 줄 = | 임베딩 | 컬럼 | 목표량 |
+|---|---|---|---|---|
+| `rules.jsonl` ★ | 규칙 설명 조각 (RAG 검색 대상) | **O** (컬렉션 rules) | id · type · unit · text · short · examples · wrong_example | 25 |
+| `eval.csv` | 평가: 학생 문장 → 정답 규칙 | **X** 시험지. 검색 채점(hit@3)에만 | text · expected_rule_id · note | 30 (정상 문장 5 = NONE) |
+| `units.csv` | Unit = 말하기 미션 | X | level · unit · title · mission · hint_words · rule_ids | 3 |
+| `words.csv` | 단어 | X | id · level · unit · word · meaning · example | 40 |
+| `patterns.csv` | 문장 패턴 | X | id · level · unit · text · meaning · tip · rule_id | 20 |
+| `errors.jsonl` | 오류 예시 (연습·데모) | X 규칙 연습 문제 | id · unit · rule_id · error · correct · target · fix · distractors | 40 |
+| `faq.jsonl` | 물어보기 챗 질문·답 조각 (RAG 검색 대상) | O 나중에 (컬렉션 explain, /ask 용) | id · unit · question · variants · answer · rule_ids · example | 30 |
 
 ## faq.jsonl 한 줄 해설 — 물어보기 챗의 "교재"
 

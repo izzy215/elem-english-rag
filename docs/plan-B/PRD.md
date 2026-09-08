@@ -153,7 +153,7 @@ POST /ask                                    담당: TTS 팀원 (chat.py)
    대화 이력은 세션 내 최근 3턴만 프롬프트에 포함
 ```
 
-### 4.4 오답노트 · 연습 — `student.py`(TTS 팀원) · `drill.py`(팀장)
+### 4.4 오답노트 · 연습 — `student.py` · `drill.py` (팀장)
 ```
 GET /notebook?student=A
 → {"active":[{"rule_id":"R-01","name":"과거시제","count":3,"last":"2026-09-10","streak":0,

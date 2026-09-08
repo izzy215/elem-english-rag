@@ -10,10 +10,10 @@ project/
 │   ├─ main.py        FastAPI 앱. 라우터를 모아 frontend/ 를 서빙
 │   ├─ config.py      .env → settings  (키·모델은 항상 여기서 읽는다)
 │   ├─ rag.py         (예정) 규칙·FAQ 조각 임베딩 → Chroma → /rag/search · /rag/eval — RAG 담당
-│   ├─ tutor.py       (예정) /fix 내 문장 고쳐주기 (검색 + 프롬프트 + Gemini) — 팀장
+│   ├─ tutor.py       ✓ /fix 내 문장 고쳐주기 (검색 + 프롬프트 + Gemini, 지금은 폴백 모드) — 팀장
 │   ├─ chat.py        (예정) /ask 물어보기 챗 (문맥 + 검색 + Gemini) — TTS 팀원
-│   ├─ student.py     (예정) 오답노트 · 문장 로그 · /notebook — TTS 팀원
-│   ├─ drill.py       (예정) 규칙 연습 4지선다 · /drill — 팀장
+│   ├─ student.py     (예정) 오답노트 읽기 /notebook (쓰기는 tutor.py · drill.py 가 함) — 팀장
+│   ├─ drill.py       ✓ 규칙 연습 4지선다 · /drill · /drill/answer — 팀장
 │   ├─ report.py      (예정) BigQuery 집계 → Gemini 주간 리포트 — 팀장
 │   ├─ tts.py         ✓ TTS 캐시 · speak.py ✓ STT + 유사도 (+ 발음 파형 실험) — TTS 팀원
 │   ├─ golden.py      ✓ data/golden/ 읽기 (levels · units · words · patterns) — TTS 팀원
@@ -137,8 +137,8 @@ index.html ─▶ units.html ─▶ learn.html ─▶ tutor.html ─▶ notebook
 
 | 역할 | 담당 | 파일 |
 |---|---|---|
-| 리딩 + 화면 + `/fix` 파이프라인(프롬프트 · LLM-as-judge) + 규칙 연습 + BigQuery 주간 리포트 | 팀장 | frontend/, backend/tutor.py, drill.py, report.py, prompts/ |
-| 따라 말하기 · 물어보기 챗 · 오답노트 데이터 · TTS/STT | 팀원 2 (TTS) | frontend(따라 말하기 · 챗 시트), backend/chat.py, student.py, tts.py, speak.py, golden.py |
+| 리딩 + 화면 + `/fix` 파이프라인(프롬프트 · LLM-as-judge) + 규칙 연습 + 오답노트 데이터 + BigQuery 주간 리포트 | 팀장 | frontend/, backend/tutor.py, drill.py, student.py, report.py, prompts/ |
+| 따라 말하기 · 물어보기 챗 · TTS/STT | 팀원 2 (TTS) | frontend(따라 말하기 · 챗 시트), backend/chat.py, tts.py, speak.py, golden.py |
 | RAG 검색 · 평가 · 조립 실험 · 데이터팀 창구 | 팀원 3 (RAG) | backend/rag.py, tests/, data/golden/ |
 
 골든 데이터셋 제작은 별도 데이터팀. 개발 3인은 받은 파일을 읽어 쓰는 쪽만.
