@@ -64,7 +64,9 @@
 | 🎙 말하기 | 녹음 최대 6초 → STT → "들린 문장" | `POST /speak` (heard 만 사용) |
 | ⌨ 쓰기 | 입력창 | — |
 | [고쳐줘] | 3단계 표시(받기 → RAG 검색 → AI 설명) 후 진단 | `POST /fix` |
-| 진단 카드 | 규칙명 · ~~틀린 말~~ 고친 말 · 고친 문장 · 설명 · 근거(조각 id · 점수 · 2위) · 🔊 고친 문장 듣기 | `GET /tts/{id}` (고친 문장은 `POST /tts/text`, 미정) |
+| 진단 카드 | 규칙명 · ~~틀린 말~~ 고친 말 · 고친 문장 · 설명 · 📚 근거 · 🔊 고친 문장 듣기 | `GET /tts/{id}` (고친 문장은 `POST /tts/text`, 미정) |
+| 📚 근거 박스 (두 겹) | **학생용(기본)**: 규칙 `short` 한 줄만. **발표·개발용(토글)**: + 조각 id · 검색 점수 · 2위 · 근거 원문 · 모드 배지. 토글은 상단 학생 칩 길게 누르기(또는 관리자에서 켜기). RAG 연결 뒤 구현 (확정 2026-09-08) | — |
+| [다시 고쳐줘] | `more_errors` 면 카드 아래 버튼 → 고친 문장으로 `/fix` 재호출, 이전 카드 "n차 고침"으로 유지. 최대 2회. 2회 뒤에도 남으면 `full_fixed` 를 "다 고치면 이렇게 돼요" 로 표시 | `POST /fix` |
 | 🙋 물어보기 | 시트 열기 (3.8) | — |
 | [다른 문장] / [오답노트] | 초기화 / 이동 | — |
 
@@ -139,7 +141,12 @@ POST /fix
    "source":{"chunk_id":"R-01","text":"yesterday, last week처럼 …"},
    "more_errors":false,
    "suggested_questions":["왜 went예요?","yesterday 대신 뭘 쓸 수 있어요?","다른 예문 보여줘"],
-   "log_id":"L-20260910-0007"}
+   "mission":{"ok":true,"nudge":""},
+   "full_fixed":"I went to the zoo yesterday.",
+   "log_id":"L-20260910-0007","mode":"rag"}
+   mission: 문법과 별개로 미션(units.mission)에 맞는 말인지. ok=false 면 nudge 한 문장 (화면 🎯 줄)
+   full_fixed: 목록 규칙 기준으로 전부 고친 문장. fixed 는 1위 규칙 하나만 고친 문장 (서버가 wrong→fix 한 곳만 적용해 강제)
+   mode: "rag" | "fallback" (+ fallback_reason: search_error | low_relevance | no_search)
    ok=true 이면 rule=null, wrong/fix=null, why="문법에 맞는 문장이에요…"
    처리: rag.search(text, kind=rule) → 1위 score ≥ threshold 면 그 조각만 프롬프트에 넣어 Gemini(JSON 강제) → 오답노트 기록 + 문장 로그
    폴백: 검색 실패/타임아웃 → 규칙 조각 전부(≤30)를 프롬프트에 넣어 생성, 응답에 "mode":"fallback"
@@ -230,7 +237,7 @@ drill_log.jsonl     {"ts":"...","student":"A","rule_id":"R-01","correct":true}
 | 항목 | 기본값 | 조정 |
 |---|---|---|
 | threshold (걸리는 규칙 없음) | 0.60 | RAG 담당이 평가셋 정상 문장 5개로 조정 |
-| 오류 2개 이상 | 1위만 고치고 `more_errors:true` → 화면에 [고친 문장으로 다시 고쳐줘] 버튼 → 고친 문장으로 `/fix` 재호출, 이전 카드는 "1차 고침"으로 남김. **최대 2회**, 그 뒤엔 "오늘은 여기까지" | 확정 (2026-09-08) |
+| 오류 2개 이상 | 1위만 고치고 `more_errors:true` → 화면에 [고친 문장으로 다시 고쳐줘] 버튼 → 고친 문장으로 `/fix` 재호출, 이전 카드는 "1차 고침"으로 남김. **최대 2회**, 그 뒤에도 남으면 `full_fixed`(다 고친 문장)를 최종 정답으로 표시. 서버는 `fixed` 가 wrong→fix 한 곳만 바뀐 문장이 되도록 강제 | 확정 (2026-09-08) |
 | 극복 | 연습 2문제 연속 2회 전부 정답 | |
 | 우선 출제 | 오답노트 count 내림차순 | |
 

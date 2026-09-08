@@ -107,6 +107,23 @@ def _ask_gemini(prompt: str) -> dict:
     return json.loads(text)
 
 
+def _single_fix(text: str, wrong: str | None, fix: str | None) -> str | None:
+    """학생 문장에서 wrong 한 단어(구)만 fix 로 바꾼 문장. wrong 이 문장에 없으면 None.
+    Gemini 가 지시를 어기고 여러 곳을 한꺼번에 고쳐 와도, 화면에는 '1위 규칙 하나만 고친 문장' 을 보여 주기 위해 서버가 다시 만든다.
+    그래야 [다시 고쳐줘] 2차에서 나머지 오류가 실제로 잡힌다 (PRD 7: 1위만 고치고 more_errors)."""
+    if not wrong or not fix:
+        return None
+    m = re.search(r"(?<![A-Za-z])" + re.escape(wrong.strip()) + r"(?![A-Za-z])", text, flags=re.IGNORECASE)
+    if not m:
+        return None
+    out = text[: m.start()] + fix.strip() + text[m.end():]
+    out = out.strip()
+    out = out[0].upper() + out[1:]                       # 문장 첫 글자 대문자 (문법 아님, 보기용)
+    if out and out[-1] not in ".!?":
+        out += "."
+    return out
+
+
 def _search_rule(text: str) -> dict | None:
     """TODO(RAG 담당 완성 후): rag.search(text, kind="rule") 1위가 threshold 이상이면 그 조각을 돌려준다.
     지금은 None → 폴백(전체 규칙) 모드."""
@@ -183,7 +200,12 @@ def fix(body: FixIn):
     print(f"[fix] gemini 응답: {json.dumps(out, ensure_ascii=False)}", flush=True)
     rule = find_rule(out.get("rule_id")) if not out.get("ok") else None
     ok = bool(out.get("ok")) or rule is None                 # 목록에 없는 id 를 지어내면 ok 로 취급 (근거 없는 지적 금지)
-    fixed = (out.get("fixed") or text).strip()
+    raw_fixed = (out.get("fixed") or text).strip()
+    fixed = raw_fixed
+    single = _single_fix(text, out.get("wrong"), out.get("fix")) if not out.get("ok") else None
+    if single and single.lower() != fixed.lower():
+        print(f"[fix] Gemini 가 여러 곳을 고침 → 1위 규칙만 반영: {fixed!r} → {single!r}", flush=True)
+        fixed = single
     log_id = "L-" + datetime.now().strftime("%Y%m%d-%H%M%S%f")[:-3]
     mission = out.get("mission") if isinstance(out.get("mission"), dict) else {"ok": True, "nudge": ""}
 
@@ -197,6 +219,7 @@ def fix(body: FixIn):
         "why": out.get("why") or ("문법에 맞는 문장이에요. 다른 문장도 말해볼까요?" if ok else ""),
         "source": {"chunk_id": rule["id"], "text": rule["text"]} if rule else None,
         "more_errors": bool(out.get("more_errors")) and not ok,
+        "full_fixed": text if ok else ((out.get("full_fixed") or "").strip() or raw_fixed),   # 다 고친 문장 (2차 뒤에도 남았을 때 화면이 최종 정답으로 보여줌)
         "suggested_questions": [q for q in (out.get("suggested_questions") or []) if isinstance(q, str)][:2] + ["다른 예문 보여줘"],
         "mission": {"ok": bool(mission.get("ok", True)), "nudge": mission.get("nudge") or ""},
         "log_id": log_id,
