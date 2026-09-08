@@ -14,6 +14,7 @@ speak.py 가 내부적으로만 쓰는 헬퍼 모듈. 새 API 엔드포인트는
 BASELINE·SCALE 은 실측 데이터로 튜닝한 값.
 """
 import base64
+import os
 import subprocess
 import tempfile
 from pathlib import Path
@@ -34,7 +35,7 @@ _whisper_encoder = None
 def _get_whisper_encoder():
     global _whisper_encoder
     if _whisper_encoder is None:
-        _whisper_encoder = whisper.load_model("base")
+        _whisper_encoder = whisper.load_model("base", download_root=os.environ.get("WHISPER_CACHE_DIR") or None)
     return _whisper_encoder
 
 # 실제 목소리 16개(정확 8개 distance 21.4~26.0, 오답 8개 distance 28.4~33.3)로

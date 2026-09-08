@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 from pathlib import Path
 
 from fastapi import APIRouter
@@ -93,6 +94,11 @@ def units(level: int) -> list[dict]:
     } for u in rows]
 
 
+def find_unit(level: int, unit: str) -> dict | None:
+    """레벨+유닛 코드로 유닛 정보 조회 (speak.py 의 챗봇 맥락 힌트용)."""
+    return next((u for u in units(level) if u["unit"] == unit), None)
+
+
 def words(level: int, unit: str) -> list[dict]:
     return [{"id": w["id"], "word": w["word"], "meaning": w["meaning"], "example": w["example"],
              "source_page": int(w.get("source_page") or 0)}  # Plan B words.csv 엔 없는 컬럼 → 없으면 0
@@ -155,6 +161,40 @@ def find_error(error_id: str) -> dict | None:
 def eval_set() -> list[dict]:
     """RAG 정확도 평가셋 (문장 → 정답 규칙 id). 이름은 eval_set — eval 은 파이썬 내장 함수라 피함."""
     return _read("eval.csv")
+
+
+def known_english_vocab(unit: str | list[str] | None = None) -> list[str]:
+    """golden data 전체에 등장하는 영어 단어 목록 (speak.py 의 STT 화이트리스트용).
+    unit 을 주면 그 유닛(+"ALL")으로만 좁힌다. 문자열/리스트 둘 다 받는다."""
+    units_scope = {unit} if isinstance(unit, str) else set(unit) if unit else set()
+
+    def _in_scope(row_unit: str | None) -> bool:
+        return not units_scope or not row_unit or row_unit in units_scope or row_unit == "ALL"
+
+    texts: list[str] = []
+    for w in _read("words.csv"):
+        if _in_scope(w.get("unit")):
+            texts.append(w.get("word", ""))
+            texts.append(w.get("example", ""))
+    for p in _read("patterns.csv"):
+        if _in_scope(p.get("unit")):
+            texts.append(p.get("text", ""))
+    for r in rules():
+        if _in_scope(r.get("unit")):
+            texts.extend(r.get("examples", []) or [])
+            texts.append(r.get("wrong_example", "") or "")
+            texts.append(r.get("text", "") or "")
+    for f in faqs():
+        if _in_scope(f.get("unit")):
+            texts.append(f.get("example", "") or "")
+            texts.append(f.get("question", "") or "")
+            texts.extend(f.get("variants", []) or [])
+
+    vocab = set()
+    for t in texts:
+        for token in re.findall(r"[A-Za-z']+", t or ""):
+            vocab.add(token.lower())
+    return sorted(vocab)
 
 
 # ─────────────────────────────────────────────

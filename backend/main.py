@@ -10,6 +10,7 @@
   golden.py   학습 데이터 (levels · units · words · sentences · progress)   TTS 팀원
   tts.py      D. 듣기                                                      TTS 팀원
   speak.py    E. 말하기 평가                                                TTS 팀원
+  ask.py      물어보기 챗 /ask (임시, PRD 4.4)                               TTS 팀원
   rag.py      A. RAG 검색 · 검수 경고 · 평가                                 RAG 팀원
   quiz.py     B. 문제 생성 · 채점                                            팀장
   explain.py  C. 오답 설명                                                  팀장
@@ -22,7 +23,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from backend import drill, explain, golden, quiz, rag, speak, student, tts, tutor
+from backend import ask, drill, explain, golden, quiz, rag, speak, student, tts, tutor
 from backend.config import settings
 
 ROOT = Path(__file__).resolve().parent.parent          # project/
@@ -42,7 +43,7 @@ async def no_cache(request, call_next):
 
 
 # 담당자별 라우터 — 새 기능은 파일 하나 만들고 여기 한 줄 추가
-for r in (golden.router, tts.router, speak.router, rag.router, quiz.router, explain.router, tutor.router, drill.router, student.router):
+for r in (golden.router, tts.router, speak.router, ask.router, rag.router, quiz.router, explain.router, tutor.router, drill.router, student.router):
     app.include_router(r, prefix="/api")
 
 
