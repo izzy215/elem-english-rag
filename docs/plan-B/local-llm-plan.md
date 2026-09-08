@@ -2,6 +2,15 @@
 
 작성 2026-09-08 · 팀장 · 담당: **TTS 팀원** (서버 설치·운영·검증) · 팀장 (호출부 `backend/llm.py`, 비교 실험) · 상태: 착수 전
 
+## 0. 현재 운영 설정 (2026-09-08 결정)
+
+| 항목 | 값 | 이유 |
+|---|---|---|
+| 서비스 기본 백엔드 | `LLM_BACKEND=groq` (openai/gpt-oss-20b, 무료 티어) | Gemini 무료 한도(하루 20회) 회피. 2문장 시험에서 규칙 적중 2/2, 평균 1.5초로 가장 빠름 |
+| 실패 시 대체 | `LLM_FALLBACK=1` → gemini | 한도·연결·JSON 오류 때 그 요청만 Gemini 로. 콘솔 `[llm] groq 실패 → gemini 대체` |
+| 선생님 서버가 뜨면 | `LLM_BACKEND=teacher` | 한 줄 교체. 그 전까지 Groq 가 임시 |
+| 비교 실험 | `python -m tests.eval_fix --backend gemini,claude,groq` | 결과 `data/rag_eval/fix_compare.md` |
+
 ## 1. 목표와 비목표
 
 **목표**

@@ -89,7 +89,7 @@ def _openai_compat(name: str, prompt: str, timeout: float) -> str:
         "response_format": {"type": "json_object"},   # Ollama ≥0.5 · vLLM · Groq · OpenRouter 지원. 미지원이면 위 system 지시에 기댄다
         "stream": False,
     }
-    headers = {"Content-Type": "application/json"}
+    headers = {"Content-Type": "application/json", "User-Agent": "elem-english-rag/0.1 (+FastAPI)"}   # 파이썬 기본 UA 는 Groq 앞단 Cloudflare 가 403(1010) 으로 막음
     if ep.get("key"):
         headers["Authorization"] = f"Bearer {ep['key']}"
     req = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), headers=headers, method="POST")
@@ -119,13 +119,16 @@ def _claude(prompt: str, timeout: float) -> str:
         raise LLMError("ANTHROPIC_API_KEY 가 설정되어 있지 않음")
     if _claude_client is None:
         _claude_client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=timeout, max_retries=1)
+    kwargs = {}
+    if not settings.claude_model.startswith("claude-haiku"):   # effort 는 Opus/Sonnet 5 계열만 지원. Haiku 4.5 는 넣으면 400
+        kwargs["output_config"] = {"effort": "low"}             # 단답 교정 작업이라 낮은 effort 로 충분 (adaptive thinking 은 켜 둔 채)
     try:
         resp = _claude_client.messages.create(
             model=settings.claude_model,
             max_tokens=2048,
             system="너는 JSON 만 출력한다. 설명·코드펜스 없이 JSON 객체 하나만 답한다.",
             messages=[{"role": "user", "content": prompt}],
-            output_config={"effort": "low"},          # 단답 교정 작업이라 낮은 effort 로 충분 (adaptive thinking 은 켜 둔 채)
+            **kwargs,
         )
     except anthropic.RateLimitError as e:
         raise LLMError(f"Claude 한도 초과(429): {e.message}") from e
@@ -157,9 +160,10 @@ def _model_of(name: str) -> str:
 # ─────────────────────────────────────────────
 # 입구
 # ─────────────────────────────────────────────
-def generate_json(prompt: str, backend: str | None = None, timeout: float | None = None) -> dict:
+def generate_json(prompt: str, backend: str | None = None, timeout: float | None = None, fallback: bool | None = None) -> dict:
     """프롬프트 → JSON dict. 결과 dict 에 `_llm` = {"backend", "model", "ms", "fallback_from"} 를 붙여 준다 (실험·로그용).
-    backend 를 안 주면 .env 의 LLM_BACKEND. local 실패 + LLM_FALLBACK=1 이면 gemini 로 한 번 더."""
+    backend 를 안 주면 .env 의 LLM_BACKEND. gemini 아닌 백엔드가 실패하고 fallback(기본 .env 의 LLM_FALLBACK)이 켜져 있으면 gemini 로 한 번 더.
+    비교 실험처럼 대체가 있으면 안 되는 곳은 fallback=False 로 부른다."""
     name = (backend or settings.llm_backend or "gemini").lower()
     if name not in backends():
         raise LLMError(f"모르는 LLM_BACKEND: {name} (가능: {', '.join(backends())})")
@@ -173,7 +177,8 @@ def generate_json(prompt: str, backend: str | None = None, timeout: float | None
                        "ms": int((time.time() - t0) * 1000), "fallback_from": None}
         return out
     except LLMError as e:
-        if name != "gemini" and settings.llm_fallback:
+        use_fallback = settings.llm_fallback if fallback is None else fallback
+        if name != "gemini" and use_fallback:
             print(f"[llm] {name} 실패 → gemini 대체: {e}", flush=True)
             out = generate_json(prompt, backend="gemini", timeout=timeout)
             out["_llm"]["fallback_from"] = name
