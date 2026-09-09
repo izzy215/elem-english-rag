@@ -1,7 +1,12 @@
 /* 내 문장 말해보기 (핵심) — 🎙 STT(팀원 API) 또는 ⌨ 입력 → /fix (서버 없으면 화면 폴백 진단) → 오답노트 기록 */
 const state = requireState('level', 'unit');
-let text = '', source = 'typed', typing = false, round = 0;   // round: 같은 문장을 몇 번째 고치는 중인지 (다시 고쳐줘 최대 2회)
+let text = '', source = 'typed', typing = false, round = 0, continuing = false;   // round: 같은 문장을 몇 번째 고치는 중인지 (다시 고쳐줘 최대 2회)
 
+// 진단 결과 영역만 초기화 (입력 문장은 그대로). 새 문장을 치면 이전 카드·단계·칩이 이어 붙지 않게
+function clearResults() {
+  ['#steps', '#diag', '#nav'].forEach(q => $(q).style.display = 'none'); $('#askChips').style.display = 'none'; hideResult('#missionNote');
+  round = 0; $$('.diag-prev').forEach(el => el.remove());
+}
 function reset() {
   text = ''; $('#heard').style.display = 'none'; $('#fixBtn').disabled = true; hideResult('#tNote');
   ['#steps', '#diag', '#nav'].forEach(q => $(q).style.display = 'none'); $('#askChips').style.display = 'none'; $('#typeInput').value = ''; hideResult('#missionNote');
@@ -12,7 +17,7 @@ function fixAgain(fixed) {
   const prev = $('#diag').cloneNode(true); prev.id = ''; prev.classList.add('diag-prev'); prev.style.opacity = '.6';
   prev.querySelectorAll('button').forEach(b => b.remove()); prev.insertAdjacentHTML('afterbegin', `<div class="hint" style="margin:0 0 6px">${round}차 고침</div>`);
   $('#diag').before(prev);
-  setText(fixed, source); runFix();
+  continuing = true; setText(fixed, source); continuing = false; runFix();
 }
 // 미션 확인 (문법과 별개): 서버 /fix 가 mission 필드를 주면 그것, 아니면 화면 임시로 "힌트 단어가 하나라도 들어갔나"만 본다
 function missionHints() {
@@ -28,7 +33,7 @@ function checkMission(text, r) {
 }
 function toggleType() { typing = !typing; $('#typeBox').style.display = typing ? 'block' : 'none'; if (typing) $('#typeInput').focus(); }
 function onType() { const v = $('#typeInput').value.trim(); if (v) setText(v, 'typed'); }
-function setText(t, src) { text = t; source = src; $('#heard').style.display = 'block'; $('#heardLbl').textContent = src === 'stt' ? '들린 문장 (STT)' : '쓴 문장'; $('#heardS').textContent = t; $('#fixBtn').disabled = false; }
+function setText(t, src) { if (round > 0 && !continuing && t !== text) clearResults(); text = t; source = src; $('#heard').style.display = 'block'; $('#heardLbl').textContent = src === 'stt' ? '들린 문장 (STT)' : '쓴 문장'; $('#heardS').textContent = t; $('#fixBtn').disabled = false; }
 async function record() {
   if (BUSY) return;
   const btn = $('#recBtn'); let stopFn = null; btn.classList.add('rec'); btn.textContent = '⏺ 녹음 중… (누르면 끝)'; btn.onclick = () => stopFn && stopFn();
@@ -53,10 +58,10 @@ async function runFix() {
   round++;
   const d = $('#diag'); d.style.display = 'block';
   const badge = r.mode === 'local' ? `<div class="src" style="opacity:.75">서버 /fix 구현 전 · 화면 임시 진단 (규칙 샘플 기준)</div>`
-    : r.mode === 'fallback' ? `<div class="src" style="opacity:.75">서버 /fix · 규칙 전체를 Gemini에 넣는 폴백 모드 (RAG 검색 연결 전)</div>` : '';
-  if (r.ok) d.innerHTML = `<div class="type ok">✓ 잘 썼어요!</div><div class="fixed">${esc(r.fixed)}</div><div class="why">${esc(r.why)}</div>${badge}`;
+    : r.mode === 'fallback' ? `<div class="src" style="opacity:.75">서버 /fix · RAG 검색 실패로 규칙 전체를 넣는 폴백 모드${r.fallback_reason ? ' (' + esc(r.fallback_reason) + ')' : ''}</div>` : '';
+  if (r.ok) d.innerHTML = `<div class="type ok">${round > 1 ? '✓ 이제 다 맞았어요!' : '✓ 잘 썼어요!'}</div><div class="fixed">${esc(r.fixed)}</div><div class="why">${esc(r.why)}</div>${badge}`;
   else {
-    d.innerHTML = `<div class="type">✕ 헷갈린 규칙: ${esc(r.rule.name)}</div><div class="fixed"><s>${esc(r.wrong)}</s><em>${esc(r.fix)}</em> → ${esc(r.fixed)}</div><div class="why">${esc(r.why)}</div><div class="src">📚 <b>RAG가 찾은 근거</b> · ${esc(r.source?.chunk_id || '')}${r.rule.score ? ` · 검색 점수 ${r.rule.score}` : ''}${r.runner_up ? ` · 2위 ${esc(r.runner_up.name)} ${r.runner_up.score}` : ''}<br><span style="opacity:.8">${esc((r.source?.text || '').slice(0, 120))}</span></div>${r.more_errors ? (round < 2 ? `<div class="result on todo">하나 더 있어요!</div><button class="btn ghost" style="margin-top:8px" onclick='fixAgain(${JSON.stringify(r.fixed)})'>고친 문장으로 다시 고쳐줘 ✨</button>` : `<div class="result on todo">아직 고칠 곳이 남았어요. 다 고치면 이렇게 돼요 👇</div><div class="fixed" style="color:var(--primary)">${esc(r.full_fixed || r.fixed)}</div>`) : ''}${badge}`;
+    d.innerHTML = `<div class="type">✕ 헷갈린 규칙: ${esc(r.rule.name)}</div><div class="fixed"><s>${esc(r.wrong)}</s><em>${esc(r.fix)}</em> → ${esc(r.fixed)}</div><div class="why">${esc(r.why)}</div><div class="src">📚 <b>${r.mode === 'rag' ? 'RAG가 찾은 근거' : r.mode === 'fallback' ? '참고한 규칙 (검색 없이 전체 규칙 중 고름)' : '참고한 규칙 (화면 샘플)'}</b> · ${esc(r.source?.chunk_id || '')}${r.rule.score != null ? ` · 검색 점수 ${r.rule.score}` : ''}${r.runner_up ? ` · 2위 ${esc(r.runner_up.name)} ${r.runner_up.score}` : ''}<br><span style="opacity:.8;white-space:normal;word-break:keep-all;overflow-wrap:anywhere">${esc(r.source?.text || '')}</span></div>${round < 2 ? `${r.more_errors ? '<div class="result on todo">하나 더 있어요!</div>' : ''}<button class="btn ghost" style="margin-top:8px" onclick='fixAgain(${JSON.stringify(r.fixed)})'>${r.more_errors ? '고친 문장으로 다시 고쳐줘 ✨' : '혹시 더 고칠 곳 있나 한 번 더 봐줘 🔍'}</button>` : (r.more_errors ? `<div class="result on todo">아직 고칠 곳이 남았어요. 다 고치면 이렇게 돼요 👇</div><div class="fixed" style="color:var(--primary)">${esc(r.full_fixed || r.fixed)}</div>` : '')}${badge}`;
     NB.addWrong(state.student, r.rule.id, text, r.fixed, r.log_id);   // 서버 /notebook 이 생기기 전까지 오답노트 화면용 로컬 기록 (서버가 있으면 화면이 서버 것을 씀)
   }
   const m = checkMission(text, r);

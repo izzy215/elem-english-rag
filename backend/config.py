@@ -41,6 +41,7 @@ class Settings:
     llm_endpoints: dict = None          # {이름: {url, key, model}} — OpenAI 호환 엔드포인트 여러 개 (LLM_ENDPOINTS=groq,teacher + LLM_GROQ_URL …)
     llm_timeout: float = 30.0
     llm_fallback: bool = True
+    log_prompt: bool = True             # /fix 가 모델에 보내는 프롬프트 전문을 콘솔에 찍을지 (LOG_PROMPT=0 이면 끔)
 
     @property
     def has_api_key(self) -> bool:
@@ -80,6 +81,7 @@ settings = Settings(
     llm_timeout=float(_get("LLM_TIMEOUT", "30") or 30),
     llm_fallback=_get("LLM_FALLBACK", "1") not in ("0", "false", "no"),
     llm_endpoints=_endpoints(),
+    log_prompt=_get("LOG_PROMPT", "1") not in ("0", "false", "no"),
 )
 
 
