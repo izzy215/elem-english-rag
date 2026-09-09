@@ -2,39 +2,47 @@
 임베딩 — 실행 단위 ②   담당: RAG 담당
 
 실행 단위 ①에서 로컬 기본(all-MiniLM-L6-v2) · 다국어 로컬 · Gemini(gemini-embedding-001) 세 후보를
-_sample-B(규칙 8 · 평가 8)로 실측한 결과 hit@3 75%로 동률이었다. 성능 차이가 없어, API 키·과금이
-필요 없는 Chroma 기본 임베딩(all-MiniLM-L6-v2, 완전 로컬)으로 확정한다(사용자 결정, 2026-09-08).
-Gemini로 바꾸려면 이 파일의 _get_ef()/embed_* 구현만 교체하면 된다 — 호출부(rag.py·indexing.py)는
-모델을 모른다.
+_sample-B(규칙 8 · 평가 8)로 실측했을 때는 hit@3 75%로 동률이라 로컬 모델을 채택했다(2026-09-08).
+데이터팀 정식 납품(실데이터 38규칙 · 평가 72문항) 이후 재측정한 결과 gemini-embedding-001이
+hit@1 70.77%→76.92%, hit@3 87.69%→89.23%로 로컬 모델을 뚜렷이 앞서 목표(hit@1≥75%)를 달성했다
+(2026-09-10 회의 후속 실험, docs/RAG_0910/Claude/Phase2-개선실험결과.md). 이에 따라 Gemini로 전환한다.
 
-문서/질의를 반드시 같은 검색 공간(같은 모델·같은 호출 방식)으로 임베딩해야 검색이 의미를 가진다.
-all-MiniLM-L6-v2 는 Gemini 임베딩과 달리 문서/질의를 구분하는 task_type 이 없으므로 embed_documents 와
-embed_query 는 내부적으로 같은 함수를 그대로 쓴다.
+GEMINI_API_KEY 필요. 문서/질의를 task_type으로 구분해서 호출한다. free tier는 분당 요청 수 제한이
+있어 색인 재구축(규칙 수십 건)·다수 동시 검색 시 429(RESOURCE_EXHAUSTED)가 날 수 있는데, 별도 재시도
+로직을 여기 두지 않는다 — rag.py의 search_rules()가 이 모듈에서 나는 예외를 전부
+IndexUnavailableError로 정규화해 tutor.py가 이미 전체 규칙 폴백으로 처리하기 때문이다.
 """
 from __future__ import annotations
 
-EMBEDDING_PROVIDER = "chromadb-default"
-EMBEDDING_MODEL = "all-MiniLM-L6-v2"   # chromadb.utils.embedding_functions.DefaultEmbeddingFunction 고정 모델
-EMBEDDING_DIM = 384
+from backend.config import settings
 
-_ef = None
+EMBEDDING_PROVIDER = "google-genai"
+EMBEDDING_MODEL = "gemini-embedding-001"
+EMBEDDING_DIM = 3072
+
+_client = None
 
 
-def _get_ef():
-    """chromadb 기본 임베딩 함수. 첫 호출 때 모델 가중치를 로드한다(로컬 캐시, 최초 1회만 다운로드)."""
-    global _ef
-    if _ef is None:
-        from chromadb.utils import embedding_functions
-        _ef = embedding_functions.DefaultEmbeddingFunction()
-    return _ef
+def _get_client():
+    global _client
+    if _client is None:
+        from google import genai
+        _client = genai.Client(api_key=settings.gemini_api_key)
+    return _client
+
+
+def _embed(texts: list[str], task_type: str) -> list[list[float]]:
+    if not texts:
+        return []
+    resp = _get_client().models.embed_content(
+        model=EMBEDDING_MODEL, contents=texts, config={"task_type": task_type},
+    )
+    return [list(e.values) for e in resp.embeddings]
 
 
 def embed_documents(texts: list[str]) -> list[list[float]]:
-    if not texts:
-        return []
-    vectors = _get_ef()(texts)
-    return [[float(x) for x in v] for v in vectors]
+    return _embed(texts, "RETRIEVAL_DOCUMENT")
 
 
 def embed_query(text: str) -> list[float]:
-    return embed_documents([text])[0]
+    return _embed([text], "RETRIEVAL_QUERY")[0]
