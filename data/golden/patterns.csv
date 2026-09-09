@@ -1,0 +1,401 @@
+﻿id,level,unit,text,meaning,tip,rule_id
+p-0001,3,Unit01,"Hello, Tom!","톰, 안녕!",인사말 뒤 쉼표·느낌표,R-02
+p-0002,3,Unit01,"Hi, Amy!","에이미, 안녕!",인사말 뒤 쉼표·느낌표,R-02
+p-0003,3,Unit01,"Bye, Mike!","마이크, 잘 가!",인사말 뒤 쉼표·느낌표,R-02
+p-0004,3,Unit01,Good morning!,좋은 아침이에요!,인사말 뒤 쉼표·느낌표,R-02
+p-0005,3,Unit01,Good night!,잘 자요!,인사말 뒤 쉼표·느낌표,R-02
+p-0006,4,Unit01,"Goodbye, Mom!","엄마, 안녕히 계세요!",인사말 뒤 쉼표·느낌표,R-02
+p-0007,4,Unit01,"Thanks, Dad!","아빠, 고마워요!",인사말 뒤 쉼표·느낌표,R-02
+p-0008,4,Unit01,I am sorry.,저는 미안해요.,형용사 앞엔 be동사,R-01
+p-0009,4,Unit01,"Please, help me!","제발, 저 좀 도와주세요!",인사말 뒤 쉼표·느낌표,R-02
+p-0010,4,Unit01,"Welcome, everyone!","여러분, 환영해요!",인사말 뒤 쉼표·느낌표,R-02
+p-0011,5,Unit01,She greets her teacher every morning.,그녀는 매일 아침 선생님께 인사해요.,he/she/it 주어면 동사에 -s,R-32
+p-0012,5,Unit01,She introduces her new friend to the class.,그녀는 반 친구들에게 새 친구를 소개해요.,he/she/it 주어면 동사에 -s,R-32
+p-0013,5,Unit01,She apologizes to her friend.,그녀는 친구에게 사과해요.,he/she/it 주어면 동사에 -s,R-32
+p-0014,5,Unit01,She thanks her parents every day.,그녀는 매일 부모님께 감사해요.,he/she/it 주어면 동사에 -s,R-32
+p-0015,5,Unit01,She invites her friends to the party.,그녀는 친구들을 파티에 초대해요.,he/she/it 주어면 동사에 -s,R-32
+p-0016,6,Unit01,She appreciates her friends' help.,그녀는 친구들의 도움에 감사해해요.,he/she/it 주어면 동사에 -s,R-32
+p-0017,6,Unit01,It was a warm farewell.,그것은 따뜻한 작별 인사였어요.,하나면 앞에 a,R-38
+p-0018,6,Unit01,It was a warm greeting.,그것은 따뜻한 인사였어요.,하나면 앞에 a,R-38
+p-0019,6,Unit01,She is very polite.,그녀는 아주 예의발라요.,형용사 앞엔 be동사,R-01
+p-0020,6,Unit01,This letter is formal.,이 편지는 격식있어요.,형용사 앞엔 be동사,R-01
+p-0021,3,Unit02,This is my mom.,이 사람은 우리 엄마예요.,"한 명 This is, 여럿 These are",R-04
+p-0022,3,Unit02,This is my dad.,이 사람은 우리 아빠예요.,"한 명 This is, 여럿 These are",R-04
+p-0023,3,Unit02,This is my sister.,이 사람은 제 언니예요.,"한 명 This is, 여럿 These are",R-04
+p-0024,3,Unit02,This is my brother.,이 사람은 제 형이에요.,"한 명 This is, 여럿 These are",R-04
+p-0025,3,Unit02,This is my baby.,이 아기는 제 동생이에요.,"한 명 This is, 여럿 These are",R-04
+p-0026,4,Unit02,She is my grandmother.,그녀는 저의 할머니예요.,누구 것? 's / my,R-03
+p-0027,4,Unit02,She is my grandfather.,그녀는 저의 할아버지예요.,누구 것? 's / my,R-03
+p-0028,4,Unit02,She is my aunt.,그녀는 저의 이모예요.,누구 것? 's / my,R-03
+p-0029,4,Unit02,She is my uncle.,그녀는 저의 삼촌예요.,누구 것? 's / my,R-03
+p-0030,4,Unit02,She is my cousin.,그녀는 저의 사촌예요.,누구 것? 's / my,R-03
+p-0031,5,Unit02,These are my parents.,이 분들은 저의 부모님이에요.,"한 명 This is, 여럿 These are",R-04
+p-0032,5,Unit02,I have a family.,저는 가족이 하나 있어요.,하나면 앞에 a,R-38
+p-0033,5,Unit02,I have a son.,저는 아들이 하나 있어요.,하나면 앞에 a,R-38
+p-0034,5,Unit02,I have a daughter.,저는 딸이 하나 있어요.,하나면 앞에 a,R-38
+p-0035,5,Unit02,I have a relative.,저는 친척이 하나 있어요.,하나면 앞에 a,R-38
+p-0036,6,Unit02,I have a grandchild.,저는 손주가 하나 있어요.,하나면 앞에 a,R-38
+p-0037,6,Unit02,I have a sibling.,저는 형제자매가 하나 있어요.,하나면 앞에 a,R-38
+p-0038,6,Unit02,I have a generation.,저는 세대가 하나 있어요.,하나면 앞에 a,R-38
+p-0039,6,Unit02,I have a spouse.,저는 배우자가 하나 있어요.,하나면 앞에 a,R-38
+p-0040,6,Unit02,I have an ancestor.,저는 조상이 하나 있어요.,모음 소리 앞엔 an,R-34
+p-0041,3,Unit03,There is a book on the desk.,책이 있어요.,"하나 There is, 여럿 There are",R-05
+p-0042,3,Unit03,There is a pencil in the bag.,연필이 있어요.,"하나 There is, 여럿 There are",R-05
+p-0043,3,Unit03,There is a desk in the room.,책상이 있어요.,"하나 There is, 여럿 There are",R-05
+p-0044,3,Unit03,There is a chair by the window.,의자가 있어요.,"하나 There is, 여럿 There are",R-05
+p-0045,3,Unit03,I have a teacher.,저는 선생님이 하나 있어요.,하나면 앞에 a,R-38
+p-0046,4,Unit03,I have a classroom.,저는 교실이 하나 있어요.,하나면 앞에 a,R-38
+p-0047,4,Unit03,I have a student.,저는 학생이 하나 있어요.,하나면 앞에 a,R-38
+p-0048,4,Unit03,There is a notebook on the table.,공책이 있어요.,"하나 There is, 여럿 There are",R-05
+p-0049,4,Unit03,There is an eraser in the pencil case.,지우개가 있어요.,"하나 There is, 여럿 There are",R-05
+p-0050,4,Unit03,There is a bag under the chair.,가방이 있어요.,"하나 There is, 여럿 There are",R-05
+p-0051,5,Unit03,She finishes her homework every day.,그녀는 매일 숙제를 끝내요.,주어+동사+목적어 순서,R-06
+p-0052,5,Unit03,She has a test every day.,그녀는 매일 시험을 봐요.,주어+동사+목적어 순서,R-06
+p-0053,5,Unit03,I have a subject.,저는 과목이 하나 있어요.,하나면 앞에 a,R-38
+p-0054,5,Unit03,She learns a lesson every day.,그녀는 매일 교훈을 배워요.,주어+동사+목적어 순서,R-06
+p-0055,5,Unit03,I have a library.,저는 도서관이 하나 있어요.,하나면 앞에 a,R-38
+p-0056,6,Unit03,I have a principal.,저는 교장 선생님이 하나 있어요.,하나면 앞에 a,R-38
+p-0057,6,Unit03,I have an education.,저는 교육이 하나 있어요.,모음 소리 앞엔 an,R-34
+p-0058,6,Unit03,I have a schedule.,저는 시간표가 하나 있어요.,하나면 앞에 a,R-38
+p-0059,6,Unit03,I have a grade.,저는 학년이 하나 있어요.,하나면 앞에 a,R-38
+p-0060,6,Unit03,I have a classmate.,저는 반 친구가 하나 있어요.,하나면 앞에 a,R-38
+p-0061,3,Unit04,The dog can run fast.,강아지는 빨리 달릴 수 있어요.,can 뒤엔 동사원형,R-07
+p-0062,3,Unit04,The cat can climb trees.,고양이는 나무를 오를 수 있어요.,can 뒤엔 동사원형,R-07
+p-0063,3,Unit04,The bird can fly high.,새는 높이 날 수 있어요.,can 뒤엔 동사원형,R-07
+p-0064,3,Unit04,The fish can swim fast.,물고기는 빨리 헤엄칠 수 있어요.,can 뒤엔 동사원형,R-07
+p-0065,3,Unit04,The rabbit can jump high.,토끼는 높이 뛸 수 있어요.,can 뒤엔 동사원형,R-07
+p-0066,4,Unit04,The lion can run fast.,사자는 빨리 달릴 수 있어요.,can 뒤엔 동사원형,R-07
+p-0067,4,Unit04,The elephant can swim well.,코끼리는 수영을 잘할 수 있어요.,can 뒤엔 동사원형,R-07
+p-0068,4,Unit04,The monkey can climb trees.,원숭이는 나무를 오를 수 있어요.,can 뒤엔 동사원형,R-07
+p-0069,4,Unit04,The tiger can run fast.,호랑이는 빨리 달릴 수 있어요.,can 뒤엔 동사원형,R-07
+p-0070,4,Unit04,The bear can climb trees.,곰은 나무를 오를 수 있어요.,can 뒤엔 동사원형,R-07
+p-0071,5,Unit04,These wildlife are amazing.,이 야생동물들은 놀라워요.,"This+단수, These+복수",R-08
+p-0072,5,Unit04,These insects are amazing.,이 곤충들은 놀라워요.,"This+단수, These+복수",R-08
+p-0073,5,Unit04,These reptiles are amazing.,이 파충류들은 놀라워요.,"This+단수, These+복수",R-08
+p-0074,5,Unit04,These mammals are amazing.,이 포유류들은 놀라워요.,"This+단수, These+복수",R-08
+p-0075,5,Unit04,These creatures are amazing.,이 생물들은 놀라워요.,"This+단수, These+복수",R-08
+p-0076,6,Unit04,This animal is endangered.,이 동물은 멸종위기예요.,형용사 앞엔 be동사,R-01
+p-0077,6,Unit04,I have a species.,저는 종이 하나 있어요.,하나면 앞에 a,R-38
+p-0078,6,Unit04,I have a habitat.,저는 서식지가 하나 있어요.,하나면 앞에 a,R-38
+p-0079,6,Unit04,I have a predator.,저는 포식자가 하나 있어요.,하나면 앞에 a,R-38
+p-0080,6,Unit04,I have an ecosystem.,저는 생태계가 하나 있어요.,모음 소리 앞엔 an,R-34
+p-0081,3,Unit05,I have an apple.,저는 사과가 하나 있어요.,모음 소리 앞엔 an,R-34
+p-0082,3,Unit05,I have much milk.,저는 우유가 많이 있어요.,셀 수 없으면 much/some,R-09
+p-0083,3,Unit05,I have much bread.,저는 빵이 많이 있어요.,셀 수 없으면 much/some,R-09
+p-0084,3,Unit05,I have much rice.,저는 밥이 많이 있어요.,셀 수 없으면 much/some,R-09
+p-0085,3,Unit05,I have an egg.,저는 달걀이 하나 있어요.,모음 소리 앞엔 an,R-34
+p-0086,4,Unit05,I want a pizza.,저는 피자를 원해요.,want 뒤엔 명사 바로,R-10
+p-0087,4,Unit05,I want a banana.,저는 바나나를 원해요.,want 뒤엔 명사 바로,R-10
+p-0088,4,Unit05,I want a cheese.,저는 치즈를 원해요.,want 뒤엔 명사 바로,R-10
+p-0089,4,Unit05,I want a soup.,저는 수프를 원해요.,want 뒤엔 명사 바로,R-10
+p-0090,4,Unit05,I want a noodle.,저는 면을 원해요.,want 뒤엔 명사 바로,R-10
+p-0091,5,Unit05,I have a vegetable.,저는 채소가 하나 있어요.,하나면 앞에 a,R-38
+p-0092,5,Unit05,I eat much fruit.,저는 과일을 많이 먹어요.,셀 수 없으면 much/some,R-09
+p-0093,5,Unit05,I have a dessert.,저는 디저트가 하나 있어요.,하나면 앞에 a,R-38
+p-0094,5,Unit05,I have a snack.,저는 간식이 하나 있어요.,하나면 앞에 a,R-38
+p-0095,5,Unit05,I have a meal.,저는 식사가 하나 있어요.,하나면 앞에 a,R-38
+p-0096,6,Unit05,Good nutrition is important.,좋은 영양은 중요해요.,셀 수 없으면 much/some,R-09
+p-0097,6,Unit05,Good ingredient is important.,좋은 재료는 중요해요.,셀 수 없으면 much/some,R-09
+p-0098,6,Unit05,Good recipe is important.,좋은 조리법은 중요해요.,셀 수 없으면 much/some,R-09
+p-0099,6,Unit05,Good appetite is important.,좋은 식욕은 중요해요.,셀 수 없으면 much/some,R-09
+p-0100,6,Unit05,Good diet is important.,좋은 식단은 중요해요.,셀 수 없으면 much/some,R-09
+p-0101,3,Unit06,I see a red apple.,저는 빨간 것을 봐요.,형용사는 명사 앞에,R-11
+p-0102,3,Unit06,I see a blue sky.,저는 파란 것을 봐요.,형용사는 명사 앞에,R-11
+p-0103,3,Unit06,I see a yellow banana.,저는 노란 것을 봐요.,형용사는 명사 앞에,R-11
+p-0104,3,Unit06,I see a green leaf.,저는 초록 것을 봐요.,형용사는 명사 앞에,R-11
+p-0105,3,Unit06,I see a white cloud.,저는 흰 것을 봐요.,형용사는 명사 앞에,R-11
+p-0106,4,Unit06,I see a black cat.,저는 검은 것을 봐요.,형용사는 명사 앞에,R-11
+p-0107,4,Unit06,I see a pink dress.,저는 분홍 것을 봐요.,형용사는 명사 앞에,R-11
+p-0108,4,Unit06,I see a purple grape.,저는 보라 것을 봐요.,형용사는 명사 앞에,R-11
+p-0109,4,Unit06,I see an orange orange.,저는 주황 것을 봐요.,형용사는 명사 앞에,R-11
+p-0110,4,Unit06,I see a brown bear.,저는 갈색 것을 봐요.,형용사는 명사 앞에,R-11
+p-0111,5,Unit06,I have a gray.,저는 회색이 하나 있어요.,하나면 앞에 a,R-38
+p-0112,5,Unit06,I have a gold.,저는 금색이 하나 있어요.,하나면 앞에 a,R-38
+p-0113,5,Unit06,I have a silver.,저는 은색이 하나 있어요.,하나면 앞에 a,R-38
+p-0114,5,Unit06,The garden is colorful.,정원이 알록달록해요.,형용사 앞엔 be동사,R-01
+p-0115,5,Unit06,The garden is bright.,정원이 밝아요.,형용사 앞엔 be동사,R-01
+p-0116,6,Unit06,I have a shade.,저는 색조가 하나 있어요.,하나면 앞에 a,R-38
+p-0117,6,Unit06,I have a tone.,저는 톤이 하나 있어요.,하나면 앞에 a,R-38
+p-0118,6,Unit06,Her face looked pale.,그녀의 얼굴이 창백해 보였어요.,형용사 앞엔 be동사,R-01
+p-0119,6,Unit06,The painting is vivid.,그림이 선명해요.,형용사 앞엔 be동사,R-01
+p-0120,6,Unit06,She dyes her shirt red.,그녀는 그녀의 셔츠를 빨갛게 염색해요.,he/she/it 주어면 동사에 -s,R-32
+p-0121,3,Unit07,I have one apple.,저는 사과가 하나 있어요.,숫자 2 이상+복수형,R-12
+p-0122,3,Unit07,I have two books.,저는 책이 2개 있어요.,숫자 2 이상+복수형,R-12
+p-0123,3,Unit07,I have three pencils.,저는 연필이 3개 있어요.,숫자 2 이상+복수형,R-12
+p-0124,3,Unit07,I have four balls.,저는 공이 4개 있어요.,숫자 2 이상+복수형,R-12
+p-0125,3,Unit07,I have five cookies.,저는 쿠키가 5개 있어요.,숫자 2 이상+복수형,R-12
+p-0126,4,Unit07,I have six stars.,저는 별이 6개 있어요.,숫자 2 이상+복수형,R-12
+p-0127,4,Unit07,I have seven flowers.,저는 꽃이 7개 있어요.,숫자 2 이상+복수형,R-12
+p-0128,4,Unit07,I have eight toys.,저는 장난감이 8개 있어요.,숫자 2 이상+복수형,R-12
+p-0129,4,Unit07,I have nine cups.,저는 컵이 9개 있어요.,숫자 2 이상+복수형,R-12
+p-0130,4,Unit07,I have ten balloons.,저는 풍선이 10개 있어요.,숫자 2 이상+복수형,R-12
+p-0131,5,Unit07,There are a hundred students.,학생이 백 명 있어요.,숫자 2 이상+복수형,R-12
+p-0132,5,Unit07,There are a thousand students.,학생이 천 명 있어요.,숫자 2 이상+복수형,R-12
+p-0133,5,Unit07,I bought a dozen eggs.,저는 달걀 한 다스를 샀어요.,숫자 2 이상+복수형,R-12
+p-0134,5,Unit07,She was the first to finish.,그녀가 첫 번째로 끝냈어요.,서수 앞엔 the,R-13
+p-0135,5,Unit07,She was the second to finish.,그녀가 두 번째로 끝냈어요.,서수 앞엔 the,R-13
+p-0136,6,Unit07,I have a million.,저는 백만이 하나 있어요.,하나면 앞에 a,R-38
+p-0137,6,Unit07,I have a quarter.,저는 사분의 일이 하나 있어요.,하나면 앞에 a,R-38
+p-0138,6,Unit07,Give me half of the apple.,사과의 절반을 주세요.,하나면 앞에 a,R-38
+p-0139,6,Unit07,I have a double.,저는 두 배가 하나 있어요.,하나면 앞에 a,R-38
+p-0140,6,Unit07,I have a triple.,저는 세 배가 하나 있어요.,하나면 앞에 a,R-38
+p-0141,3,Unit08,It is sunny today.,오늘은 화창해요.,날씨는 It is ~,R-14
+p-0142,3,Unit08,It is rainy today.,오늘은 비가 와요.,날씨는 It is ~,R-14
+p-0143,3,Unit08,It is cloudy today.,오늘은 흐려요.,날씨는 It is ~,R-14
+p-0144,3,Unit08,It is hot today.,오늘은 더워요.,날씨는 It is ~,R-14
+p-0145,3,Unit08,It is cold today.,오늘은 추워요.,날씨는 It is ~,R-14
+p-0146,4,Unit08,It is windy today.,오늘은 바람이 불어요.,날씨는 It is ~,R-14
+p-0147,4,Unit08,It is snowy today.,오늘은 눈이 와요.,날씨는 It is ~,R-14
+p-0148,4,Unit08,It is warm today.,오늘은 따뜻해요.,날씨는 It is ~,R-14
+p-0149,4,Unit08,It is cool today.,오늘은 시원해요.,날씨는 It is ~,R-14
+p-0150,4,Unit08,How is the weather today?,오늘 날씨가 어때요?,하나면 앞에 a,R-38
+p-0151,5,Unit08,The temperature dropped last night.,기온이 어젯밤 떨어졌어요.,하나면 앞에 a,R-38
+p-0152,5,Unit08,The forecast says it will rain.,예보에 따르면 비가 올 거예요.,will 뒤엔 동사원형,R-15
+p-0153,5,Unit08,I have a storm.,저는 폭풍이 하나 있어요.,하나면 앞에 a,R-38
+p-0154,5,Unit08,It is humid in summer.,여름엔 습해요.,형용사 앞엔 be동사,R-01
+p-0155,5,Unit08,The morning was foggy.,아침에 안개가 꼈어요.,형용사 앞엔 be동사,R-01
+p-0156,6,Unit08,I have a climate.,저는 기후가 하나 있어요.,하나면 앞에 a,R-38
+p-0157,6,Unit08,I have a drought.,저는 가뭄이 하나 있어요.,하나면 앞에 a,R-38
+p-0158,6,Unit08,We heard much thunder last night.,어젯밤 천둥이 많이 쳤어요.,셀 수 없으면 much/some,R-09
+p-0159,6,Unit08,We heard much lightning last night.,어젯밤 번개가 많이 쳤어요.,셀 수 없으면 much/some,R-09
+p-0160,6,Unit08,A hurricane will hit the coast.,허리케인이 해안을 강타할 거예요.,will 뒤엔 동사원형,R-15
+p-0161,3,Unit09,Flowers bloom in spring.,봄에는 꽃이 펴요.,계절 앞엔 in,R-16
+p-0162,3,Unit09,We enjoy summer activities in summer.,여름에는 물놀이를 즐겨요.,계절 앞엔 in,R-16
+p-0163,3,Unit09,We enjoy fall activities in fall.,가을에는 단풍 구경을 즐겨요.,계절 앞엔 in,R-16
+p-0164,3,Unit09,We enjoy winter activities in winter.,겨울에는 눈싸움을 즐겨요.,계절 앞엔 in,R-16
+p-0165,3,Unit09,I have a season.,저는 계절이 하나 있어요.,하나면 앞에 a,R-38
+p-0166,4,Unit09,I have a leaf.,저는 나뭇잎이 하나 있어요.,하나면 앞에 a,R-38
+p-0167,4,Unit09,I have a flower.,저는 꽃이 하나 있어요.,하나면 앞에 a,R-38
+p-0168,4,Unit09,I have a snowman.,저는 눈사람이 하나 있어요.,하나면 앞에 a,R-38
+p-0169,4,Unit09,I have a vacation.,저는 방학이 하나 있어요.,하나면 앞에 a,R-38
+p-0170,4,Unit09,I have a holiday.,저는 휴일이 하나 있어요.,하나면 앞에 a,R-38
+p-0171,5,Unit09,A farmer harvests rice in fall.,농부는 가을에 벼를 수확해요.,he/she/it 주어면 동사에 -s,R-32
+p-0172,5,Unit09,The cherry tree blossoms in April.,벚나무는 4월에 꽃이 펴요.,he/she/it 주어면 동사에 -s,R-32
+p-0173,5,Unit09,The bird migrates south in winter.,그 새는 겨울에 남쪽으로 이동해요.,he/she/it 주어면 동사에 -s,R-32
+p-0174,5,Unit09,The bear hibernates in winter.,그 곰은 겨울에 겨울잠을 자요.,he/she/it 주어면 동사에 -s,R-32
+p-0175,5,Unit09,Strawberries are seasonal.,딸기는 계절 과일이에요.,형용사 앞엔 be동사,R-01
+p-0176,6,Unit09,I have an equinox.,저는 춘분/추분이 하나 있어요.,모음 소리 앞엔 an,R-34
+p-0177,6,Unit09,I have a solstice.,저는 하지/동지가 하나 있어요.,하나면 앞에 a,R-38
+p-0178,6,Unit09,This trip is annual.,이 여행은 매년 하는 거예요.,형용사 앞엔 be동사,R-01
+p-0179,6,Unit09,Korea's climate is temperate.,한국의 기후는 온화해요.,형용사 앞엔 be동사,R-01
+p-0180,6,Unit09,I have a transition.,저는 변화가 하나 있어요.,하나면 앞에 a,R-38
+p-0181,3,Unit10,She is wearing a white shirt.,그녀는 흰색 셔츠를 입고 있어요.,지금 입고 있다=be+wearing,R-17
+p-0182,3,Unit10,These pants are too long.,이 바지는 너무 길어요.,I am · you are · he is,R-36
+p-0183,3,Unit10,My shoes are new.,제 신발은 새 거예요.,I am · you are · he is,R-36
+p-0184,3,Unit10,He wears a blue hat.,그는 파란 모자를 써요.,하나면 앞에 a,R-38
+p-0185,3,Unit10,My socks are warm.,제 양말은 따뜻해요.,I am · you are · he is,R-36
+p-0186,4,Unit10,He is wearing a jacket.,그는 재킷을 입고 있어요.,지금 입고 있다=be+wearing,R-17
+p-0187,4,Unit10,She is wearing a red skirt.,그녀는 빨간 치마를 입고 있어요.,지금 입고 있다=be+wearing,R-17
+p-0188,4,Unit10,She is wearing a pretty dress.,그녀는 예쁜 원피스를 입고 있어요.,지금 입고 있다=be+wearing,R-17
+p-0189,4,Unit10,He is wearing a heavy coat.,그는 두꺼운 코트를 입고 있어요.,지금 입고 있다=be+wearing,R-17
+p-0190,4,Unit10,"Wear a glove, it's cold.","장갑을 껴요, 추워요.",하나면 앞에 a,R-38
+p-0191,5,Unit10,I have a uniform.,저는 교복이 하나 있어요.,하나면 앞에 a,R-38
+p-0192,5,Unit10,I have a scarf.,저는 목도리가 하나 있어요.,하나면 앞에 a,R-38
+p-0193,5,Unit10,I have a button.,저는 단추가 하나 있어요.,하나면 앞에 a,R-38
+p-0194,5,Unit10,I have a zipper.,저는 지퍼가 하나 있어요.,하나면 앞에 a,R-38
+p-0195,5,Unit10,I have a fabric.,저는 옷감이 하나 있어요.,하나면 앞에 a,R-38
+p-0196,6,Unit10,I have a fashion.,저는 패션이 하나 있어요.,하나면 앞에 a,R-38
+p-0197,6,Unit10,I have a style.,저는 스타일이 하나 있어요.,하나면 앞에 a,R-38
+p-0198,6,Unit10,I have an accessory.,저는 액세서리가 하나 있어요.,모음 소리 앞엔 an,R-34
+p-0199,6,Unit10,I have a wardrobe.,저는 옷장이 하나 있어요.,하나면 앞에 a,R-38
+p-0200,6,Unit10,I have a textile.,저는 직물이 하나 있어요.,하나면 앞에 a,R-38
+p-0201,3,Unit11,My head hurts.,제 머리가 아파요.,신체부위 앞엔 소유격,R-18
+p-0202,3,Unit11,My hand is cold.,제 손이 차가워요.,신체부위 앞엔 소유격,R-18
+p-0203,3,Unit11,My foot is cold.,제 발이 차가워요.,신체부위 앞엔 소유격,R-18
+p-0204,3,Unit11,My eye hurts.,제 눈이 아파요.,신체부위 앞엔 소유격,R-18
+p-0205,3,Unit11,My ear hurts.,제 귀가 아파요.,신체부위 앞엔 소유격,R-18
+p-0206,4,Unit11,My arm hurts.,제 팔이 아파요.,신체부위 앞엔 소유격,R-18
+p-0207,4,Unit11,My leg is tired.,제 다리가 피곤해요.,신체부위 앞엔 소유격,R-18
+p-0208,4,Unit11,My finger hurts.,제 손가락이 아파요.,신체부위 앞엔 소유격,R-18
+p-0209,4,Unit11,My nose is red.,제 코가 빨개요.,신체부위 앞엔 소유격,R-18
+p-0210,4,Unit11,My mouth is dry.,제 입이 말라요.,신체부위 앞엔 소유격,R-18
+p-0211,5,Unit11,My shoulder hurts.,제 어깨가 아파요.,신체부위 앞엔 소유격,R-18
+p-0212,5,Unit11,My elbow hurts.,제 팔꿈치가 아파요.,신체부위 앞엔 소유격,R-18
+p-0213,5,Unit11,My knee hurts.,제 무릎이 아파요.,신체부위 앞엔 소유격,R-18
+p-0214,5,Unit11,My stomach hurts.,제 배가 아파요.,신체부위 앞엔 소유격,R-18
+p-0215,5,Unit11,My chest hurts.,제 가슴이 아파요.,신체부위 앞엔 소유격,R-18
+p-0216,6,Unit11,I have a skeleton.,저는 골격이 하나 있어요.,하나면 앞에 a,R-38
+p-0217,6,Unit11,I have a muscle.,저는 근육이 하나 있어요.,하나면 앞에 a,R-38
+p-0218,6,Unit11,I have an organ.,저는 장기가 하나 있어요.,모음 소리 앞엔 an,R-34
+p-0219,6,Unit11,I have a brain.,저는 뇌가 하나 있어요.,하나면 앞에 a,R-38
+p-0220,6,Unit11,I have a nerve.,저는 신경이 하나 있어요.,하나면 앞에 a,R-38
+p-0221,3,Unit12,I like running.,저는 달리기를 좋아해요.,like 뒤엔 동사-ing,R-19
+p-0222,3,Unit12,I like jumping.,저는 줄넘기를 좋아해요.,like 뒤엔 동사-ing,R-19
+p-0223,3,Unit12,I like swimming.,저는 수영을 좋아해요.,like 뒤엔 동사-ing,R-19
+p-0224,3,Unit12,I have a ball.,저는 공이 하나 있어요.,하나면 앞에 a,R-38
+p-0225,3,Unit12,I like playing soccer.,저는 축구하는 것을 좋아해요.,like 뒤엔 동사-ing,R-19
+p-0226,4,Unit12,He likes playing baseball.,그는 야구를 좋아해요.,like 뒤엔 동사-ing,R-19
+p-0227,4,Unit12,He likes playing basketball.,그는 농구를 좋아해요.,like 뒤엔 동사-ing,R-19
+p-0228,4,Unit12,He likes playing badminton.,그는 배드민턴을 좋아해요.,like 뒤엔 동사-ing,R-19
+p-0229,4,Unit12,I have a race.,저는 경주가 하나 있어요.,하나면 앞에 a,R-38
+p-0230,4,Unit12,I have a team.,저는 팀이 하나 있어요.,하나면 앞에 a,R-38
+p-0231,5,Unit12,I have an athlete.,저는 운동선수가 하나 있어요.,모음 소리 앞엔 an,R-34
+p-0232,5,Unit12,I have a coach.,저는 코치가 하나 있어요.,하나면 앞에 a,R-38
+p-0233,5,Unit12,She exercises every morning.,그녀는 매일 아침 운동해요.,he/she/it 주어면 동사에 -s,R-32
+p-0234,5,Unit12,I have a stadium.,저는 경기장이 하나 있어요.,하나면 앞에 a,R-38
+p-0235,5,Unit12,I have a referee.,저는 심판이 하나 있어요.,하나면 앞에 a,R-38
+p-0236,6,Unit12,I have a champion.,저는 챔피언이 하나 있어요.,하나면 앞에 a,R-38
+p-0237,6,Unit12,I have a tournament.,저는 대회가 하나 있어요.,하나면 앞에 a,R-38
+p-0238,6,Unit12,Running builds much endurance.,달리기는 많은 지구력을 길러줘요.,셀 수 없으면 much/some,R-09
+p-0239,6,Unit12,I have a strategy.,저는 전략이 하나 있어요.,하나면 앞에 a,R-38
+p-0240,6,Unit12,I have a competition.,저는 경쟁이 하나 있어요.,하나면 앞에 a,R-38
+p-0241,3,Unit13,I enjoy drawing.,저는 그림 그리기를 즐겨요.,enjoy 뒤엔 동사-ing,R-20
+p-0242,3,Unit13,I enjoy singing.,저는 노래하기를 즐겨요.,enjoy 뒤엔 동사-ing,R-20
+p-0243,3,Unit13,I enjoy dancing.,저는 춤추기를 즐겨요.,enjoy 뒤엔 동사-ing,R-20
+p-0244,3,Unit13,I enjoy reading.,저는 독서를 즐겨요.,enjoy 뒤엔 동사-ing,R-20
+p-0245,3,Unit13,I enjoy playing.,저는 놀기를 즐겨요.,enjoy 뒤엔 동사-ing,R-20
+p-0246,4,Unit13,He enjoys painting.,그는 그림 그리기를 즐겨요.,enjoy 뒤엔 동사-ing,R-20
+p-0247,4,Unit13,He enjoys collecting stamps.,그는 우표 수집을 즐겨요.,enjoy 뒤엔 동사-ing,R-20
+p-0248,4,Unit13,I have a camera.,저는 카메라가 하나 있어요.,하나면 앞에 a,R-38
+p-0249,4,Unit13,I have a puzzle.,저는 퍼즐이 하나 있어요.,하나면 앞에 a,R-38
+p-0250,4,Unit13,He enjoys gardening.,그는 정원 가꾸기를 즐겨요.,enjoy 뒤엔 동사-ing,R-20
+p-0251,5,Unit13,I have a hobby.,저는 취미가 하나 있어요.,하나면 앞에 a,R-38
+p-0252,5,Unit13,I have an instrument.,저는 악기가 하나 있어요.,모음 소리 앞엔 an,R-34
+p-0253,5,Unit13,She does much photography.,그녀는 사진 촬영을 많이 해요.,셀 수 없으면 much/some,R-09
+p-0254,5,Unit13,I have a craft.,저는 공예가 하나 있어요.,하나면 앞에 a,R-38
+p-0255,5,Unit13,I have a collection.,저는 수집품이 하나 있어요.,하나면 앞에 a,R-38
+p-0256,6,Unit13,Art class needs much creativity.,미술 수업은 창의력이 많이 필요해요.,셀 수 없으면 much/some,R-09
+p-0257,6,Unit13,He has much leisure time.,그는 여가 시간이 많아요.,셀 수 없으면 much/some,R-09
+p-0258,6,Unit13,I have a talent.,저는 재능이 하나 있어요.,하나면 앞에 a,R-38
+p-0259,6,Unit13,I have a skill.,저는 기술이 하나 있어요.,하나면 앞에 a,R-38
+p-0260,6,Unit13,I have a passion.,저는 열정이 하나 있어요.,하나면 앞에 a,R-38
+p-0261,3,Unit14,I have a test on Monday.,저는 월요일에 시험이 있어요.,요일은 on+대문자,R-21
+p-0262,3,Unit14,I have a test on Tuesday.,저는 화요일에 시험이 있어요.,요일은 on+대문자,R-21
+p-0263,3,Unit14,Today is a sunny day.,오늘은 맑은 날이에요.,하나면 앞에 a,R-38
+p-0264,3,Unit14,We will have a trip tomorrow.,우리는 내일 소풍을 갈 거예요.,will 뒤엔 동사원형,R-15
+p-0265,3,Unit14,It was rainy yesterday.,어제는 비가 왔어요.,과거의 be동사는 was/were,R-37
+p-0266,4,Unit14,I have a test on Wednesday.,저는 수요일에 시험이 있어요.,요일은 on+대문자,R-21
+p-0267,4,Unit14,I have a test on Thursday.,저는 목요일에 시험이 있어요.,요일은 on+대문자,R-21
+p-0268,4,Unit14,I have a test on Friday.,저는 금요일에 시험이 있어요.,요일은 on+대문자,R-21
+p-0269,4,Unit14,We have five classes this week.,이번 주에 수업이 다섯 개 있어요.,숫자 2 이상+복수형,R-12
+p-0270,4,Unit14,I usually visit my grandparents on the weekend.,저는 보통 주말에 조부모님을 뵈러 가요.,빈도부사는 동사 앞,R-22
+p-0271,5,Unit14,I have a test on Saturday.,저는 토요일에 시험이 있어요.,요일은 on+대문자,R-21
+p-0272,5,Unit14,I have a test on Sunday.,저는 일요일에 시험이 있어요.,요일은 on+대문자,R-21
+p-0273,5,Unit14,I have a month.,저는 달이 하나 있어요.,하나면 앞에 a,R-38
+p-0274,5,Unit14,I have a calendar.,저는 달력이 하나 있어요.,하나면 앞에 a,R-38
+p-0275,5,Unit14,I have a planner.,저는 계획표가 하나 있어요.,하나면 앞에 a,R-38
+p-0276,6,Unit14,I have a century.,저는 세기가 하나 있어요.,하나면 앞에 a,R-38
+p-0277,6,Unit14,I have a decade.,저는 십 년이 하나 있어요.,하나면 앞에 a,R-38
+p-0278,6,Unit14,I have an anniversary.,저는 기념일이 하나 있어요.,모음 소리 앞엔 an,R-34
+p-0279,6,Unit14,The homework deadline is always Friday.,숙제 마감일은 항상 금요일이에요.,빈도부사는 동사 앞,R-22
+p-0280,6,Unit14,She is always punctual.,그녀는 항상 시간을 잘 지켜요.,형용사 앞엔 be동사,R-01
+p-0281,3,Unit15,We go to school by car.,우리는 자동차로 학교에 가요.,"by+교통수단, 관사 없이",R-23
+p-0282,3,Unit15,We go to school by bus.,우리는 버스로 학교에 가요.,"by+교통수단, 관사 없이",R-23
+p-0283,3,Unit15,We go to school by bike.,우리는 자전거로 학교에 가요.,"by+교통수단, 관사 없이",R-23
+p-0284,3,Unit15,We travel by train.,우리는 기차로 여행해요.,"by+교통수단, 관사 없이",R-23
+p-0285,3,Unit15,We go home by taxi.,우리는 택시로 집에 가요.,"by+교통수단, 관사 없이",R-23
+p-0286,4,Unit15,We travel by subway.,우리는 지하철로 여행해요.,"by+교통수단, 관사 없이",R-23
+p-0287,4,Unit15,We travel by airplane.,우리는 비행기로 여행해요.,"by+교통수단, 관사 없이",R-23
+p-0288,4,Unit15,We travel by ship.,우리는 배로 여행해요.,"by+교통수단, 관사 없이",R-23
+p-0289,4,Unit15,We carry boxes by truck.,우리는 트럭으로 박스를 날라요.,"by+교통수단, 관사 없이",R-23
+p-0290,4,Unit15,We go to work by motorcycle.,우리는 오토바이로 출근해요.,"by+교통수단, 관사 없이",R-23
+p-0291,5,Unit15,There is much traffic today.,오늘 교통량이 많아요.,셀 수 없으면 much/some,R-09
+p-0292,5,Unit15,I have a passenger.,저는 승객이 하나 있어요.,하나면 앞에 a,R-38
+p-0293,5,Unit15,I have a station.,저는 역이 하나 있어요.,하나면 앞에 a,R-38
+p-0294,5,Unit15,I have a ticket.,저는 표가 하나 있어요.,하나면 앞에 a,R-38
+p-0295,5,Unit15,I have a highway.,저는 고속도로가 하나 있어요.,하나면 앞에 a,R-38
+p-0296,6,Unit15,I have a vehicle.,저는 차량이 하나 있어요.,하나면 앞에 a,R-38
+p-0297,6,Unit15,Public transportation needs much support.,대중교통수단은 많은 지원이 필요해요.,셀 수 없으면 much/some,R-09
+p-0298,6,Unit15,I have a license.,저는 면허가 하나 있어요.,하나면 앞에 a,R-38
+p-0299,6,Unit15,I have a pedestrian.,저는 보행자가 하나 있어요.,하나면 앞에 a,R-38
+p-0300,6,Unit15,She commutes to work by subway.,그녀는 지하철로 통근해요.,he/she/it 주어면 동사에 -s,R-32
+p-0301,3,Unit16,I feel happy at home.,저는 집에서 행복해요.,하나면 앞에 a,R-38
+p-0302,3,Unit16,We go to the park every day.,우리는 공원에 가요.,장소 앞엔 go to the,R-24
+p-0303,3,Unit16,We go to the store every day.,우리는 가게에 가요.,장소 앞엔 go to the,R-24
+p-0304,3,Unit16,We go to the playground every day.,우리는 놀이터에 가요.,장소 앞엔 go to the,R-24
+p-0305,3,Unit16,We go to the zoo every day.,우리는 동물원에 가요.,장소 앞엔 go to the,R-24
+p-0306,4,Unit16,We went to the hospital.,우리는 병원에 갔어요.,장소 앞엔 go to the,R-24
+p-0307,4,Unit16,We went to the market.,우리는 시장에 갔어요.,장소 앞엔 go to the,R-24
+p-0308,4,Unit16,We went to the bakery.,우리는 빵집에 갔어요.,장소 앞엔 go to the,R-24
+p-0309,4,Unit16,We went to the bank.,우리는 은행에 갔어요.,장소 앞엔 go to the,R-24
+p-0310,4,Unit16,We went to the restaurant.,우리는 식당에 갔어요.,장소 앞엔 go to the,R-24
+p-0311,5,Unit16,We went to the museum.,우리는 박물관에 갔어요.,장소 앞엔 go to the,R-24
+p-0312,5,Unit16,We went shopping downtown.,우리는 시내로 쇼핑하러 갔어요.,하나면 앞에 a,R-38
+p-0313,5,Unit16,I have a neighborhood.,저는 동네가 하나 있어요.,하나면 앞에 a,R-38
+p-0314,5,Unit16,We went to the church.,우리는 교회에 갔어요.,장소 앞엔 go to the,R-24
+p-0315,5,Unit16,We went to the theater.,우리는 극장에 갔어요.,장소 앞엔 go to the,R-24
+p-0316,6,Unit16,I have a community.,저는 지역사회가 하나 있어요.,하나면 앞에 a,R-38
+p-0317,6,Unit16,I have a facility.,저는 시설이 하나 있어요.,하나면 앞에 a,R-38
+p-0318,6,Unit16,I have a landmark.,저는 랜드마크가 하나 있어요.,하나면 앞에 a,R-38
+p-0319,6,Unit16,Seoul is urban.,서울은 도시적이에요.,형용사 앞엔 be동사,R-01
+p-0320,6,Unit16,I have a suburb.,저는 교외가 하나 있어요.,하나면 앞에 a,R-38
+p-0321,3,Unit17,My uncle is a doctor.,제 삼촌은 의사예요.,직업 앞엔 a/an,R-26
+p-0322,3,Unit17,My uncle is a nurse.,제 삼촌은 간호사예요.,직업 앞엔 a/an,R-26
+p-0323,3,Unit17,My uncle is a farmer.,제 삼촌은 농부예요.,직업 앞엔 a/an,R-26
+p-0324,3,Unit17,My uncle is a cook.,제 삼촌은 요리사예요.,직업 앞엔 a/an,R-26
+p-0325,3,Unit17,My aunt is a police officer.,제 이모는 경찰관이에요.,직업 앞엔 a/an,R-26
+p-0326,4,Unit17,My uncle is a firefighter.,제 삼촌은 소방관예요.,직업 앞엔 a/an,R-26
+p-0327,4,Unit17,My uncle is a pilot.,제 삼촌은 조종사예요.,직업 앞엔 a/an,R-26
+p-0328,4,Unit17,My uncle is a singer.,제 삼촌은 가수예요.,직업 앞엔 a/an,R-26
+p-0329,4,Unit17,My uncle is a dancer.,제 삼촌은 무용수예요.,직업 앞엔 a/an,R-26
+p-0330,4,Unit17,My uncle is an artist.,제 삼촌은 예술가예요.,직업 앞엔 a/an,R-26
+p-0331,5,Unit17,My uncle is an engineer.,제 삼촌은 엔지니어예요.,직업 앞엔 a/an,R-26
+p-0332,5,Unit17,My uncle is a scientist.,제 삼촌은 과학자예요.,직업 앞엔 a/an,R-26
+p-0333,5,Unit17,My uncle is a designer.,제 삼촌은 디자이너예요.,직업 앞엔 a/an,R-26
+p-0334,5,Unit17,My uncle is a writer.,제 삼촌은 작가예요.,직업 앞엔 a/an,R-26
+p-0335,5,Unit17,My uncle is a photographer.,제 삼촌은 사진작가예요.,직업 앞엔 a/an,R-26
+p-0336,6,Unit17,I have a profession.,저는 직업이 하나 있어요.,하나면 앞에 a,R-38
+p-0337,6,Unit17,I have a career.,저는 경력이 하나 있어요.,하나면 앞에 a,R-38
+p-0338,6,Unit17,I have an occupation.,저는 직업이 하나 있어요.,모음 소리 앞엔 an,R-34
+p-0339,6,Unit17,I have an employee.,저는 직원이 하나 있어요.,모음 소리 앞엔 an,R-34
+p-0340,6,Unit17,She wants to be an entrepreneur.,그녀는 사업가가 되고 싶어해요.,장래희망=want to be a/an,R-25
+p-0341,3,Unit18,I am happy today.,저는 오늘 행복해요.,형용사 앞엔 be동사,R-01
+p-0342,3,Unit18,I am sad today.,저는 오늘 슬퍼요.,형용사 앞엔 be동사,R-01
+p-0343,3,Unit18,I am angry today.,저는 오늘 화나요.,형용사 앞엔 be동사,R-01
+p-0344,3,Unit18,I am tired today.,저는 오늘 피곤해요.,형용사 앞엔 be동사,R-01
+p-0345,3,Unit18,I am hungry today.,저는 오늘 배고파요.,형용사 앞엔 be동사,R-01
+p-0346,4,Unit18,I am excited today.,저는 오늘 신나요.,형용사 앞엔 be동사,R-01
+p-0347,4,Unit18,She is scared of the dark.,그녀는 어둠을 무서워해요.,형용사 앞엔 be동사,R-01
+p-0348,4,Unit18,I am surprised today.,저는 오늘 놀라요.,형용사 앞엔 be동사,R-01
+p-0349,4,Unit18,I am bored today.,저는 오늘 지루해요.,형용사 앞엔 be동사,R-01
+p-0350,4,Unit18,I am nervous today.,저는 오늘 긴장돼요.,형용사 앞엔 be동사,R-01
+p-0351,5,Unit18,She is proud of her son.,그녀는 아들에 대해 자랑스러워해요.,감정형용사+알맞은 전치사,R-27
+p-0352,5,Unit18,She is worried about the exam.,그녀는 시험에 대해 걱정해요.,감정형용사+알맞은 전치사,R-27
+p-0353,5,Unit18,She is jealous of his friend.,그녀는 친구에 대해 질투해요.,감정형용사+알맞은 전치사,R-27
+p-0354,5,Unit18,She is confident about her speech.,그녀는 발표에 대해 자신있어해요.,감정형용사+알맞은 전치사,R-27
+p-0355,5,Unit18,She is disappointed with the result.,그녀는 결과에 대해 실망해요.,감정형용사+알맞은 전치사,R-27
+p-0356,6,Unit18,I have an emotion.,저는 감정이 하나 있어요.,모음 소리 앞엔 an,R-34
+p-0357,6,Unit18,She felt anxious about the interview.,그녀는 면접에 대해 불안해했어요.,감정형용사+알맞은 전치사,R-27
+p-0358,6,Unit18,He was too embarrassed to speak.,그는 너무 당황해서 말을 못 했어요.,지나치면 too+형용사,R-28
+p-0359,6,Unit18,I am grateful for my friends.,저는 친구들에게 감사해요.,감정형용사+알맞은 전치사,R-27
+p-0360,6,Unit18,He felt too frustrated to continue.,그는 너무 좌절해서 계속할 수 없었어요.,지나치면 too+형용사,R-28
+p-0361,3,Unit19,She buys a new toy.,그녀는 새 장난감을 사요.,he/she/it 주어면 동사에 -s,R-32
+p-0362,3,Unit19,The store sells fresh fruit.,그 가게는 신선한 과일을 팔아요.,he/she/it 주어면 동사에 -s,R-32
+p-0363,3,Unit19,I saved much money.,저는 돈을 많이 모았어요.,셀 수 없으면 much/some,R-09
+p-0364,3,Unit19,How much is this shirt?,이 셔츠는 얼마예요?,"가격 How much, 개수 How many",R-29
+p-0365,3,Unit19,I have a shop.,저는 상점이 하나 있어요.,하나면 앞에 a,R-38
+p-0366,4,Unit19,I paid much cash.,저는 현금을 많이 냈어요.,셀 수 없으면 much/some,R-09
+p-0367,4,Unit19,I have a coin.,저는 동전이 하나 있어요.,하나면 앞에 a,R-38
+p-0368,4,Unit19,I have a bill.,저는 지폐가 하나 있어요.,하나면 앞에 a,R-38
+p-0369,4,Unit19,I have a receipt.,저는 영수증이 하나 있어요.,하나면 앞에 a,R-38
+p-0370,4,Unit19,I have a discount.,저는 할인이 하나 있어요.,하나면 앞에 a,R-38
+p-0371,5,Unit19,I have a customer.,저는 고객이 하나 있어요.,하나면 앞에 a,R-38
+p-0372,5,Unit19,I have a cashier.,저는 계산원이 하나 있어요.,하나면 앞에 a,R-38
+p-0373,5,Unit19,I have a cart.,저는 카트가 하나 있어요.,하나면 앞에 a,R-38
+p-0374,5,Unit19,I have a mall.,저는 쇼핑몰이 하나 있어요.,하나면 앞에 a,R-38
+p-0375,5,Unit19,He likes bargaining for a lower price.,그는 흥정하는 것을 좋아해요.,like 뒤엔 동사-ing,R-19
+p-0376,6,Unit19,How much is our budget?,우리 예산이 얼마예요?,"가격 How much, 개수 How many",R-29
+p-0377,6,Unit19,I have an expense.,저는 지출이 하나 있어요.,모음 소리 앞엔 an,R-34
+p-0378,6,Unit19,I have a refund.,저는 환불이 하나 있어요.,하나면 앞에 a,R-38
+p-0379,6,Unit19,I have a purchase.,저는 구매가 하나 있어요.,하나면 앞에 a,R-38
+p-0380,6,Unit19,I have a consumer.,저는 소비자가 하나 있어요.,하나면 앞에 a,R-38
+p-0381,3,Unit20,The house is in the neighborhood.,집이 동네에 있어요.,"안=in, 위=on, 아래=under",R-30
+p-0382,3,Unit20,The room is in the house.,방이 집에 있어요.,"안=in, 위=on, 아래=under",R-30
+p-0383,3,Unit20,The bed is in the bedroom.,침대가 침실에 있어요.,"안=in, 위=on, 아래=under",R-30
+p-0384,3,Unit20,The table is on the floor.,탁자가 바닥에 있어요.,"안=in, 위=on, 아래=under",R-30
+p-0385,3,Unit20,The door is on the left.,문이 왼쪽에 있어요.,"안=in, 위=on, 아래=under",R-30
+p-0386,4,Unit20,I have a kitchen.,저는 부엌이 하나 있어요.,하나면 앞에 a,R-38
+p-0387,4,Unit20,I have a bathroom.,저는 욕실이 하나 있어요.,하나면 앞에 a,R-38
+p-0388,4,Unit20,I have a window.,저는 창문이 하나 있어요.,하나면 앞에 a,R-38
+p-0389,4,Unit20,I have a sofa.,저는 소파가 하나 있어요.,하나면 앞에 a,R-38
+p-0390,4,Unit20,I have a lamp.,저는 램프가 하나 있어요.,하나면 앞에 a,R-38
+p-0391,5,Unit20,We bought much new furniture.,우리는 새 가구를 많이 샀어요.,셀 수 없으면 much/some,R-09
+p-0392,5,Unit20,The car is in the garage.,차는 차고 안에 있어요.,"안=in, 위=on, 아래=under",R-30
+p-0393,5,Unit20,Snow is on the roof.,지붕 위에 눈이 있어요.,"안=in, 위=on, 아래=under",R-30
+p-0394,5,Unit20,The pictures hang in the hallway.,그림들이 복도에 걸려 있어요.,"안=in, 위=on, 아래=under",R-30
+p-0395,5,Unit20,I hung my coat in the closet.,저는 옷장 안에 코트를 걸었어요.,"안=in, 위=on, 아래=under",R-30
+p-0396,6,Unit20,I have a residence.,저는 거주지가 하나 있어요.,하나면 앞에 a,R-38
+p-0397,6,Unit20,She studies much architecture.,그녀는 건축을 많이 공부해요.,셀 수 없으면 much/some,R-09
+p-0398,6,Unit20,I have a structure.,저는 구조가 하나 있어요.,하나면 앞에 a,R-38
+p-0399,6,Unit20,I have an interior.,저는 실내가 하나 있어요.,모음 소리 앞엔 an,R-34
+p-0400,6,Unit20,Their new apartment is spacious.,그들의 새 아파트는 넓어요.,형용사 앞엔 be동사,R-01
