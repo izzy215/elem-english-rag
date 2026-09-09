@@ -5,18 +5,15 @@ let text = '', source = 'typed', typing = false, round = 0, continuing = false; 
 // 진단 결과 영역만 초기화 (입력 문장은 그대로). 새 문장을 치면 이전 카드·단계·칩이 이어 붙지 않게
 function clearResults() {
   ['#steps', '#diag', '#nav'].forEach(q => $(q).style.display = 'none'); $('#askChips').style.display = 'none'; hideResult('#missionNote');
-  round = 0; $$('.diag-prev').forEach(el => el.remove());
+  round = 0; rounds = []; $$('.diag-prev').forEach(el => el.remove());
 }
 function reset() {
   text = ''; $('#heard').style.display = 'none'; $('#fixBtn').disabled = true; hideResult('#tNote');
   ['#steps', '#diag', '#nav'].forEach(q => $(q).style.display = 'none'); $('#askChips').style.display = 'none'; $('#typeInput').value = ''; hideResult('#missionNote');
-  round = 0; $$('.diag-prev').forEach(el => el.remove());
+  round = 0; rounds = []; $$('.diag-prev').forEach(el => el.remove());
 }
 // 다시 고쳐줘: 방금 고친 문장을 새 입력으로 삼아 한 번 더 /fix. 이전 카드는 위에 남겨 둔다
 function fixAgain(fixed) {
-  const prev = $('#diag').cloneNode(true); prev.id = ''; prev.classList.add('diag-prev'); prev.style.opacity = '.6';
-  prev.querySelectorAll('button').forEach(b => b.remove()); prev.insertAdjacentHTML('afterbegin', `<div class="hint" style="margin:0 0 6px">${round}차 고침</div>`);
-  $('#diag').before(prev);
   continuing = true; setText(fixed, source); continuing = false; runFix();
 }
 // 미션 확인 (문법과 별개): 서버 /fix 가 mission 필드를 주면 그것, 아니면 화면 임시로 "힌트 단어가 하나라도 들어갔나"만 본다
@@ -47,6 +44,34 @@ async function record() {
     hideResult('#tNote'); setText(r.heard.replace(/\s+$/, '') + (/[.!?]$/.test(r.heard) ? '' : '.'), 'stt');
   } catch (e) { btn.classList.remove('rec'); btn.textContent = '🎙 말하기'; btn.onclick = record; showResult('#tNote', esc(e.message), 'bad'); }
 }
+let rounds = [];   // 이 문장의 회차별 /fix 결과 [1차, 2차]. 발표용 토글 때 전부 다시 그리려고 보관
+// 진단 카드. 근거 박스는 두 겹 — 학생용(기본): 규칙 한 줄 / 발표·개발용(상단 학생 칩 길게 누르기): id·검색 점수·순위·2위·후보·원문·모드
+function evidenceBox(r) {
+  const rule = ruleOf(r.rule.id);
+  if (!DEV.on()) return `<div class="src">📚 <b>${esc(rule?.short || r.rule.name)}</b></div>`;
+  const title = r.mode === 'rag' ? 'RAG가 찾은 근거' : r.mode === 'fallback' ? '참고한 규칙 (검색 없이 전체 규칙 중 고름)' : '참고한 규칙 (화면 샘플)';
+  const cands = (r.candidates || []).map((c, i) => `${i + 1}위 ${esc(c.name)} ${c.score}`).join(' · ');
+  const llm = r.llm ? `${esc(r.llm.backend)}:${esc(r.llm.model || '')} ${r.llm.ms}ms${r.llm.fallback_from ? ` (${esc(r.llm.fallback_from)} 실패 → 대체)` : ''}` : '';
+  return `<div class="src">📚 <b>${title}</b> · ${esc(r.source?.chunk_id || '')}${r.rule.score != null ? ` · 검색 점수 ${r.rule.score}${r.rule.rank ? ` (${r.rule.rank}위)` : ''}` : ''}${r.runner_up ? ` · 2위 ${esc(r.runner_up.name)} ${r.runner_up.score}` : ''}
+    <br><span style="opacity:.8;white-space:normal;word-break:keep-all;overflow-wrap:anywhere">${esc(r.source?.text || '')}</span>
+    ${cands ? `<br><span style="opacity:.7">검색 후보: ${cands}</span>` : ''}${llm ? `<br><span style="opacity:.7">모델: ${llm}</span>` : ''}</div>`;
+}
+function diagHTML(r, n, isLast) {
+  const badge = !DEV.on() ? '' : r.mode === 'local' ? `<div class="src" style="opacity:.75">서버 /fix 구현 전 · 화면 임시 진단 (규칙 샘플 기준)</div>`
+    : r.mode === 'fallback' ? `<div class="src" style="opacity:.75">서버 /fix · RAG 검색 실패로 규칙 전체를 넣는 폴백 모드${r.fallback_reason ? ' (' + esc(r.fallback_reason) + ')' : ''}</div>` : '';
+  if (r.ok) return `<div class="type ok">${n > 1 ? '✓ 이제 다 맞았어요!' : '✓ 잘 썼어요!'}</div><div class="fixed">${esc(r.fixed)}</div><div class="why">${esc(r.why)}</div>${badge}`;
+  const tail = !isLast ? '' : n < 2
+    ? `${r.more_errors ? '<div class="result on todo">하나 더 있어요!</div>' : ''}<button class="btn ghost" style="margin-top:8px" onclick='fixAgain(${JSON.stringify(r.fixed)})'>${r.more_errors ? '고친 문장으로 다시 고쳐줘 ✨' : '혹시 더 고칠 곳 있나 한 번 더 봐줘 🔍'}</button>`
+    : (r.more_errors ? `<div class="result on todo">아직 고칠 곳이 남았어요. 다 고치면 이렇게 돼요 👇</div><div class="fixed" style="color:var(--primary)">${esc(r.full_fixed || r.fixed)}</div>` : '');
+  return `<div class="type">✕ 헷갈린 규칙: ${esc(r.rule.name)}</div><div class="fixed"><s>${esc(r.wrong)}</s><em>${esc(r.fix)}</em> → ${esc(r.fixed)}</div><div class="why">${esc(r.why)}</div>${evidenceBox(r)}${tail}${badge}`;
+}
+function renderAll() {   // 이전 회차는 흐린 카드(버튼 없음)로 위에, 마지막 회차는 #diag 에
+  $$('.diag-prev').forEach(el => el.remove());
+  const d = $('#diag'); if (!rounds.length) { d.style.display = 'none'; return; }
+  rounds.slice(0, -1).forEach((r, i) => d.insertAdjacentHTML('beforebegin', `<div class="diag diag-prev" style="opacity:.6"><div class="hint" style="margin:0 0 6px">${i + 1}차 고침</div>${diagHTML(r, i + 1, false)}</div>`));
+  d.style.display = 'block'; d.innerHTML = diagHTML(rounds[rounds.length - 1], rounds.length, true);
+}
+window.addEventListener('devview', () => { if (rounds.length) renderAll(); });
 async function runFix() {
   if (!text) return; $('#fixBtn').disabled = true; $('#steps').style.display = 'grid'; $('#diag').style.display = 'none';
   const st = ['#st1', '#st2', '#st3']; st.forEach(s => $(s).className = 'step'); $('#st1').className = 'step on';
@@ -57,11 +82,8 @@ async function runFix() {
   $('#st2').className = 'step done'; $('#st3').className = 'step on'; await new Promise(x => setTimeout(x, 350)); $('#st3').className = 'step done';
   round++;
   const d = $('#diag'); d.style.display = 'block';
-  const badge = r.mode === 'local' ? `<div class="src" style="opacity:.75">서버 /fix 구현 전 · 화면 임시 진단 (규칙 샘플 기준)</div>`
-    : r.mode === 'fallback' ? `<div class="src" style="opacity:.75">서버 /fix · RAG 검색 실패로 규칙 전체를 넣는 폴백 모드${r.fallback_reason ? ' (' + esc(r.fallback_reason) + ')' : ''}</div>` : '';
-  if (r.ok) d.innerHTML = `<div class="type ok">${round > 1 ? '✓ 이제 다 맞았어요!' : '✓ 잘 썼어요!'}</div><div class="fixed">${esc(r.fixed)}</div><div class="why">${esc(r.why)}</div>${badge}`;
-  else {
-    d.innerHTML = `<div class="type">✕ 헷갈린 규칙: ${esc(r.rule.name)}</div><div class="fixed"><s>${esc(r.wrong)}</s><em>${esc(r.fix)}</em> → ${esc(r.fixed)}</div><div class="why">${esc(r.why)}</div><div class="src">📚 <b>${r.mode === 'rag' ? 'RAG가 찾은 근거' : r.mode === 'fallback' ? '참고한 규칙 (검색 없이 전체 규칙 중 고름)' : '참고한 규칙 (화면 샘플)'}</b> · ${esc(r.source?.chunk_id || '')}${r.rule.score != null ? ` · 검색 점수 ${r.rule.score}` : ''}${r.runner_up ? ` · 2위 ${esc(r.runner_up.name)} ${r.runner_up.score}` : ''}<br><span style="opacity:.8;white-space:normal;word-break:keep-all;overflow-wrap:anywhere">${esc(r.source?.text || '')}</span></div>${round < 2 ? `${r.more_errors ? '<div class="result on todo">하나 더 있어요!</div>' : ''}<button class="btn ghost" style="margin-top:8px" onclick='fixAgain(${JSON.stringify(r.fixed)})'>${r.more_errors ? '고친 문장으로 다시 고쳐줘 ✨' : '혹시 더 고칠 곳 있나 한 번 더 봐줘 🔍'}</button>` : (r.more_errors ? `<div class="result on todo">아직 고칠 곳이 남았어요. 다 고치면 이렇게 돼요 👇</div><div class="fixed" style="color:var(--primary)">${esc(r.full_fixed || r.fixed)}</div>` : '')}${badge}`;
+  rounds.push(r); renderAll();
+  if (!r.ok) {
     NB.addWrong(state.student, r.rule.id, text, r.fixed, r.log_id);   // 서버 /notebook 이 생기기 전까지 오답노트 화면용 로컬 기록 (서버가 있으면 화면이 서버 것을 씀)
   }
   const m = checkMission(text, r);

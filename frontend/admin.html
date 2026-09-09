@@ -6,10 +6,11 @@
 <title>초등 영어 · 관리자</title>
 <link rel="stylesheet" href="css/app.css">
 <style>
-  /* 관리자는 데스크톱에서 보므로 폭을 넓힌다 */
-  .app{max-width:760px}
-  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:14px}
-  .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px}
+  /* 관리자는 데스크톱(발표 화면)에서 보므로 폭을 넓힌다 — docs/plan-B/mockup.html 관리자 웹 구성 */
+  .app{max-width:900px}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;margin-top:14px}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-top:14px}
+  .grid2 .panel{margin-top:0}
   .panel h2{font-size:1rem;font-weight:800;margin:0 0 4px}
   .panel .d{color:var(--muted);font-size:.82rem;margin-bottom:12px}
   .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
@@ -18,28 +19,23 @@
   .kpi .num.na{color:var(--muted);font-size:1rem}
   .kpi .lbl{font-size:.72rem;color:var(--muted)}
   .bars{display:grid;gap:8px;margin-top:12px}
-  .bar{display:grid;grid-template-columns:130px 1fr 48px;align-items:center;gap:10px;font-size:.82rem}
+  .bar{display:grid;grid-template-columns:170px 1fr 48px;align-items:center;gap:10px;font-size:.82rem}
   .bar .track{height:10px;border-radius:5px;background:var(--line);overflow:hidden}
   .bar .track i{display:block;height:100%;background:var(--primary)}
   .bar .track i.best{background:var(--accent)}
   .bar .v{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
-  label.field{margin:12px 0 6px}
-  input[type=text],textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:.92rem;background:var(--surface)}
-  textarea{min-height:130px;resize:vertical;line-height:1.6}
-  .row{display:grid;grid-template-columns:1fr 130px;gap:10px}
-  .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
-  .actions .btn{margin-top:0}
-  .checks{display:grid;gap:6px;margin-top:12px}
-  .check{display:grid;grid-template-columns:22px 1fr;gap:8px;align-items:start;font-size:.85rem;padding:8px 10px;border-radius:8px;background:var(--bg)}
-  .check.ok{background:var(--primary-soft)} .check.ok .ic{color:var(--primary)}
-  .check.warn{background:var(--accent-soft)} .check.warn .ic{color:#B07514}
-  .check .ic{font-weight:800}
-  .check .t{font-weight:600} .check .w{color:var(--muted);font-size:.8rem;margin-top:2px}
+  .bars .d{margin:8px 0 0}
   table.mini{width:100%;border-collapse:collapse;font-size:.83rem;margin-top:8px}
-  table.mini th,table.mini td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+  table.mini th,table.mini td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
   table.mini th{font-size:.72rem;color:var(--muted);font-weight:600}
-  .pill{display:inline-block;font-size:.72rem;font-weight:700;padding:2px 9px;border-radius:999px}
-  .pill.ok{background:var(--primary-soft);color:var(--primary)} .pill.warn{background:var(--accent-soft);color:#B07514}
+  table.mini td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  table.mini td.n b{color:var(--primary)}
+  table.mini td.f{white-space:nowrap;font-family:ui-monospace,Consolas,monospace;font-size:.8rem}
+  .pill{display:inline-block;font-size:.72rem;font-weight:700;padding:2px 9px;border-radius:999px;margin-right:4px}
+  .pill.ok{background:var(--primary-soft);color:var(--primary)} .pill.warn{background:var(--accent-soft);color:#B07514} .pill.idx{background:var(--sky);color:#2A5B8A}
+  .head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  select.small{width:auto;flex:0 0 auto;font:inherit;font-size:.8rem;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
+  .empty{color:var(--muted);font-size:.85rem;padding:10px 0}
 </style>
 </head>
 <body>
@@ -47,54 +43,58 @@
   <header class="topbar" id="topbar"></header>
   <main>
     <h1>관리자</h1>
-    <p class="sub">골든 데이터 상태 · RAG 검색 정확도 · 소스 등록(검수 경고)</p>
+    <p class="sub">골든 데이터 · RAG 검색 정확도 · STT 정확도 · 학생 문장 로그</p>
 
     <div class="grid2">
-      <!-- 데이터 상태 -->
+      <!-- 골든 데이터 (GET /api/admin/golden) -->
       <section class="panel">
         <h2>골든 데이터</h2>
-        <div class="d">서버가 지금 읽고 있는 데이터</div>
+        <div class="d">데이터팀이 만든 것 (자체 제작) · 서버가 지금 읽고 있는 파일</div>
         <div id="dataStatus" class="hint">확인 중…</div>
         <table class="mini" id="dataTable"></table>
+        <div class="hint" id="indexStatus"></div>
       </section>
 
-      <!-- RAG 정확도 (PRD 4.6 · GET /api/rag/eval) -->
+      <!-- RAG 정확도 (GET /api/rag/eval) -->
       <section class="panel">
-        <h2>RAG 검색 정확도</h2>
-        <div class="d">평가셋(eval.csv) 기준 · 상위 3개 안에 정답 조각이 있으면 맞힘</div>
+        <h2>RAG 정확도 — 문장 → 규칙 찾기</h2>
+        <div class="d" id="evalDesc">시험지(eval.csv) 문장마다 검색을 돌려, 정답 규칙이 상위 3개 안에 들면 맞힘</div>
         <div class="kpis">
           <div class="kpi"><div class="num na" id="hit3">–</div><div class="lbl">hit@3</div></div>
           <div class="kpi"><div class="num na" id="hit1">–</div><div class="lbl">hit@1</div></div>
-          <div class="kpi"><div class="num na" id="evalN">–</div><div class="lbl">문항 수</div></div>
+          <div class="kpi"><div class="num na" id="evalN">–</div><div class="lbl">채점 문장</div></div>
         </div>
         <div class="bars" id="runs"></div>
         <div class="hint" id="evalHint"></div>
       </section>
     </div>
 
-    <!-- 소스 등록 + RAG 검수 경고 (PRD 4.6 · POST /api/rag/check) -->
-    <section class="panel" style="margin-top:14px">
-      <h2>소스 등록</h2>
-      <div class="d">한 줄에 한 문장 · <code>영어 | 한국어 뜻</code> · 등록 전에 교육과정 범위와 중복을 RAG로 검사합니다</div>
-      <div class="row">
-        <div>
-          <label class="field" for="srcTitle">제목</label>
-          <input type="text" id="srcTitle" placeholder="예: 동물원에서">
-        </div>
-        <div>
-          <label class="field" for="srcLevel">Level</label>
-          <select id="srcLevel"><option value="1">Level 1</option><option value="2" selected>Level 2</option><option value="3">Level 3</option></select>
-        </div>
+    <!-- STT 정확도 — TTS 담당 실험 결과 자리 (API 미정) -->
+    <section class="panel">
+      <h2>STT 정확도 — 아이 목소리로 얼마나 잘 받아쓰나</h2>
+      <div class="d">테스트 녹음(팀원·지인 아동 목소리) · 단어 오류율(WER) 낮을수록 좋음 · 자체 STT 실험은 TTS 담당</div>
+      <div class="kpis">
+        <div class="kpi"><div class="num na">측정 전</div><div class="lbl">WER · Gemini 오디오 입력 (현재)</div></div>
+        <div class="kpi"><div class="num na">측정 전</div><div class="lbl">WER · 자체 STT 모델 (실험)</div></div>
+        <div class="kpi"><div class="num na">–</div><div class="lbl">테스트 녹음</div></div>
       </div>
-      <label class="field" for="srcText">문장</label>
-      <textarea id="srcText" placeholder="The giraffe is eating leaves. | 기린이 나뭇잎을 먹고 있어요.
-I have a rabbit. | 나는 토끼가 있어요."></textarea>
-      <div class="actions">
-        <button class="btn ghost" id="checkBtn" onclick="runCheck()">검수 경고 확인</button>
-        <button class="btn" id="submitBtn" onclick="submitSource()" disabled>등록</button>
+      <div class="hint">TTS 담당의 자체 STT 실험 결과를 여기서 Gemini와 같은 잣대(WER)로 비교. 결과 파일 형식이 정해지면 숫자를 붙인다.</div>
+    </section>
+
+    <!-- 학생 문장 로그 (GET /api/admin/log?days=N) -->
+    <section class="panel">
+      <div class="head">
+        <h2>학생 문장 로그 · 자주 걸리는 규칙</h2>
+        <select class="small" id="logDays" onchange="loadLog()">
+          <option value="1">오늘</option>
+          <option value="7" selected>최근 7일</option>
+          <option value="30">최근 30일</option>
+          <option value="3650">전체</option>
+        </select>
       </div>
-      <div class="checks" id="checks"></div>
-      <div class="hint" id="srcHint"></div>
+      <div class="d" id="logDesc">튜터에 들어온 문장과 진단 결과 (BigQuery 집계 후보)</div>
+      <table class="mini" id="logTable"></table>
+      <div class="hint" id="logHint"></div>
     </section>
   </main>
   <div class="status" id="status"></div>

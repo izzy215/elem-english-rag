@@ -37,7 +37,10 @@ PROMPT_FILE = Path(__file__).parent / "prompts" / "fix_fallback.txt"
 
 router = APIRouter(tags=["tutor"])
 _lock = threading.Lock()
-RAG_TOP_K = 5          # 프롬프트에 넣는 검색 후보 수. 1 = 인계문서 최초 기준선(1위만). 어순 규칙(R-09)은 임베딩이 순서를 못 봐서 4~5위로 나와 5 로 둔다 (규칙 38개가 들어오면 다시 조정)
+RAG_TOP_K = 5          # 프롬프트에 넣는 검색 후보 수 (검색 순위 표시용). 어순 규칙은 임베딩이 순서를 못 봐서 4~5위로 나와 5 로 둔다
+RAG_ALL_IF_LE = 12     # 규칙이 이 수 이하(샘플 9개)면 검색으로 후보를 좁히지 않고 전부 넣는다. 점수·순위는 그대로 표시
+# 규칙이 많을 때(실제 38개) 프롬프트 = 검색 상위 RAG_TOP_K + 이 Unit 의 규칙(units.csv rule_ids) + 공통(unit=ALL) 규칙.
+# 검색만으로는 관사(R-38) 같은 공통 규칙이 후보 밖으로 밀린다 ('I drew zoo yesterday' 에서 R-38 이 22위) → 관사를 붙였다 안 붙였다 하는 원인
 
 
 # ─────────────────────────────────────────────
@@ -99,6 +102,8 @@ def _pair_problem(text: str, wrong: str | None, fix: str | None, rule_type: str 
         return "wrong/fix 가 단어가 아님"
     if not re.search(r"(?<![A-Za-z])" + re.escape(wrong.strip()) + r"(?![A-Za-z])", text, flags=re.IGNORECASE):
         return f"wrong={wrong!r} 이 학생 문장에 없음"
+    if wrong.strip() == fix.strip():                         # drew → drew 처럼 고친 게 없는 쌍 (모델이 더 고칠 게 없는데 ok=false 로 답함)
+        return f"wrong 과 fix 가 같음: {wrong!r}"
     if "어순" in (rule_type or ""):                          # 어순 규칙: 같은 단어들의 재배열만 허용 (관사는 넣거나 빼도 됨)
         strip = lambda ts: sorted(t for t in ts if t not in _ARTICLES)
         if len(w) < 2 or strip(w) != strip(f) or w == f:
@@ -194,6 +199,33 @@ class FixIn(BaseModel):
     source: str = "typed"           # "stt" | "typed"
 
 
+_STOP = {"i", "a", "an", "the", "to", "at", "in", "on", "of", "and", "is", "am", "are", "was", "were", "it", "my", "you", "he", "she", "we", "they", "this", "that"}
+
+
+def _suggest_questions(rule: dict | None, text: str) -> list[str]:
+    """더 물어보기 칩. 원칙: /ask 가 답할 수 있고(FAQ·규칙 조각 안) **방금 문장과 관련 있는** 것만. 둘 다 아니면 비워 둔다.
+    1) 틀린 규칙에 연결된 FAQ  2) 학생 문장의 단어가 들어 있는 FAQ (question·variants·example 의 영어 단어와 겹침)
+    3) 틀렸으면 "규칙명 예문 더 보여줘" (규칙 조각으로 답 가능). Unit 공통 질문으로 채우지 않는다 — 문장과 무관한 칩은 신뢰를 깎는다."""
+    faqs = golden.faqs()
+    words = {w for w in _tokens(text) if len(w) >= 3 and w not in _STOP}
+    out: list[str] = []
+    if rule:
+        out += [f["question"] for f in faqs if rule["id"] in (f.get("rule_ids") or [])]
+    scored = []
+    for f in faqs:
+        if f["question"] in out:
+            continue
+        bag = {w for w in _tokens(" ".join([f.get("question", "")] + list(f.get("variants") or []))) if len(w) >= 3}   # 질문·변형에 나온 단어만 (예문은 제외 — zoo 같은 부수 단어로 엉뚱한 FAQ 가 걸림)
+        hit = len(words & bag)
+        if hit:
+            scored.append((hit, f["question"]))
+    out += [q for _, q in sorted(scored, key=lambda x: -x[0])]
+    out = out[:2]
+    if rule:
+        out.append(f"{rule['type']} 예문 더 보여줘")
+    return out[:3]
+
+
 def diagnose(text: str, level: int = 2, unit: str = "", student: str = "A", source_kind: str = "typed", record: bool = True) -> dict:
     """/fix 의 본체. record=False 면 sentence_log·notebook 에 아무것도 쓰지 않는다 (RAG 담당 생성 평가용 → fix_internal)."""
     text = (text or "").strip()
@@ -204,9 +236,20 @@ def diagnose(text: str, level: int = 2, unit: str = "", student: str = "A", sour
         raise HTTPException(503, "rules.jsonl 이 없음 (data/golden/ 또는 _sample-B/)")
     unit_row = golden.find_unit(level, unit) or {}
 
-    # 1) RAG 검색 → 상위 RAG_TOP_K 조각만 프롬프트에 (1위만 주면 검색이 틀린 문장을 놓침: 'I am hot lastyear' 에서 R-07 이 3위). 실패하면 규칙 전부 (폴백)
-    cands, mode, fallback_reason = _search_candidates(text, k=RAG_TOP_K)
-    prompt_rules = cands[:RAG_TOP_K] if mode == "rag" else all_rules
+    # 1) 검색은 규칙 전부를 받아 둔다 (점수·순위 표시용, 38개라 비용 없음). 프롬프트엔 상위 RAG_TOP_K + Unit 규칙 + 공통 규칙. 검색 실패면 규칙 전부 (폴백)
+    cands, mode, fallback_reason = _search_candidates(text, k=len(all_rules))
+    if mode == "rag":
+        if len(cands) != len(all_rules):                    # 색인이 rules.jsonl 과 다름 (데이터 갱신 뒤 --rebuild 안 함)
+            print(f"[fix] 경고: 색인 {len(cands)}개 ≠ rules.jsonl {len(all_rules)}개 → python -m backend.indexing --rebuild 필요", flush=True)
+        extra_ids = set(unit_row.get("rule_ids") or []) | {r["id"] for r in all_rules if r.get("unit") == "ALL"}
+        if len(all_rules) <= RAG_ALL_IF_LE:
+            prompt_rules = list(cands)
+        else:
+            prompt_rules = cands[:RAG_TOP_K] + [c for c in cands[RAG_TOP_K:] if c["id"] in extra_ids]
+        seen = {r["id"] for r in prompt_rules}              # 색인에 없는 Unit·공통 규칙은 rules.jsonl 에서 보충
+        prompt_rules += [r for r in all_rules if r["id"] in extra_ids and r["id"] not in seen]
+    else:
+        prompt_rules = all_rules
     allowed_ids = {r["id"] for r in prompt_rules}          # 모델이 고를 수 있는 규칙 = 실제로 전달한 것만
 
     prompt = _render(
@@ -216,8 +259,9 @@ def diagnose(text: str, level: int = 2, unit: str = "", student: str = "A", sour
         all_rules=_rules_block(prompt_rules),
         sentence=text,
     )
-    shown = [(c["id"], round(c["score"], 3)) for c in cands] if cands else [r["id"] for r in all_rules]
-    print(f"[fix] student={student} unit={unit} mode={mode}{' (' + fallback_reason + ')' if fallback_reason else ''} candidates={shown} text={text!r}", flush=True)
+    shown = [(c["id"], round(c["score"], 3)) for c in cands[:RAG_TOP_K]] if cands else [r["id"] for r in all_rules]
+    extra = [r["id"] for r in prompt_rules[RAG_TOP_K:]] if cands else []
+    print(f"[fix] student={student} unit={unit} mode={mode}{' (' + fallback_reason + ')' if fallback_reason else ''} candidates={shown} +unit/공통={extra} text={text!r}", flush=True)
 
     # 2) 생성 → 3) 검증. 검증에 걸리면 이유를 덧붙여 한 번 더 생성, 그래도 안 되면 502
     problem = None
@@ -284,16 +328,16 @@ def diagnose(text: str, level: int = 2, unit: str = "", student: str = "A", sour
         "wrong": None if ok else out.get("wrong"),
         "fix": None if ok else out.get("fix"),
         "fixed": text if ok else fixed,
-        "why": out.get("why") or ("문법에 맞는 문장이에요. 다른 문장도 말해볼까요?" if ok else ""),
+        "why": "문법에 맞는 문장이에요. 다른 문장도 말해볼까요?" if ok else (out.get("why") or ""),   # 맞는 문장이면 고정 문구 — 모델이 미션 지적을 why 에 섞는 것 방지 (미션은 mission.nudge 로만)
         "source": source,
         "more_errors": bool(out.get("more_errors")) and not ok,
         "full_fixed": text if ok else full_fixed,              # 다 고친 문장 (2차 뒤에도 남았을 때 화면이 최종 정답으로 보여줌)
-        "suggested_questions": [q for q in (out.get("suggested_questions") or []) if isinstance(q, str)][:2] + ["다른 예문 보여줘"],
+        "suggested_questions": _suggest_questions(rule, text),   # FAQ 에서 고름 (모델이 지어낸 질문은 /ask 가 못 답함)
         "mission": {"ok": bool(mission.get("ok", True)), "nudge": mission.get("nudge") or ""},
         "log_id": log_id,
         "mode": mode,
         "fallback_reason": fallback_reason,                    # "search_error" | "no_results" | None
-        "candidates": [{"id": c["id"], "name": c["type"], "score": round(c["score"], 4)} for c in cands],   # 검색 상위 k (관리자·실험용)
+        "candidates": [{"id": c["id"], "name": c["type"], "score": round(c["score"], 4)} for c in cands[:RAG_TOP_K]],   # 검색 상위 k (관리자·실험용)
         "llm": llm_info,                                       # {"backend","model","ms","fallback_from"} — 비교 실험·관리자용
     }
 

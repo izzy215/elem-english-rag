@@ -14,6 +14,8 @@ a{color:var(--primary)}
 .topbar .crumb{flex:1;display:flex;gap:6px;flex-wrap:wrap}
 .topbar .crumb span{background:var(--primary-soft);color:var(--primary);padding:3px 9px;border-radius:999px;font-weight:700;font-size:.72rem}
 .topbar .student{font-weight:800;color:var(--ink);background:#fff;border-radius:999px;padding:3px 10px;box-shadow:var(--shadow-sm)}
+.topbar .student{user-select:none;-webkit-user-select:none;cursor:pointer}
+.topbar .student.dev{background:var(--accent-soft);color:#A9690F;outline:1.5px solid var(--accent)}
 main{flex:1;padding:6px 18px 110px}
 h1{font-family:'Jua','Noto Sans KR',sans-serif;font-weight:400;font-size:1.45rem;letter-spacing:-.01em}
 .sub{color:var(--muted);font-size:.86rem;margin-top:2px}

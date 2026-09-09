@@ -23,11 +23,23 @@ function go(page) { location.href = page; }
 function requireState(...keys) { const s = S.get(); for (const k of keys) if (s[k] == null) { go('index.html'); return null; } return s; }
 
 // ---------- 상단바 · 상태줄 ----------
+// ---------- 발표·개발용 뷰 (근거 박스 두 겹: 학생용은 규칙 한 줄, 발표용은 id·검색 점수·순위·2위·원문·모드) ----------
+// 상단 "학생 A" 칩을 길게(0.6초) 누르거나 더블클릭하면 켜고 끈다. 이 브라우저에만 저장.
+const DEV = {
+  on() { try { return localStorage.getItem('devView') === '1'; } catch (_) { return false; } },
+  toggle() { try { localStorage.setItem('devView', DEV.on() ? '0' : '1'); } catch (_) {} renderTopbar(renderTopbar.last || {}); window.dispatchEvent(new Event('devview')); },
+};
 function renderTopbar({ back = true, crumbs = true } = {}) {
+  renderTopbar.last = { back, crumbs };
   const s = S.get(); const parts = [];
   if (crumbs && s.level) parts.push(`Level ${s.level.level}`);
   if (crumbs && s.unit) parts.push(`${s.unit.unit} ${s.unit.title}`);
-  $('#topbar').innerHTML = `${back ? '<button class="back" onclick="history.back()">‹ 뒤로</button>' : ''}<div class="crumb">${parts.map(p => `<span>${esc(p)}</span>`).join('')}</div><div class="student">학생 ${esc(s.student || 'A')}</div>`;
+  $('#topbar').innerHTML = `${back ? '<button class="back" onclick="history.back()">‹ 뒤로</button>' : ''}<div class="crumb">${parts.map(p => `<span>${esc(p)}</span>`).join('')}</div><div class="student${DEV.on() ? ' dev' : ''}" title="길게 누르면 발표용 보기">학생 ${esc(s.student || 'A')}${DEV.on() ? ' · 발표용' : ''}</div>`;
+  const chip = $('#topbar .student'); let t = null;
+  const start = () => { t = setTimeout(() => { t = null; DEV.toggle(); }, 600); };
+  const cancel = () => { if (t) { clearTimeout(t); t = null; } };
+  chip.addEventListener('pointerdown', start); chip.addEventListener('pointerup', cancel); chip.addEventListener('pointerleave', cancel);
+  chip.addEventListener('dblclick', DEV.toggle); chip.addEventListener('contextmenu', e => e.preventDefault());
 }
 async function showHealth() {
   const el = $('#status'); if (!el) return null;
@@ -187,7 +199,10 @@ async function openChat(extra = {}) {
   const sug = CHAT.ctx.rule_id ? SB.faq.filter(f => f.rule_ids.includes(CHAT.ctx.rule_id)).map(f => f.question) : SB.faq.filter(f => f.unit === 'ALL' || f.unit === CHAT.ctx.unit).map(f => f.question);
   renderSugg(sug.slice(0, 3)); $('#chat').classList.add('on'); $('#chatBg').classList.add('on');
 }
-function renderSugg(list) { $('#chatSugg').innerHTML = list.map(q => `<button onclick="askChat(${JSON.stringify(q)})">${esc(q)}</button>`).join(''); }
+function renderSugg(list) {   // 질문 문구를 onclick 속성에 넣지 않고 data 속성 + 이벤트로 (따옴표가 들어가면 속성이 깨져 클릭이 안 됨)
+  $('#chatSugg').innerHTML = list.map(q => `<button type="button" data-q="${esc(q)}">${esc(q)}</button>`).join('');
+  $$('#chatSugg button[data-q]').forEach(b => b.addEventListener('click', () => askChat(b.dataset.q)));
+}
 function closeChat() { stopRecording(); $('#chat').classList.remove('on'); $('#chatBg').classList.remove('on'); }
 function faqMatch(q) {                             // 폴백: 질문 ↔ question+variants 단어 겹침
   const norm = t => t.toLowerCase().replace(/[?？.!,]/g, '').split(/\s+/).filter(Boolean);

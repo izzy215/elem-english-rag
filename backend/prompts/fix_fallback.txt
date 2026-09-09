@@ -10,7 +10,7 @@
    예) 학생 "I go to a zoo yesterday and see a elephant." → wrong="go", fix="went", fixed="I went to a zoo yesterday and see a elephant.", more_errors=true  (see, a elephant 는 그대로 둔다)
    어순(단어 순서)은 참고 규칙에 '어순' 규칙이 있을 때만 고친다. 그때는 wrong 에 순서가 틀린 구간을 그대로, fix 에 **같은 단어들을 바른 순서로** 쓴다 (wrong="yesterday saw a lion", fix="saw a lion yesterday"). 구간은 순서가 틀린 단어를 모두 포함해 **한 번에 바른 순서가 되게** 넓게 잡는다 ("yesterday saw" 만 바꾸면 "saw yesterday lion" 이 되어 또 틀림). 단어를 더하거나 빼지 않는다. 어순 규칙이 참고 규칙에 없으면 어순은 건드리지 않고 more_errors 로도 세지 않는다.
 4-1. full_fixed 는 **학생이 쓴 단어만으로** 참고 규칙 위반을 전부 고친 문장이다. 관사(a/an/the)와 동사 형태 변화 외에 새 단어를 넣지 않는다. "to the zoo", "and" 처럼 학생이 말하지 않은 내용을 덧붙이면 안 된다. 어순도 학생 것을 유지한다.
-5. 미션 확인: 학생이 "오늘의 미션"에 맞는 이야기를 했는지 본다. 문법과는 별개다. 미션과 다른 이야기면 mission.ok=false 와 함께 한 문장으로 부드럽게 권한다(예: "동물원에서 본 동물도 말해볼까요?"). 미션에 맞으면 mission.ok=true, nudge 는 빈 문자열.
+5. 미션 확인: 학생이 "오늘의 미션"에 맞는 이야기를 했는지 본다. 문법과는 별개다. **미션 이야기는 mission.nudge 에만 쓴다.** why 에는 문법 이야기만 쓰고, ok=true 면 why 는 "문법에 맞는 문장이에요." 처럼 문법 칭찬만 한다 ("하지만 어제라고 말해야 해요" 같은 미션 지적을 why 에 섞지 않는다). 미션과 다른 이야기면 mission.ok=false 와 함께 한 문장으로 부드럽게 권한다(예: "동물원에서 본 동물도 말해볼까요?"). 미션에 맞으면 mission.ok=true, nudge 는 빈 문자열.
 6. 출력은 아래 JSON 하나만. 다른 말은 쓰지 않는다.
 
 ## 오늘의 미션
@@ -33,6 +33,5 @@
   "why": "설명 2문장 이내",
   "more_errors": true 또는 false,
   "full_fixed": "참고 규칙 기준으로 틀린 곳을 전부 고친 완성 문장 (fixed 와 달리 여기서는 다 고친다. 틀린 곳이 하나뿐이면 fixed 와 같음)",
-  "suggested_questions": ["학생이 선생님에게 이어서 물어볼 만한 짧은 질문 2개 — 반드시 한국어로 (예: 왜 went예요?)"],
   "mission": {"ok": true 또는 false, "nudge": "미션과 다르면 권하는 한 문장, 맞으면 빈 문자열"}
 }
