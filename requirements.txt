@@ -1,5 +1,6 @@
 # 공통
 google-genai>=1.0
+#anthropic>=1.0          # backend/llm.py claude 백엔드 (비교 실험용, 키 없으면 안 씀)
 python-dotenv>=1.0
 
 # 웹 서버 (목업 HTML + FastAPI 구조)
