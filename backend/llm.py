@@ -127,3 +127,20 @@ def generate_json(prompt: str, backend: str | None = None, timeout: float | None
             out["_llm"]["fallback_from"] = "local"
             return out
         raise
+
+
+def generate_text(prompt: str, backend: str | None = None, timeout: float | None = None) -> str:
+    """프롬프트 → 순수 텍스트 한 줄. generate_json 과 같은 백엔드 스위치·폴백을 쓰지만 JSON 파싱은 안 한다
+    (STT 병합처럼 "문장 하나만 출력해" 같은 자유 텍스트 응답에 쓴다)."""
+    name = (backend or settings.llm_backend or "gemini").lower()
+    if name not in _BACKENDS:
+        raise LLMError(f"모르는 LLM_BACKEND: {name} (gemini | local)")
+    timeout = timeout or settings.llm_timeout
+
+    try:
+        return _BACKENDS[name](prompt, timeout).strip()
+    except LLMError as e:
+        if name == "local" and settings.llm_fallback:
+            print(f"[llm] local 실패 → gemini 대체: {e}", flush=True)
+            return generate_text(prompt, backend="gemini", timeout=timeout)
+        raise

@@ -131,12 +131,12 @@ function setBusy(on, msg = '') {
   });
 }
 const SPEAK_TIMEOUT_MS = 90000;   // Cloudflare 터널은 100초 넘으면 끊으므로 그 전에 화면이 먼저 포기
-async function speak(b64, itemId = '', msg = '🎧 듣는 중… 잠깐만요', mime = 'audio/webm') {   // 팀원 완성 API. item_id 없으면 받아쓰기(heard)만 의미 있음
+async function speak(b64, itemId = '', msg = '🎧 듣는 중… 잠깐만요', mime = 'audio/webm', language = null) {   // 팀원 완성 API. item_id 없으면 받아쓰기(heard)만 의미 있음. language 생략 시 서버가 자동 판단
   if (BUSY) throw new Error('아직 앞 문장을 듣는 중이에요. 잠깐만 기다려 주세요.');
   setBusy(true, msg);
   const t0 = Date.now(), tick = setInterval(() => { const m = $('#loadmsg'); if (m) m.textContent = `${msg} (${Math.round((Date.now() - t0) / 1000)}초)`; }, 1000);
   const ac = new AbortController(), timer = setTimeout(() => ac.abort(), SPEAK_TIMEOUT_MS);
-  try { return await api('/api/speak', { method: 'POST', signal: ac.signal, body: JSON.stringify({ student: S.get().student || 'A', item_id: itemId, audio_base64: b64, mime }) }); }
+  try { return await api('/api/speak', { method: 'POST', signal: ac.signal, body: JSON.stringify({ student: S.get().student || 'A', item_id: itemId, audio_base64: b64, mime, language }) }); }
   catch (e) { throw e.name === 'AbortError' ? new Error('서버 응답이 90초 넘게 없어요. 잠시 후 다시 해 주세요.') : e; }
   finally { clearTimeout(timer); clearInterval(tick); setBusy(false); }
 }
@@ -204,12 +204,15 @@ async function askChat(q) {
   m.scrollTop = m.scrollHeight; CHAT.turns++;
   if (r.suggested && r.suggested.length) renderSugg(r.suggested); if (CHAT.turns >= 3) $('#chatSugg').innerHTML = `<button onclick="closeChat()">이제 돌아갈게요 ↩</button>`;
 }
-async function chatMic() {           // 한 번 누르면 녹음 시작, 다시 누르면 끝 (5초 지나면 자동으로 끝). STT 가 영어 전용이라 영어 질문만 받아쓴다
+async function chatMic() {           // 한 번 누르면 녹음 시작, 다시 누르면 끝 (5초 지나면 자동으로 끝).
+  // 챗봇 질문은 기본적으로 한국어(+영어 단어 혼용)라고 가정 — language 자동 감지 대신 항상 "ko" 로 고정해서
+  // hybrid_stt() 를 타게 한다: Whisper 한/영 강제 인식 2회 + 병합. 순수 영어로만 물어봐도 병합 단계가
+  // 영어 강제 인식 결과 쪽을 그대로 살리는 안전장치가 있어 크게 나쁘지 않다.
   if (BUSY) return;
   if (REC) { stopRecording(); return; }
   const btn = $('.inp .mic'), inp = $('#chatIn'), ph = inp.placeholder;
   btn.textContent = '⏹'; btn.classList.add('rec'); inp.placeholder = '말하는 중… 다시 누르면 끝';
-  try { const { b64, mime } = await recordOnce({ maxMs: 5000 }); btn.textContent = '…'; btn.classList.remove('rec'); const r = await speak(b64, '', '🎧 듣는 중…', mime); if (r.heard) inp.value = r.heard; else inp.placeholder = '잘 안 들렸어요. 다시 말해볼까요?'; }
+  try { const { b64, mime } = await recordOnce({ maxMs: 5000 }); btn.textContent = '…'; btn.classList.remove('rec'); const r = await speak(b64, '', '🎧 듣는 중…', mime, 'ko'); if (r.heard) inp.value = r.heard; else inp.placeholder = '잘 안 들렸어요. 다시 말해볼까요?'; }
   catch (e) { inp.placeholder = e.message; }
   finally { btn.textContent = '🎙'; btn.classList.remove('rec'); if (inp.placeholder === '말하는 중… 다시 누르면 끝') inp.placeholder = ph; }
 }

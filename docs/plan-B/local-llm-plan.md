@@ -57,11 +57,12 @@ LLM_BACKEND=local
 LLM_LOCAL_URL=http://<서버IP>:11434/v1
 LLM_LOCAL_MODEL=qwen2.5:7b-instruct
 ```
-- [ ] 튜터 화면에서 "I go to the zoo yesterday."로 [고쳐줘] → 파이참 콘솔 `[fix] local:qwen2.5:7b-instruct 1234ms 응답: {...}` 확인
-- [ ] 서버를 끈 상태로 다시 → 콘솔 `[llm] local 실패 → gemini 대체` 가 찍히고 화면은 정상 진단 (폴백 동작)
-- [ ] `LLM_BACKEND=gemini`로 되돌려 두기 (주 경로)
+- [x] 튜터 화면에서 "I go to the zoo yesterday."로 [고쳐줘] → 콘솔 `[fix] local:qwen2.5:14b-instruct 12690ms 응답: {...}` 확인 (2026-09-09, /api/fix 직접 호출로 검증. 모델은 계획 당시 후보였던 7b 대신 서버 VRAM 여유로 14b 사용)
+- [x] 서버를 끈 상태로 다시 → 콘솔 `[llm] local 실패 → gemini 대체` 가 찍히고 화면은 정상 진단 (폴백 동작) (2026-09-09, LLM_LOCAL_URL을 존재하지 않는 포트로 바꿔 연결 실패를 재현·확인)
+- [x] `LLM_BACKEND=gemini`로 되돌려 두기 (주 경로) — 완료, .env 는 로컬 실험 원할 때만 주석 해제
 
-완료 기준: 위 세 가지 캡처. `/fix` 응답의 `llm.backend`가 각각 local / gemini(fallback_from: local) / gemini.
+완료 기준: 위 세 가지 캡처. `/fix` 응답의 `llm.backend`가 각각 local / gemini(fallback_from: local) / gemini. → **모두 확인됨.**
+참고: 선생님 서버 접속은 SSH 터널(`ssh -L 11434:localhost:11434 research1@192.168.1.147`)로 한다 — VSCode 자동 포트 포워딩은 이전 세션이 안 닫히고 겹치면 응답이 안 오는 문제가 있었음(새 터널로 교체하면 해결).
 
 ### 작업 4. 비교 실험 (팀장 + TTS 팀원)
 `tests/eval_fix.py` (팀장이 만듦): eval.csv 10문장을 **같은 프롬프트·같은 규칙 조각**으로 Gemini와 로컬에 각각 보내 표로 만든다.
@@ -89,7 +90,7 @@ ask.py가 Gemini를 직접 부르는 부분을 `llm.generate_json(prompt)`로 �
 | 선생님 서버 Ollama + 모델 | TTS 팀원 | ⬜ 작업 1~2 |
 | 연결 검증 3종 캡처 | TTS 팀원 | ⬜ 작업 3 |
 | tests/eval_fix.py + 비교표 | 팀장 (+TTS 팀원 실행) | ⬜ 작업 4 |
-| ask.py → llm 사용 | TTS 팀원 | ⬜ 작업 5 (선택) |
+| ask.py → llm 사용 | TTS 팀원 | ✅ 응답에 llm 정보, 로컬 매칭 우회 시(문장 정오 판정 포함) 전부 llm.py 경유 |
 
 ## 5. 리스크와 대응
 

@@ -13,7 +13,8 @@ body: {"student", "item_id", "audio_base64", "mime"="audio/webm", "language"=Non
 STT_BACKEND=gemini(기본) / whisper(할당량 없이 로컬 테스트용).
 
 language="ko"는 hybrid_stt() 사용 — Gemini 한 번으론 섞인 영어 단어(went 등)가 한국어로
-뭉개져서, 로컬 Whisper 2회(한국어/영어 강제, 할당량 안 씀) + Gemini 병합 1회로 처리한다.
+뭉개져서, 로컬 Whisper 2회(한국어/영어 강제, 할당량 안 씀) + 병합 1회(backend/llm.py 경유 —
+.env 의 LLM_BACKEND 에 따라 Gemini 또는 선생님 서버 로컬 모델)로 처리한다.
 단어 목록·맥락 힌트는 _recent_context()/_notebook_units() 로 학생 맥락에 맞게 좁힌다.
 """
 import base64
@@ -29,7 +30,7 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel
 
-from backend import golden
+from backend import golden, llm
 from backend.config import settings
 from backend.pronounce import _decode_to_wav_array, pronunciation_level, pronunciation_score
 from backend.tts import ensure_tts
@@ -182,10 +183,12 @@ def hybrid_stt(audio_base64: str, mime: str, student: str = "") -> str:
     model = _get_whisper_model()
     korean_guess = model.transcribe(audio, language="ko", fp16=False, temperature=0.0)["text"].strip()
     english_guess = model.transcribe(audio, language="en", fp16=False, temperature=0.0)["text"].strip()
+    print(f"[hybrid_stt] ko 강제={korean_guess!r} en 강제={english_guess!r}", flush=True)
     unit, rule_id, level = _recent_context(student)
     unit_scope = list({unit, *_notebook_units(student)} - {None}) if unit else _notebook_units(student)
 
     vocab = ", ".join(golden.known_english_vocab(unit_scope or None))
+    print(f"[hybrid_stt] unit={unit} rule_id={rule_id} vocab={vocab!r}", flush=True)
     rag_hit = _rag_rule_hint(korean_guess)  # rag.py 완성 전까지는 항상 None
     rule = golden.find_rule(rule_id) if rule_id else None
     unit_info = golden.find_unit(level, unit) if (unit and level) else None
@@ -218,10 +221,11 @@ A를 그대로 출력해라. 학생 문장은 기본적으로 한국어 질문/�
 다른 설명 없이 문장만 출력."""
 
     try:
-        resp = _get_client().models.generate_content(model=settings.gemini_model, contents=prompt)
-        merged = (resp.text or "").strip().strip("\"'“”‘’")
+        merged = llm.generate_text(prompt).strip("\"'“”‘’")
+        print(f"[hybrid_stt] 병합 결과={merged!r}", flush=True)
         return merged or korean_guess
-    except Exception:
+    except llm.LLMError as e:
+        print(f"[hybrid_stt] 병합 실패({e}) → ko 강제 결과 그대로 사용", flush=True)
         return korean_guess
 
 

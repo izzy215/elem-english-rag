@@ -10,6 +10,7 @@
 audio_cache/
 data/student/
 data/chroma/
+data/rag_eval/
 __pycache__/
 *.pyc
 

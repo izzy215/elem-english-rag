@@ -6,9 +6,9 @@ body: {"student", "question", "context": {"screen","unit","rule_id","log_id"}}
 → {"answer", "source": [{"chunk_id"}], "offtopic", "suggested": [...]}
 (common.js 의 askChat() 이 이미 이 형식을 기다림 — 필드 바꾸면 그쪽도 같이 바꿔야 함)
 
-1) 로컬 매칭(faq.jsonl→rules.jsonl 단어 겹침) 먼저 — 되면 Gemini 호출 없이 즉시 반환
-2) 안 되면 Gemini 폴백(faq 전체를 프롬프트에 넣고 고르게 함 — rag.search 완성되면
-   1위 조각만 넣는 방식으로 바꿀 수 있음)
+1) 로컬 매칭(faq.jsonl→rules.jsonl 단어 겹침) 먼저 — 되면 LLM 호출 없이 즉시 반환
+2) 안 되면 backend/llm.py 로 폴백(faq 전체를 프롬프트에 넣고 고르게 함 — Gemini 기본, .env
+   LLM_BACKEND=local 이면 선생님 서버 로컬 모델. rag.search 완성되면 1위 조각만 넣게 바꿀 수 있음)
 
 context.log_id 가 있으면 sentence_log.jsonl 에서 그 순간의 원문·고친 문장을 찾아 프롬프트에
 넣는다("아까 말한 거 고쳐줘"에 다시 추론 안 하고 /fix 결과를 그대로 씀). student.py 의
@@ -19,23 +19,13 @@ import re
 from pathlib import Path
 
 from fastapi import APIRouter
-from google import genai
-from google.genai import types
 from pydantic import BaseModel
 
-from backend import golden
+from backend import golden, llm
 from backend.config import settings
 
 router = APIRouter(tags=["ask"])
-_client: genai.Client | None = None
 SENTENCE_LOG = Path(__file__).resolve().parent.parent / "data" / "student" / "sentence_log.jsonl"
-
-
-def _get_client() -> genai.Client:
-    global _client
-    if _client is None:
-        _client = genai.Client(api_key=settings.gemini_api_key)
-    return _client
 
 
 class AskContext(BaseModel):
@@ -186,7 +176,8 @@ def _check_correctness(question: str) -> dict:
     기록 안 남김 — 궁금해서 물어본 거지 "내 문장 말하기" 연습이 아니라서). 실패하면 안내 문구로
     폴백(호출부에서 처리)."""
     prompt = CORRECTNESS_PROMPT.format(rules_block="\n".join(f"- [{r['id']}] {r['type']}: {r['text']}" for r in golden.rules()), question=question)
-    out = _ask_gemini(prompt)
+    out = llm.generate_json(prompt)
+    llm_info = out.pop("_llm", {})
     ok = bool(out.get("ok", True))
     rule = golden.find_rule(out.get("rule_id")) if not ok else None
     sentence = (out.get("sentence") or "").strip()
@@ -194,19 +185,8 @@ def _check_correctness(question: str) -> dict:
         answer = f'네, "{sentence}"는 맞는 문장이에요! 👍' if sentence else "네, 맞는 문장이에요!"
     else:
         answer = f'{(out.get("why") or "").strip()} "{out.get("fixed", "")}"가 맞아요.'.strip()
-    return {"answer": answer, "source": [{"chunk_id": rule["id"]}] if rule else [], "offtopic": False, "suggested": []}
-
-
-def _ask_gemini(prompt: str) -> dict:
-    """JSON 만 받는다. 모델이 코드펜스를 붙여도 벗겨서 파싱 (tutor.py 의 _ask_gemini 와 같은 패턴)."""
-    resp = _get_client().models.generate_content(
-        model=settings.gemini_model,
-        contents=prompt,
-        config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.2),
-    )
-    text = (resp.text or "").strip()
-    text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text)
-    return json.loads(text)
+    return {"answer": answer, "source": [{"chunk_id": rule["id"]}] if rule else [], "offtopic": False,
+            "suggested": [], "llm": llm_info}
 
 
 @router.post("/ask")
@@ -220,7 +200,7 @@ def ask(body: AskIn):
             return {"answer": "", "source": [], "offtopic": True, "error": "GEMINI_API_KEY 미설정"}
         try:
             return _check_correctness(question)
-        except Exception:
+        except llm.LLMError:
             return _CORRECTNESS_FALLBACK
 
     all_faqs = golden.faqs()
@@ -233,7 +213,7 @@ def ask(body: AskIn):
     if local is not None:
         return local
 
-    # 2) 로컬 매칭 실패 → Gemini 폴백 (faq 전체를 프롬프트에 넣고 고르게 함)
+    # 2) 로컬 매칭 실패 → llm.py 폴백 (faq 전체를 프롬프트에 넣고 고르게 함)
     if not settings.has_api_key:
         return {"answer": "", "source": [], "offtopic": True, "error": "GEMINI_API_KEY 미설정"}
 
@@ -263,9 +243,10 @@ def ask(body: AskIn):
         log_block=log_block, notebook_block=notebook_block, faq_block=_faq_block(all_faqs), question=question,
     )
     try:
-        out = _ask_gemini(prompt)
-    except Exception as e:
+        out = llm.generate_json(prompt)
+    except llm.LLMError as e:
         return {"answer": "", "source": [], "offtopic": True, "error": str(e)}
+    llm_info = out.pop("_llm", {})
 
     faq = next((f for f in all_faqs if f["id"] == out.get("faq_id")), None)
     source = [{"chunk_id": rid} for rid in (faq.get("rule_ids") or [])] if faq else []
@@ -279,4 +260,5 @@ def ask(body: AskIn):
         "source": source,
         "offtopic": bool(out.get("offtopic")),
         "suggested": [q for q in (out.get("suggested") or []) if isinstance(q, str)][:2],
+        "llm": llm_info,
     }

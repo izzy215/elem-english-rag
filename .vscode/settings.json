@@ -1,4 +1,7 @@
 {
   "python.terminal.activateEnvironment": true,
-  "files.exclude": { "**/__pycache__": true }
+  "files.exclude": {
+    "**/__pycache__": true
+  },
+  "python-envs.defaultEnvManager": "ms-python.python:system"
 }
