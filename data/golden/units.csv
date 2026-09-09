@@ -1,0 +1,21 @@
+﻿level,unit,title,mission,hint_words,rule_ids
+3,Unit01,Greetings (인사),친구를 만나거나 헤어질 때 하는 인사말을 영어로 말해봐요,hello;hi;bye;morning;night,R-32;R-38;R-01;R-02
+3,Unit02,Family (가족),우리 가족을 영어로 소개해봐요,mom;dad;sister;brother;baby,R-34;R-38;R-03;R-04
+3,Unit03,School (학교),학교에서 쓰는 물건과 사람을 영어로 말해봐요,book;pencil;desk;chair;teacher,R-34;R-38;R-05;R-06
+3,Unit04,Animals (동물),동물원이나 주변에서 본 동물을 영어로 말해봐요,dog;cat;bird;fish;rabbit,R-34;R-38;R-01;R-07;R-08
+3,Unit05,Food (음식),좋아하는 음식을 영어로 말해봐요,apple;milk;bread;rice;egg,R-34;R-38;R-09;R-10
+3,Unit06,Colors (색깔),좋아하는 색깔을 영어로 말해봐요,red;blue;yellow;green;white,R-32;R-38;R-01;R-11
+3,Unit07,Numbers (숫자),숫자를 넣어 영어로 문장을 말해봐요,one;two;three;four;five,R-38;R-12;R-13
+3,Unit08,Weather (날씨),오늘 날씨를 영어로 말해봐요,sunny;rainy;cloudy;hot;cold,R-38;R-01;R-09;R-14;R-15
+3,Unit09,Seasons (계절),좋아하는 계절과 그 특징을 영어로 말해봐요,spring;summer;fall;winter;season,R-32;R-34;R-38;R-01;R-16
+3,Unit10,Clothes (옷),오늘 입은 옷을 영어로 말해봐요,shirt;pants;shoes;hat;socks,R-34;R-36;R-38;R-17
+3,Unit11,Body (신체),내 몸의 부분을 가리키며 영어로 말해봐요,head;hand;foot;eye;ear,R-34;R-38;R-18
+3,Unit12,Sports (운동),좋아하는 운동을 영어로 말해봐요,run;jump;swim;ball;soccer,R-32;R-34;R-38;R-09;R-19
+3,Unit13,Hobbies (취미),내 취미를 영어로 소개해봐요,draw;sing;dance;read;play,R-34;R-38;R-09;R-20
+3,Unit14,Time & Days (시간·요일),"오늘이 무슨 요일인지, 시간 표현을 영어로 말해봐요",Monday;Tuesday;today;tomorrow;yesterday,R-34;R-37;R-38;R-01;R-12;R-15;R-21;R-22
+3,Unit15,Transportation (교통수단),학교에 어떻게 가는지 영어로 말해봐요,car;bus;bike;train;taxi,R-32;R-38;R-09;R-23
+3,Unit16,Places in Town (동네 장소),우리 동네에 있는 장소를 영어로 말해봐요,home;park;store;playground;zoo,R-38;R-01;R-24
+3,Unit17,Jobs (직업),커서 되고 싶은 직업을 영어로 말해봐요,doctor;nurse;farmer;cook;police officer,R-34;R-38;R-25;R-26
+3,Unit18,Feelings (감정),지금 내 기분을 영어로 말해봐요,happy;sad;angry;tired;hungry,R-34;R-01;R-27;R-28
+3,Unit19,Shopping (쇼핑),가게에서 물건을 사는 상황을 영어로 말해봐요,buy;sell;money;price;shop,R-32;R-34;R-38;R-09;R-19;R-29
+3,Unit20,House & Furniture (집·가구),우리 집 방과 가구를 영어로 소개해봐요,house;room;bed;table;door,R-34;R-38;R-01;R-09;R-30
