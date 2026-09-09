@@ -31,7 +31,7 @@ class TranscribeIn(BaseModel):
     audio_base64: str
     mime: str = "audio/webm"
     language: str | None = None
-    model: str = "medium"
+    model: str = "large-v3"
 
 
 @app.post("/transcribe")

@@ -107,7 +107,7 @@ def _detect_language(audio_base64: str, mime: str) -> str:
     return max(probs, key=probs.get)
 
 
-def _remote_whisper(audio_base64: str, mime: str, language: str | None, model: str = "medium") -> tuple[str, float]:
+def _remote_whisper(audio_base64: str, mime: str, language: str | None, model: str = "large-v3") -> tuple[str, float]:
     """GPU 서버의 whisper_server.py 호출. (텍스트, avg_logprob) 반환. 실패하면 예외 그대로 던짐(호출부가 로컬로 대체)."""
     body = json.dumps({"audio_base64": audio_base64, "mime": mime, "language": language, "model": model}).encode()
     req = urllib.request.Request(WHISPER_SERVER_URL.rstrip("/") + "/transcribe", data=body,
