@@ -23,6 +23,7 @@ import difflib
 import json
 import os
 import re
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 
@@ -37,6 +38,7 @@ from backend.pronounce import _decode_to_wav_array, pronunciation_level, pronunc
 from backend.tts import ensure_tts
 
 STT_BACKEND = os.environ.get("STT_BACKEND", "gemini")
+WHISPER_SERVER_URL = os.environ.get("WHISPER_SERVER_URL", "").strip()   # 있으면 GPU 서버(whisper_server.py)로, 없으면 로컬
 SENTENCE_LOG = Path(__file__).resolve().parent.parent / "data" / "student" / "sentence_log.jsonl"
 
 router = APIRouter(tags=["speak"])
@@ -105,13 +107,33 @@ def _detect_language(audio_base64: str, mime: str) -> str:
     return max(probs, key=probs.get)
 
 
-def whisper_stt(audio_base64: str, mime: str, language: str = "en") -> str:
-    """로컬 Whisper STT (STT_BACKEND=whisper 테스트용, 할당량 안 씀). language=None이면 자동 감지."""
+def _remote_whisper(audio_base64: str, mime: str, language: str | None, model: str = "medium") -> tuple[str, float]:
+    """GPU 서버의 whisper_server.py 호출. (텍스트, avg_logprob) 반환. 실패하면 예외 그대로 던짐(호출부가 로컬로 대체)."""
+    body = json.dumps({"audio_base64": audio_base64, "mime": mime, "language": language, "model": model}).encode()
+    req = urllib.request.Request(WHISPER_SERVER_URL.rstrip("/") + "/transcribe", data=body,
+                                  headers={"Content-Type": "application/json"}, method="POST")
+    with urllib.request.urlopen(req, timeout=60) as r:
+        data = json.loads(r.read().decode())
+    return data["text"], data.get("avg_logprob", -999.0)
+
+
+def _transcribe(audio_base64: str, mime: str, language: str | None) -> tuple[str, float]:
+    """WHISPER_SERVER_URL 설정돼 있으면 GPU 서버로, 실패하거나 설정 없으면 로컬 Whisper로. (텍스트, avg_logprob) 반환."""
+    if WHISPER_SERVER_URL:
+        try:
+            return _remote_whisper(audio_base64, mime, language)
+        except Exception as e:
+            print(f"[speak] whisper 서버 호출 실패({e}) → 로컬로 대체", flush=True)
     audio_bytes = base64.b64decode(audio_base64)
     ext = ".webm" if "webm" in mime else ".wav"
     audio, _ = _decode_to_wav_array(audio_bytes, ext)
-    result = _get_whisper_model().transcribe(audio, language=language, fp16=False)
-    return result["text"].strip()
+    result = _get_whisper_model().transcribe(audio, language=language, fp16=False, temperature=0.0)
+    return result["text"].strip(), _avg_logprob(result)
+
+
+def whisper_stt(audio_base64: str, mime: str, language: str = "en") -> str:
+    """Whisper STT (STT_BACKEND=whisper 테스트용, 할당량 안 씀). WHISPER_SERVER_URL 있으면 GPU 서버 사용."""
+    return _transcribe(audio_base64, mime, language)[0]
 
 
 RECENT_RULE_WINDOW_SEC = 120  # 이 안이면 "더 물어보기"(방금 그 규칙 얘기), 넘으면 유닛 챗봇(뭐든 물어볼 수 있음)으로 봄
@@ -200,20 +222,13 @@ def hybrid_stt(audio_base64: str, mime: str, student: str = "") -> str:
     섞인 영어 단어를 보존한다. 단어 목록은 _recent_context()/_notebook_units() 로 학생 맥락에 맞게
     좁히고, 규칙 힌트는 _rag_rule_hint() → 최근 /fix → 유닛 제목 순으로 대체한다.
     병합 실패 시 한국어 강제 인식 결과를 그대로 반환한다."""
-    audio_bytes = base64.b64decode(audio_base64)
-    ext = ".webm" if "webm" in mime else ".wav"
-    audio, _ = _decode_to_wav_array(audio_bytes, ext)
-
     unit, rule_id, level = _recent_context(student)
     unit_scope = list({unit, *_notebook_units(student)} - {None}) if unit else _notebook_units(student)
     vocab = ", ".join(golden.known_english_vocab(unit_scope or None))
 
-    model = _get_whisper_model()
     # initial_prompt 로 vocab 힌트를 줘봤으나 오탐·반복 루프가 더 늘어 실측상 안 씀(2026-09-09)
-    ko_result = model.transcribe(audio, language="ko", fp16=False, temperature=0.0)
-    en_result = model.transcribe(audio, language="en", fp16=False, temperature=0.0)
-    korean_guess, english_guess = ko_result["text"].strip(), en_result["text"].strip()
-    ko_conf, en_conf = _avg_logprob(ko_result), _avg_logprob(en_result)
+    korean_guess, ko_conf = _transcribe(audio_base64, mime, "ko")
+    english_guess, en_conf = _transcribe(audio_base64, mime, "en")
     print(f"[hybrid_stt] ko 강제={korean_guess!r}(conf={ko_conf:.2f}) en 강제={english_guess!r}(conf={en_conf:.2f})", flush=True)
     if _normalize(korean_guess) == _normalize(english_guess) and korean_guess:
         # 둘이 이미 같은 문장(대개 순수 영어) → 병합 모델이 "번역"해버리는 걸 막기 위해 병합 자체를 생략
