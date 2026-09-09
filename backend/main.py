@@ -18,10 +18,18 @@
   drill.py    규칙 연습 /drill · /drill/answer                                팀장
   student.py  오답노트 읽기 /notebook (쓰기는 tutor · drill)                   팀장
 """
+import sys
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+
+# Windows 콘솔(cp949)이 —/→ 같은 문자를 못 그려 print() 가 죽는 걸 방지
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
 
 from backend import ask, drill, explain, golden, quiz, rag, speak, student, tts, tutor
 from backend.config import settings

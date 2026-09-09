@@ -1,0 +1,73 @@
+﻿text,expected_rule_id,note
+I play with my dog yesterday.,R-31,과거시제 · 새 문장 (rules·errors와 겹치지 않음)
+My sister like cats.,R-32,3인칭단수
+There are three bird in the tree.,R-33,명사복수형
+I ate a orange.,R-34,관사 an
+She is eat lunch now.,R-35,현재진행형
+They is my friends.,R-36,be동사일치
+We are at the park yesterday.,R-37,과거의 be동사
+I have dog.,R-38,관사 a
+I saw a big lion at the zoo.,NONE,정상 문장 (오탐 측정)
+She likes bananas.,NONE,정상 문장
+He tired after school.,R-01,형용사+be동사 (be동사 없이 형용사만)
+This is Sam brother.,R-03,소유격 's 빠짐
+There is many pencils in the box.,R-05,There is/are 반대로 사용
+He can plays basketball every day.,R-07,can 뒤에 동사원형이 아닌 3인칭단수형
+I drank many water.,R-09,셀 수 없는 명사에 many
+I have a apple red.,R-11,형용사가 명사 뒤에 옴
+He was second to arrive.,R-13,서수 앞에 the 빠짐
+It will snows tomorrow.,R-15,will 뒤에 동사원형이 아닌 3인칭단수형
+She wear a blue coat now.,R-17,지금 입고 있다인데 진행형이 아님
+He likes play basketball.,R-19,like 뒤에 동사원형(동명사 아님)
+My swimming class is in thursday.,R-21,요일 앞 전치사 in + 소문자
+She goes home by a taxi.,R-23,by+교통수단에 불필요한 관사
+He wants to be pilot.,R-25,want to be 뒤에 관사 빠짐
+He is worried of his dog.,R-27,감정형용사에 맞지 않는 전치사
+How many is this hat?,R-29,가격을 물을 때 How much를 써야 함
+These is my cousins.,R-04,여럿인데 This·is 사용
+The ball is at the table.,R-30,위치전치사 on 대신 at 사용
+My brother plays soccer every weekend.,NONE,정상 문장
+The weather is nice today.,NONE,정상 문장
+They visited their grandmother last month.,NONE,정상 문장 (과거시제 정상 사용)
+Hi Jane,R-02,인사말 뒤 쉼표·느낌표 빠짐
+She a letter writes.,R-06,목적어가 동사 앞에 옴
+These book are new.,R-08,These+단수명사
+I want to noodle.,R-10,want 뒤에 불필요한 to
+I have three book.,R-12,숫자 2 이상인데 단수명사
+That is rainy today.,R-14,날씨에 That 사용
+We swim at summer.,R-16,계절 앞 전치사 at 사용
+I hurt arm.,R-18,신체부위 앞 소유격 빠짐
+She enjoys to read.,R-20,enjoy 뒤에 to+동사원형
+She goes always to the park.,R-22,빈도부사가 동사 뒤
+They go to market every week.,R-24,장소 앞 the 빠짐
+My mom is nurse.,R-26,직업 앞 관사 빠짐
+This box is very too heavy.,R-28,very와 too 중복 사용
+He hungry now.,R-01,"형용사+be동사, 새 문장"
+That is my dog toy.,R-03,"소유격 's 빠짐, 새 문장"
+This are my grandparents.,R-04,여럿인데 This·are 사용
+There are a cat under the table.,R-05,하나인데 There are 사용
+Birds can flying.,R-07,can 뒤에 -ing
+She wants many bread.,R-09,"셀 수 없는 명사에 many, 새 문장"
+I saw a house big.,R-11,"형용사가 명사 뒤에 옴, 새 문장"
+He was first in line.,R-13,"서수 앞 the 빠짐, 새 문장"
+They will comes tomorrow.,R-15,will 뒤에 3인칭단수형
+He wear his shoes now.,R-17,지금 신고 있는데 진행형 아님
+She likes to swim.,R-19,like 뒤에 to+동사원형
+We rest on sunday.,R-21,요일 소문자
+He goes to work by a bike.,R-23,"by+교통수단에 불필요한 관사, 새 문장"
+She wants to be nurse.,R-25,"want to be 뒤 관사 빠짐, 새 문장"
+He is scared about the dog.,R-27,"감정형용사에 맞지 않는 전치사, 새 문장"
+How much apples are there?,R-29,개수를 물을 때 How much 사용
+The keys are in the table.,R-30,"위치전치사 on 대신 in, 새 문장"
+Good night Tom,R-02,"인사말 뒤 쉼표·느낌표 빠짐, 새 문장"
+He a book reads.,R-06,"목적어가 동사 앞에 옴, 새 문장"
+These apple are fresh.,R-08,"These+단수명사, 새 문장"
+She want to a sandwich.,R-10,"want 뒤에 불필요한 to, 새 문장"
+He has five apple.,R-12,"숫자 2 이상인데 단수명사, 새 문장"
+This is cold in winter.,R-14,날씨에 This 사용
+Leaves fall on fall.,R-16,계절 앞 전치사 on 사용
+She broke leg.,R-18,"신체부위 앞 소유격 빠짐, 새 문장"
+He enjoys sing.,R-20,enjoy 뒤에 동사원형
+He is happy usually.,R-22,빈도부사가 문장 맨 끝
+I read books every night.,NONE,정상 문장
+The girls are playing in the park.,NONE,정상 문장

@@ -10,11 +10,12 @@ body: {"student", "item_id", "audio_base64", "mime"="audio/webm", "language"=Non
   {"heard", "expected", "score": 0~100, "passed": score>=70,
    "pronunciation_level": "상"/"중"/"하"(passed일 때만), "error": 실패 사유}
 
-STT_BACKEND=gemini(기본) / whisper(할당량 없이 로컬 테스트용).
+STT_BACKEND=gemini(기본, 오디오 인식 자체는 아래처럼 전부 로컬 Whisper) / whisper(자동 감지 없이 그대로).
 
-language="ko"는 hybrid_stt() 사용 — Gemini 한 번으론 섞인 영어 단어(went 등)가 한국어로
-뭉개져서, 로컬 Whisper 2회(한국어/영어 강제, 할당량 안 씀) + 병합 1회(backend/llm.py 경유 —
-.env 의 LLM_BACKEND 에 따라 Gemini 또는 선생님 서버 로컬 모델)로 처리한다.
+language="en"이면 whisper_stt() — 로컬 Whisper로 바로 받아쓴다(할당량 안 씀). 섀도잉·"내 문장 말하기"가 여기로 옴.
+
+language="ko"는 hybrid_stt() — Whisper 2회(한국어/영어 강제) + 병합 1회(backend/llm.py 경유,
+.env의 LLM_BACKEND에 따라 Gemini 또는 로컬 모델)로 섞인 영어 단어를 보존한다.
 단어 목록·맥락 힌트는 _recent_context()/_notebook_units() 로 학생 맥락에 맞게 좁힌다.
 """
 import base64
@@ -171,6 +172,29 @@ def _rag_rule_hint(text: str) -> dict | None:
     return None
 
 
+def _avg_logprob(result: dict) -> float:
+    """model.transcribe() 결과의 세그먼트별 평균 로그확률(Whisper 자체 신뢰도)을 평균낸다.
+    0에 가까울수록(덜 음수) 자신 있게 들었다는 뜻. 세그먼트가 없으면(무음 등) 아주 낮은 값."""
+    segs = result.get("segments") or []
+    return sum(s.get("avg_logprob", -999.0) for s in segs) / len(segs) if segs else -999.0
+
+
+def _extract_sentence(text: str) -> str:
+    """병합 모델이 지시를 어기고 JSON 이나 코드펜스로 감싸 와도(로컬 모델에서 관찰됨) 문장만 뽑아낸다.
+    {"sentence": "..."} 모양이면 그 값을, 아니면 코드펜스/앞뒤 따옴표만 벗겨서 그대로 돌려준다."""
+    text = re.sub(r"^```(?:json)?\s*|\s*```$", "", (text or "").strip())
+    if text.startswith("{"):
+        try:
+            data = json.loads(text)
+            if isinstance(data, dict):
+                value = next((v for v in data.values() if isinstance(v, str) and v.strip()), None)
+                if value:
+                    return value.strip().strip("\"'“”‘’")
+        except json.JSONDecodeError:
+            pass
+    return text.strip("\"'“”‘’")
+
+
 def hybrid_stt(audio_base64: str, mime: str, student: str = "") -> str:
     """language="ko" 인식. Whisper 로컬 2회(한국어/영어 강제, 할당량 안 씀) + Gemini 병합 1회로
     섞인 영어 단어를 보존한다. 단어 목록은 _recent_context()/_notebook_units() 로 학생 맥락에 맞게
@@ -180,14 +204,26 @@ def hybrid_stt(audio_base64: str, mime: str, student: str = "") -> str:
     ext = ".webm" if "webm" in mime else ".wav"
     audio, _ = _decode_to_wav_array(audio_bytes, ext)
 
-    model = _get_whisper_model()
-    korean_guess = model.transcribe(audio, language="ko", fp16=False, temperature=0.0)["text"].strip()
-    english_guess = model.transcribe(audio, language="en", fp16=False, temperature=0.0)["text"].strip()
-    print(f"[hybrid_stt] ko 강제={korean_guess!r} en 강제={english_guess!r}", flush=True)
     unit, rule_id, level = _recent_context(student)
     unit_scope = list({unit, *_notebook_units(student)} - {None}) if unit else _notebook_units(student)
-
     vocab = ", ".join(golden.known_english_vocab(unit_scope or None))
+
+    model = _get_whisper_model()
+    # initial_prompt 로 vocab 힌트를 줘봤으나 오탐·반복 루프가 더 늘어 실측상 안 씀(2026-09-09)
+    ko_result = model.transcribe(audio, language="ko", fp16=False, temperature=0.0)
+    en_result = model.transcribe(audio, language="en", fp16=False, temperature=0.0)
+    korean_guess, english_guess = ko_result["text"].strip(), en_result["text"].strip()
+    ko_conf, en_conf = _avg_logprob(ko_result), _avg_logprob(en_result)
+    print(f"[hybrid_stt] ko 강제={korean_guess!r}(conf={ko_conf:.2f}) en 강제={english_guess!r}(conf={en_conf:.2f})", flush=True)
+    if _normalize(korean_guess) == _normalize(english_guess) and korean_guess:
+        # 둘이 이미 같은 문장(대개 순수 영어) → 병합 모델이 "번역"해버리는 걸 막기 위해 병합 자체를 생략
+        print(f"[hybrid_stt] ko=en 이라 병합 생략, 그대로 사용", flush=True)
+        return korean_guess
+    if english_guess and not re.search(r"[가-힣]", english_guess) and en_conf - ko_conf > 0.3:
+        # 한글 없는 온전한 영어 + 신뢰도도 더 높으면 순수 영어로 보고 그대로 사용(신뢰도까지 봐야
+        # 한국어를 영어로 지어낸 오역과 구분됨)
+        print(f"[hybrid_stt] en 강제가 한글 없고 신뢰도도 더 높아 그대로 사용", flush=True)
+        return english_guess
     print(f"[hybrid_stt] unit={unit} rule_id={rule_id} vocab={vocab!r}", flush=True)
     rag_hit = _rag_rule_hint(korean_guess)  # rag.py 완성 전까지는 항상 None
     rule = golden.find_rule(rule_id) if rule_id else None
@@ -218,10 +254,15 @@ B는 영어 단어 자체는 맞게 알아들었을 가능성이 높지만 나�
 중요: A와 B가 서로 너무 달라서 공통된 문장을 짐작하기 어려우면, 억지로 새 문장을 지어내지 말고
 A를 그대로 출력해라. 학생 문장은 기본적으로 한국어 질문/요청이니, 결과가 영어 평서문 전체로
 바뀌거나 챗봇과 무관한 일반 사실 설명이 되면 안 된다.
+출력 형식: 문장 하나만, 있는 그대로의 순수 텍스트로 출력해라. JSON·중괄호·따옴표로 감싸기·코드펜스는
+절대 쓰지 말 것. 그리고 이건 번역이 아니다 — A/B에 나온 단어를 그대로 골라 이어붙이기만 하고,
+전체 뜻을 다른 말로 새로 옮기지 마라(예: "I play friend" 가 섞여 있으면 "플레이"·"프렌드"처럼 그
+발음/철자를 살리고, "친구랑 놀아요"처럼 뜻만 번역한 새 문장을 만들지 말 것).
 다른 설명 없이 문장만 출력."""
 
     try:
-        merged = llm.generate_text(prompt).strip("\"'“”‘’")
+        # 병합은 자유 재구성 작업이라 14b(서비스 기본)보다 32b가 더 안정적이었음(실측) — 이 호출만 지정
+        merged = _extract_sentence(llm.generate_text(prompt, backend="merge32b"))
         print(f"[hybrid_stt] 병합 결과={merged!r}", flush=True)
         return merged or korean_guess
     except llm.LLMError as e:
@@ -258,7 +299,7 @@ def speak(body: SpeakIn):
             if language == "ko":
                 heard = hybrid_stt(body.audio_base64, body.mime, body.student)
             else:
-                heard = gemini_stt(body.audio_base64, body.mime, language)
+                heard = whisper_stt(body.audio_base64, body.mime, language)
     except Exception as e:
         return {"heard": "", "expected": expected, "score": 0, "passed": False, "error": str(e)}
 
