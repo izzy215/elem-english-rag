@@ -8,13 +8,13 @@
 |---|---|---|
 | 서비스 기본 백엔드 | `LLM_BACKEND=groq` (openai/gpt-oss-20b, 무료 티어) | Gemini 무료 한도(하루 20회) 회피. 2문장 시험에서 규칙 적중 2/2, 평균 1.5초로 가장 빠름 |
 | 실패 시 대체 | `LLM_FALLBACK=1` → gemini | 한도·연결·JSON 오류 때 그 요청만 Gemini 로. 콘솔 `[llm] groq 실패 → gemini 대체` |
-| 선생님 서버가 뜨면 | `LLM_BACKEND=teacher` | 한 줄 교체. 그 전까지 Groq 가 임시 |
+| 강의실 서버가 뜨면 | `LLM_BACKEND=teacher` | 한 줄 교체. 그 전까지 Groq 가 임시 |
 | 비교 실험 | `python -m tests.eval_fix --backend gemini,claude,groq` | 결과 `data/rag_eval/fix_compare.md` |
 
 ## 1. 목표와 비목표
 
 **목표**
-1. Gemini 한도(무료 등급 하루 20회)·장애 때 `/fix`(나중엔 `/ask`)가 선생님 서버의 로컬 모델로 **자동 대체**되어 서비스가 멈추지 않는다.
+1. Gemini 한도(무료 등급 하루 20회)·장애 때 `/fix`(나중엔 `/ask`)가 강의실 서버의 로컬 모델로 **자동 대체**되어 서비스가 멈추지 않는다.
 2. "같은 규칙 조각을 근거로 주면 소형 모델도 맞게 고치나?"를 **숫자로** 보여 준다 (발표 한 장). RAG를 "지식 확장이 아니라 근거 보증"으로 정의한 우리 기획의 증명.
 
 **비목표** (이번엔 하지 않음)
@@ -28,17 +28,17 @@ tutor.py /fix ─┐                       .env: LLM_BACKEND=gemini | local
 ask.py   /ask ─┴─▶ backend/llm.py ─┬─ gemini  (지금 쓰는 것, 그대로)
                    generate_json()  ├─ claude  (Anthropic API · 비교 실험용, ANTHROPIC_API_KEY 필요, 무료 등급 없음)
                                     └─ <이름>  ──HTTP──▶ OpenAI 호환 엔드포인트 (이름 여러 개 등록: LLM_ENDPOINTS=teacher,groq,…)
-                                        │             ├─ teacher: 선생님 서버 Ollama/vLLM  qwen2.5:7b-instruct 등
+                                        │             ├─ teacher: 강의실 서버 Ollama/vLLM  qwen2.5:7b-instruct 등
                                         │             └─ groq / mistral / openrouter …: 무료 티어 있는 공개 모델 API
                                         └─ gemini 아닌 백엔드 실패 시 gemini 로 폴백 (LLM_FALLBACK=1)
 ```
 
 - 호출부는 백엔드를 모른다. `.env` 한 줄로 바꾼다. 응답에 `llm: {backend, model, ms, fallback_from}`이 붙고 sentence_log에도 기록되므로 어느 모델이 답했는지 나중에 셀 수 있다.
-- `backend/llm.py`의 `_local()`은 OpenAI 호환 API를 부르는 코드까지 들어 있다. **TTS 팀원이 할 일은 "그 API가 선생님 서버에 떠 있게 하는 것"과 "우리 프롬프트로 JSON이 제대로 나오는지 확인"이다.**
+- `backend/llm.py`의 `_local()`은 OpenAI 호환 API를 부르는 코드까지 들어 있다. **TTS 팀원이 할 일은 "그 API가 강의실 서버에 떠 있게 하는 것"과 "우리 프롬프트로 JSON이 제대로 나오는지 확인"이다.**
 
 ## 3. 작업 순서와 완료 기준
 
-### 작업 1. 선생님 서버 확인 (TTS 팀원)
+### 작업 1. 강의실 서버 확인 (TTS 팀원)
 - [ ] 접속 방식: SSH 계정 / 팀원 PC에서 HTTP로 닿는 IP·포트 (방화벽에 11434 또는 8001 열기)
 - [ ] OS, NVIDIA 드라이버, `nvidia-smi`로 5060 ×2 인식·VRAM 크기 (8GB인지 16GB인지)
 - [ ] Docker 또는 직접 설치 가능 여부
@@ -74,12 +74,12 @@ LLM_BACKEND=teacher
 - [x] `LLM_BACKEND=gemini`(또는 groq)로 되돌려 두기 (주 경로) — 완료
 
 완료 기준: 위 세 가지 캡처. `/fix` 응답의 `llm.backend`가 각각 local(→teacher) / gemini(fallback_from) / gemini. → **모두 확인됨.**
-참고: 선생님 서버 접속은 SSH 터널(`ssh -L 11434:localhost:11434 research1@192.168.1.147`) 또는 같은 네트워크면 서버 IP로 직접 접속 가능(`http://192.168.1.147:11434`, OLLAMA_HOST=0.0.0.0). VSCode 자동 포트 포워딩·죽지 않은 옛 ssh 세션이 겹치면 응답이 안 오는 문제가 있었음(새로 깨끗하게 띄우면 해결). Ollama 는 `nohup ... &`로 띄워서 VSCode/SSH 세션을 닫아도 서버 재부팅 전까지 계속 돎.
+참고: 강의실 서버 접속은 SSH 터널(`ssh -L 11434:localhost:11434 research1@192.168.1.147`) 또는 같은 네트워크면 서버 IP로 직접 접속 가능(`http://192.168.1.147:11434`, OLLAMA_HOST=0.0.0.0). VSCode 자동 포트 포워딩·죽지 않은 옛 ssh 세션이 겹치면 응답이 안 오는 문제가 있었음(새로 깨끗하게 띄우면 해결). Ollama 는 `nohup ... &`로 띄워서 VSCode/SSH 세션을 닫아도 서버 재부팅 전까지 계속 돎.
 
 ### 작업 4. 비교 실험 (팀장 + TTS 팀원)
 `tests/eval_fix.py` (만들어 둠, `--backend gemini,claude,teacher,groq` 또는 `all`): eval.csv 10문장을 **같은 프롬프트·같은 규칙 조각**으로 Gemini·Claude·로컬에 각각 보내 표로 만든다.
 
-| 문장 | 정답 규칙 | Gemini | Claude | 선생님 서버 7B | Groq 70B (무료) |
+| 문장 | 정답 규칙 | Gemini | Claude | 강의실 서버 7B | Groq 70B (무료) |
 |---|---|---|---|---|---|
 
 - [ ] 규칙 적중(rule_id 일치), 고친 문장 일치, 정상 문장 2개 오교정 여부, 평균 응답 시간
@@ -99,7 +99,7 @@ ask.py가 Gemini를 직접 부르는 부분을 `llm.generate_json(prompt)`로 �
 | backend/config.py `LLM_*` | 팀장 | ✅ |
 | backend/tutor.py → llm 사용 | 팀장 | ✅ 응답·로그에 llm 정보 |
 | .env.example `LLM_*` | 팀장 | ✅ |
-| 선생님 서버 Ollama + 모델 | TTS 팀원 | ✅ qwen2.5(7b/14b/32b-instruct), gemma2:9b, exaone3.5:7.8b, mistral:7b 받아둠 |
+| 강의실 서버 Ollama + 모델 | TTS 팀원 | ✅ qwen2.5(7b/14b/32b-instruct), gemma2:9b, exaone3.5:7.8b, mistral:7b 받아둠 |
 | 연결 검증 3종 캡처 | TTS 팀원 | ✅ 작업 3 완료 |
 | tests/eval_fix.py + 비교표 | 팀장 (+TTS 팀원 실행) | ✅ 10문장 기준 qwen2.5:32b 9/10, 14b/7b 7/10, exaone 6/10, gemma2 2/10, mistral 3/10 (Gemini 10/10). "Qwen 계열이 다른 가문보다 크게 앞섬"이 발표 포인트 |
 | ask.py → llm 사용 | TTS 팀원 | ✅ 응답에 llm 정보, 로컬 매칭 우회 시(문장 정오 판정 포함) 전부 llm.py 경유 |
@@ -110,7 +110,7 @@ ask.py가 Gemini를 직접 부르는 부분을 `llm.generate_json(prompt)`로 �
 |---|---|
 | 로컬 모델이 JSON 형식을 안 지킴 | `response_format=json_object` + 프롬프트 "JSON만" 이중. 그래도 깨지면 llm.py가 LLMError → Gemini 폴백. 실험표엔 "형식 실패"로 집계 |
 | 로컬이 느림 (7B 가 문장당 3~10초) | `LLM_TIMEOUT=30`. 대체 경로라 허용. 실험표에 ms 기록 |
-| 선생님 서버가 학교 밖에서 안 닿음 | 시연 장소가 학교면 문제 없음. 밖이면 Gemini 주 경로로 시연하고 로컬은 비교표로만 |
+| 강의실 서버가 학교 밖에서 안 닿음 | 시연 장소가 학교면 문제 없음. 밖이면 Gemini 주 경로로 시연하고 로컬은 비교표로만 |
 | 8GB VRAM 에 7B 가 안 올라감 | q4 양자화 태그 사용, 안 되면 3B(qwen2.5:3b) 로 낮춤. 실험 목적엔 충분 |
 | 로컬 결과가 나쁨 | 그것도 결과. "근거를 줘도 7B는 5/10, Gemini는 9/10" 역시 발표 문장이 됨 |
 

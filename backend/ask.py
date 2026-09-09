@@ -8,7 +8,7 @@ body: {"student", "question", "context": {"screen","unit","rule_id","log_id"}}
 
 1) 로컬 매칭(faq.jsonl→rules.jsonl 단어 겹침) 먼저 — 되면 LLM 호출 없이 즉시 반환
 2) 안 되면 backend/llm.py 로 폴백(faq 전체를 프롬프트에 넣고 고르게 함 — Gemini 기본, .env
-   LLM_BACKEND=local 이면 선생님 서버 로컬 모델. rag.search 완성되면 1위 조각만 넣게 바꿀 수 있음)
+   LLM_BACKEND=local 이면 강의실 서버 로컬 모델. rag.search 완성되면 1위 조각만 넣게 바꿀 수 있음)
 
 context.log_id 가 있으면 sentence_log.jsonl 에서 그 순간의 원문·고친 문장을 찾아 프롬프트에
 넣는다("아까 말한 거 고쳐줘"에 다시 추론 안 하고 /fix 결과를 그대로 씀). student.py 의

@@ -1,5 +1,5 @@
 """
-LLM 제공자 스위치 — Gemini(기본) · Claude(Anthropic API) · 선생님 서버의 로컬 모델 (Ollama / vLLM)   구조·호출부: 팀장 · 로컬 쪽 구현·운영: TTS 팀원
+LLM 제공자 스위치 — Gemini(기본) · Claude(Anthropic API) · 강의실 서버의 로컬 모델 (Ollama / vLLM)   구조·호출부: 팀장 · 로컬 쪽 구현·운영: TTS 팀원
 
 호출하는 쪽(tutor.py /fix, ask.py /ask)은 이 함수 하나만 쓴다:
     from backend import llm
@@ -72,7 +72,7 @@ def _gemini(prompt: str, timeout: float) -> str:
 
 
 # ─────────────────────────────────────────────
-# 백엔드 2: OpenAI 호환 엔드포인트 (이름 여러 개) — 선생님 서버 Ollama/vLLM, Groq, Mistral, OpenRouter, Cerebras … 전부 같은 규격
+# 백엔드 2: OpenAI 호환 엔드포인트 (이름 여러 개) — 강의실 서버 Ollama/vLLM, Groq, Mistral, OpenRouter, Cerebras … 전부 같은 규격
 #   .env: LLM_ENDPOINTS=groq,teacher  +  LLM_GROQ_URL / LLM_GROQ_KEY / LLM_GROQ_MODEL, LLM_TEACHER_URL / LLM_TEACHER_MODEL …
 #   예전 LLM_LOCAL_* 은 'local' 이름으로 자동 등록
 # ─────────────────────────────────────────────
