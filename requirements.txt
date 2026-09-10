@@ -13,6 +13,9 @@ streamlit>=1.45
 # RAG (RAG 담당)
 chromadb>=0.5
 
+# 튜터 /fix 철자 사전검사 (팀장) — 없으면 검사만 생략되고 나머지는 동작
+pyspellchecker>=0.8
+
 # 발음 파형 비교 (파형분석에 필요해서 넣었습니다)
 librosa>=0.10
 soundfile>=0.12
