@@ -276,7 +276,16 @@ def hybrid_stt(audio_base64: str, mime: str, student: str = "") -> str:
     en_only_words = _vocab_words_in(english_guess, vocab_set) - _vocab_words_in(korean_guess, vocab_set)
     word_hint = ""
     if en_only_words:
-        word_hint = f'주의: (B)에는 있는데 (A)에는 없는 학습 단어가 있다: {", ".join(sorted(en_only_words))} — (A)가 이 단어를 다른 소리로 잘못 들었을 가능성이 높으니 이 단어를 살려서 합쳐라.\n'
+        # "그 단어를 살려서 합쳐라"라고만 하면 모델이 한글 음역을 안 지우고 영어를 덧붙여 중복
+        # 시키거나(투데이즈 two days ago는), 아예 무시하는 경우가 많아(2026-09-10 실측) 예시로 못박는다
+        word_hint = (
+            f'주의: (B)에는 있는데 (A)에는 없는 학습 단어가 있다: {", ".join(sorted(en_only_words))} '
+            "— (A)가 이 단어를 한글 음역으로 잘못 받아썼을 가능성이 높다. (A)에서 그 음역 부분을 "
+            "찾아 완전히 지우고 그 자리에 힌트 단어의 영어 철자를 넣어 하나로 합쳐라(음역과 영어 "
+            "철자를 둘 다 남기면 안 됨).\n"
+            '예: A="라스트위크는 뭐예요?", B="What is last week?", 힌트=last, week\n'
+            '  -> "last week는 뭐예요?" ("라스트위크"를 지우고 그 자리에 "last week"를 넣음)\n'
+        )
         print(f"[hybrid_stt] word_hint={en_only_words}", flush=True)
     prompt = f"""아래는 초등학생이 영어 수업 챗봇에게 "질문이나 요청"을 하나 말한 음성을, 로컬
 STT(Whisper)로 두 번 받아쓴 결과다(이 마이크는 챗봇한테 뭔가를 묻거나 부탁하는 용도로만 쓴다 —
