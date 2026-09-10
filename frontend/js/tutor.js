@@ -52,18 +52,26 @@ function evidenceBox(r) {
   const title = r.mode === 'rag' ? 'RAG가 찾은 근거' : r.mode === 'fallback' ? '참고한 규칙 (검색 없이 전체 규칙 중 고름)' : '참고한 규칙 (화면 샘플)';
   const cands = (r.candidates || []).map((c, i) => `${i + 1}위 ${esc(c.name)} ${c.score}`).join(' · ');
   const llm = r.llm ? `${esc(r.llm.backend)}:${esc(r.llm.model || '')} ${r.llm.ms}ms${r.llm.fallback_from ? ` (${esc(r.llm.fallback_from)} 실패 → 대체)` : ''}` : '';
-  return `<div class="src">📚 <b>${title}</b> · ${esc(r.source?.chunk_id || '')}${r.rule.score != null ? ` · 검색 점수 ${r.rule.score}${r.rule.rank ? ` (${r.rule.rank}위)` : ''}` : ''}${r.runner_up ? ` · 2위 ${esc(r.runner_up.name)} ${r.runner_up.score}` : ''}
+  return `<div class="src">📚 <b>${title}</b> · ${esc(r.source?.chunk_id || '')}${r.rule.score != null ? ` · 검색 점수 ${r.rule.score}${r.rule.rank ? ` (${r.rule.rank}위)` : ''}` : ''}${r.runner_up ? ` · 다른 후보 ${r.runner_up.rank ? r.runner_up.rank + '위 ' : ''}${esc(r.runner_up.name)} ${r.runner_up.score}` : ''}
     <br><span style="opacity:.8;white-space:normal;word-break:keep-all;overflow-wrap:anywhere">${esc(r.source?.text || '')}</span>
     ${cands ? `<br><span style="opacity:.7">검색 후보: ${cands}</span>` : ''}${llm ? `<br><span style="opacity:.7">모델: ${llm}</span>` : ''}</div>`;
 }
 function diagHTML(r, n, isLast) {
   const badge = !DEV.on() ? '' : r.mode === 'local' ? `<div class="src" style="opacity:.75">서버 /fix 구현 전 · 화면 임시 진단 (규칙 샘플 기준)</div>`
     : r.mode === 'fallback' ? `<div class="src" style="opacity:.75">서버 /fix · RAG 검색 실패로 규칙 전체를 넣는 폴백 모드${r.fallback_reason ? ' (' + esc(r.fallback_reason) + ')' : ''}</div>` : '';
-  if (r.ok) return `<div class="type ok">${n > 1 ? '✓ 이제 다 맞았어요!' : '✓ 잘 썼어요!'}</div><div class="fixed">${esc(r.fixed)}</div><div class="why">${esc(r.why)}</div>${badge}`;
+  const spell = (r.spelling || []).length ? `<div class="hint" style="margin-top:10px">✏️ 철자만 살짝 고치면</div><div class="fixed">${spellHTML(r.fixed, r.spelling)}</div>` : '';
+  if (r.ok) return `<div class="type ok">${n > 1 ? '✓ 이제 다 맞았어요!' : '✓ 잘 썼어요!'}</div><div class="fixed">${esc(r.fixed)}</div><div class="why">${esc(r.why)}</div>${spell}${badge}`;
+  if (r.rule?.id === 'OTHER') return `<div class="type">✎ 우리 규칙 밖이에요</div><div class="fixed">${esc(r.fixed)}</div><div class="why">${esc(r.why)}</div><div class="hint" style="margin-top:6px">교과서 규칙에는 없는 부분이라 오답노트에는 안 들어가요. 하려던 말이 다르면 문장을 다시 써 주세요.</div>${badge}`;
   const tail = !isLast ? '' : n < 2
     ? `${r.more_errors ? '<div class="result on todo">하나 더 있어요!</div>' : ''}<button class="btn ghost" style="margin-top:8px" onclick='fixAgain(${JSON.stringify(r.fixed)})'>${r.more_errors ? '고친 문장으로 다시 고쳐줘 ✨' : '혹시 더 고칠 곳 있나 한 번 더 봐줘 🔍'}</button>`
     : (r.more_errors ? `<div class="result on todo">아직 고칠 곳이 남았어요. 다 고치면 이렇게 돼요 👇</div><div class="fixed" style="color:var(--primary)">${esc(r.full_fixed || r.fixed)}</div>` : '');
-  return `<div class="type">✕ 헷갈린 규칙: ${esc(r.rule.name)}</div><div class="fixed"><s>${esc(r.wrong)}</s><em>${esc(r.fix)}</em> → ${esc(r.fixed)}</div><div class="why">${esc(r.why)}</div>${evidenceBox(r)}${tail}${badge}`;
+  const spell2 = (r.spelling || []).length ? `<div class="hint" style="margin-top:4px">✏️ 철자도 살짝: ${r.spelling.map(s => `<s>${esc(s.wrong)}</s> → <b>${esc(s.fix)}</b>`).join(', ')}</div>` : '';
+  return `<div class="type">✕ 헷갈린 규칙: ${esc(r.rule.name)}</div><div class="fixed"><s>${esc(r.wrong)}</s><em>${esc(r.fix)}</em> → ${esc(r.fixed)}</div>${spell2}<div class="why">${esc(r.why)}</div>${evidenceBox(r)}${tail}${badge}`;
+}
+function spellHTML(text, pairs) {   // 원문에서 틀린 단어를 <s>틀림</s><em>맞음</em> 으로 (틀린 규칙 카드의 wrong→fix 표기와 같은 모양)
+  let html = esc(text);
+  for (const p of pairs) html = html.replace(new RegExp('(^|[^A-Za-z])(' + p.wrong + ')(?![A-Za-z])', 'i'), (m, pre, w) => pre + '<s>' + esc(w) + '</s><em>' + esc(p.fix) + '</em>');
+  return html;
 }
 function renderAll() {   // 이전 회차는 흐린 카드(버튼 없음)로 위에, 마지막 회차는 #diag 에
   $$('.diag-prev').forEach(el => el.remove());
