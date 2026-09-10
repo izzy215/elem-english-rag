@@ -64,18 +64,38 @@ def _best_match(question: str, items: list[dict], candidates_of) -> tuple[dict |
     return best, best_score
 
 
+def _rag_hint_rule_id(question: str) -> tuple[str | None, float]:
+    """질문과 가장 가까운 규칙 id·score(RAG 검색). 색인 없음 등 실패하면 (None, 0.0) — 게이트를 그냥 통과시킴."""
+    try:
+        from backend.rag import search_rules
+        hits = search_rules(question, k=1)
+        return (hits[0]["id"], hits[0]["score"]) if hits else (None, 0.0)
+    except Exception:
+        return (None, 0.0)
+
+
 def _local_match(question: str, faq_list: list[dict], rule_list: list[dict]) -> dict | None:
     """1순위 faq.jsonl(질문+variants), 2순위 rules.jsonl(유형명+짧은 힌트) 순으로 로컬 매칭.
-    둘 다 0.5 미만이면 None → 호출부가 Gemini 로 넘어간다."""
+    둘 다 0.5 미만이거나 RAG 힌트와 크게 어긋나면(단어겹침 오탐 방지, 2026-09-10) None → 폴백."""
+    rag_rule_id, rag_score = _rag_hint_rule_id(question)
+
+    def _rag_disagrees(rule_ids: list[str]) -> bool:
+        return bool(rule_ids) and rag_rule_id is not None and rag_score >= 0.5 and rag_rule_id not in rule_ids
+
     faq, faq_score = _best_match(question, faq_list, lambda f: [f["question"]] + (f.get("variants") or []))
     if faq_score >= 0.5:
-        source = [{"chunk_id": rid} for rid in (faq.get("rule_ids") or [])] + [{"chunk_id": faq["id"]}]
-        return {"answer": faq["answer"], "source": source, "offtopic": False, "suggested": []}
+        faq_rule_ids = faq.get("rule_ids") or []
+        if not _rag_disagrees(faq_rule_ids):
+            source = [{"chunk_id": rid} for rid in faq_rule_ids] + [{"chunk_id": faq["id"]}]
+            return {"answer": faq["answer"], "source": source, "offtopic": False, "suggested": []}
+        print(f"[ask] 로컬 매칭 {faq['id']}(단어겹침 {faq_score:.2f}) 이 RAG 힌트({rag_rule_id}, {rag_score:.2f})와 어긋나 폴백으로 넘김", flush=True)
 
     rule, rule_score = _best_match(question, rule_list, lambda r: [r["type"], r.get("short", "")])
     if rule_score >= 0.5:
-        return {"answer": rule.get("short") or rule["text"], "source": [{"chunk_id": rule["id"]}],
-                "offtopic": False, "suggested": []}
+        if not _rag_disagrees([rule["id"]]):
+            return {"answer": rule.get("short") or rule["text"], "source": [{"chunk_id": rule["id"]}],
+                    "offtopic": False, "suggested": []}
+        print(f"[ask] 로컬 매칭 {rule['id']}(단어겹침 {rule_score:.2f}) 이 RAG 힌트({rag_rule_id}, {rag_score:.2f})와 어긋나 폴백으로 넘김", flush=True)
 
     return None
 
