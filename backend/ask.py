@@ -302,10 +302,19 @@ def ask(body: AskIn):
     if log and log.get("rule_id") and not any(s["chunk_id"] == log["rule_id"] for s in source):
         source.append({"chunk_id": log["rule_id"]})
 
+    answer = out.get("answer") or ""
+    offtopic = bool(out.get("offtopic"))
+    if offtopic and len(answer.strip()) >= 15:
+        # "목록에 없으면 답하지 마라"는 지시를 모델이 offtopic=true 로는 지키면서도
+        # answer 에는 실제로 유용한 설명을 주는 경우가 잦음(2026-09-10 실측, banana 등 —
+        # 프롬프트가 정한 "진짜 못 답함" 응답("선생님한테 물어볼까?")은 짧다) → 이땐 offtopic 취소
+        print(f"[ask] offtopic=true인데 answer가 길어서(len={len(answer)}) offtopic 취소", flush=True)
+        offtopic = False
+
     return {
-        "answer": out.get("answer") or "",
+        "answer": answer,
         "source": source,
-        "offtopic": bool(out.get("offtopic")),
+        "offtopic": offtopic,
         "suggested": [q for q in (out.get("suggested") or []) if isinstance(q, str)][:2],
         "llm": llm_info,
     }
