@@ -84,6 +84,21 @@ def _rag_hint_rule_id(question: str) -> tuple[str | None, float]:
         return (None, 0.0)
 
 
+def _followup_questions(rule_ids: list[str], faq_list: list[dict], exclude_id: str | None = None) -> list[str]:
+    """rule_ids 와 연결된 다른 FAQ 질문 최대 2개(방금 답한 FAQ 자신은 제외) — tutor.py 의
+    _suggest_questions() 와 같은 목적, 로컬 매칭·정오 판정 답변도 항상 빈 채로 안 남게."""
+    if not rule_ids:
+        return []
+    out = []
+    for f in faq_list:
+        if f.get("id") == exclude_id or not any(rid in rule_ids for rid in (f.get("rule_ids") or [])):
+            continue
+        out.append(f["question"])
+        if len(out) >= 2:
+            break
+    return out
+
+
 def _local_match(question: str, faq_list: list[dict], rule_list: list[dict]) -> dict | None:
     """1순위 faq.jsonl(질문+variants), 2순위 rules.jsonl(유형명+짧은 힌트) 순으로 로컬 매칭.
     둘 다 0.5 미만이거나 RAG 힌트와 크게 어긋나면(단어겹침 오탐 방지, 2026-09-10) None → 폴백."""
@@ -97,14 +112,15 @@ def _local_match(question: str, faq_list: list[dict], rule_list: list[dict]) -> 
         faq_rule_ids = faq.get("rule_ids") or []
         if not _rag_disagrees(faq_rule_ids):
             source = [{"chunk_id": rid} for rid in faq_rule_ids] + [{"chunk_id": faq["id"]}]
-            return {"answer": faq["answer"], "source": source, "offtopic": False, "suggested": []}
+            suggested = _followup_questions(faq_rule_ids, faq_list, exclude_id=faq["id"])
+            return {"answer": faq["answer"], "source": source, "offtopic": False, "suggested": suggested}
         print(f"[ask] 로컬 매칭 {faq['id']}(단어겹침 {faq_score:.2f}) 이 RAG 힌트({rag_rule_id}, {rag_score:.2f})와 어긋나 폴백으로 넘김", flush=True)
 
     rule, rule_score = _best_match(question, rule_list, lambda r: [r["type"], r.get("short", "")])
     if rule_score >= 0.5:
         if not _rag_disagrees([rule["id"]]):
             return {"answer": rule.get("short") or rule["text"], "source": [{"chunk_id": rule["id"]}],
-                    "offtopic": False, "suggested": []}
+                    "offtopic": False, "suggested": _followup_questions([rule["id"]], faq_list)}
         print(f"[ask] 로컬 매칭 {rule['id']}(단어겹침 {rule_score:.2f}) 이 RAG 힌트({rag_rule_id}, {rag_score:.2f})와 어긋나 폴백으로 넘김", flush=True)
 
     return None
@@ -215,8 +231,9 @@ def _check_correctness(question: str) -> dict:
         answer = f'네, "{sentence}"는 맞는 문장이에요! 👍' if sentence else "네, 맞는 문장이에요!"
     else:
         answer = f'{(out.get("why") or "").strip()} "{out.get("fixed", "")}"가 맞아요.'.strip()
+    suggested = _followup_questions([rule["id"]], golden.faqs()) if rule else []
     return {"answer": answer, "source": [{"chunk_id": rule["id"]}] if rule else [], "offtopic": False,
-            "suggested": [], "llm": llm_info}
+            "suggested": suggested, "llm": llm_info}
 
 
 @router.post("/ask")
