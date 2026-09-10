@@ -3,7 +3,7 @@
 
 GET /admin/golden        골든 데이터 파일별 개수 + 색인 상태 (rules.jsonl 개수와 색인 개수가 다르면 index_stale)
 GET /admin/log?days=7    학생 문장 로그(data/student/sentence_log.jsonl) → 규칙별 걸린 횟수 · 학생 수 · 예시 문장,
-                         모델별 처리 건수(llm), 우리 규칙으로 못 짚은 문장(gaps: 규칙 밖 + 진단 실패, 최근 30개)
+                         모델별 처리 건수(llm), 우리 규칙으로 못 짚은 문장(gaps: 규칙 밖 + 진단 실패 최근 30개 + tests/gen_gaps.py 생성 점검 후보)
 
 읽기만 한다. 골든·색인·학생 파일에 아무것도 쓰지 않는다 (로그를 읽을 때만 tutor 의 쓰기 자물쇠를 잠깐 잡는다).
 """
@@ -14,9 +14,12 @@ import json
 from collections import Counter
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
-from backend import golden, tutor
+from pydantic import BaseModel
+
+from backend import gapcheck, golden, llm, tutor
+from backend.config import settings
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -91,6 +94,14 @@ def sentence_log(days: int = 7):
         g["students"].add(r.get("student"))
         g["example"] = r.get("text") or g["example"]        # 가장 최근 문장이 예시
     out = sorted(({**g, "students": len(g["students"])} for g in by.values()), key=lambda g: -g["count"])
+    gaps = [{"ts": r.get("ts"), "text": r.get("text"), "fixed": r.get("fixed"), "kind": "규칙 밖" if r.get("rule_id") == "OTHER" else "진단 실패",
+             "reason": r.get("failed") or "", "llm": r.get("llm") or "?", "student": r.get("student")}
+            for r in reversed(rows) if r.get("rule_id") == "OTHER" or r.get("failed")][:30]
+    g = gapcheck.latest()                                    # 생성 점검(backend/gapcheck.py) 결과: 규칙 밖 오류로 만들었는데 /fix 가 맞다고 한 문장 (모델이 붙인 오류 이름)
+    if g:
+        gaps += [{"ts": g.get("ran_at"), "text": m.get("text"), "fixed": m.get("correct") or None, "kind": "생성 점검",
+                  "reason": f"{m.get('intended', '')} (모델 표시, 확인 필요)", "llm": f"{g.get('backend')}:{g.get('model') or ''}", "student": g.get("student")}
+                 for m in g.get("missed_outside", [])][:30]
     return {
         "days": days,
         "n": len(rows),
@@ -98,8 +109,27 @@ def sentence_log(days: int = 7):
         "students": len({r.get("student") for r in rows}),
         "llm": dict(Counter(r.get("llm") or "?" for r in rows)),   # 어느 모델이 몇 문장 처리했나 (발표용)
         "rows": out,
-        # 우리 규칙으로 못 짚은 문장 — 규칙 밖(OTHER) 으로 고친 것 + 검증 실패로 502 난 것. 데이터팀 '빠진 규칙' 안건 (최근 것부터 30개)
-        "gaps": [{"ts": r.get("ts"), "text": r.get("text"), "fixed": r.get("fixed"), "kind": "규칙 밖" if r.get("rule_id") == "OTHER" else "진단 실패",
-                  "reason": r.get("failed") or ""}
-                 for r in reversed(rows) if r.get("rule_id") == "OTHER" or r.get("failed")][:30],
+        # 우리 규칙으로 못 짚은 문장 — 학생 로그의 규칙 밖(OTHER)·진단 실패(502) 최근 30개 + 생성 점검(tests/gen_gaps.py) 후보. 데이터팀 '빠진 규칙' 안건
+        "gaps": gaps,
     }
+
+
+# ── 생성 점검 (backend/gapcheck.py) — 관리자 화면 버튼 ──
+class GenIn(BaseModel):
+    n: int = 20
+    backend: str | None = None       # gemini | claude | LLM_ENDPOINTS 이름. 없으면 .env 의 LLM_BACKEND
+
+
+@router.get("/gen_gaps")
+def gen_gaps_latest():
+    """최근 생성 점검 결과(어떤 모델로 어떤 문장을 넣었고 튜터가 뭐라 했나) + 지금 도는 작업 상태 + 고를 수 있는 백엔드."""
+    g = gapcheck.latest() or {}
+    return {"latest": g, "job": gapcheck.job_status(), "backends": llm.backends(), "default_backend": settings.llm_backend}
+
+
+@router.post("/gen_gaps")
+def gen_gaps_run(body: GenIn):
+    """생성 점검을 백그라운드로 시작한다 (한 번에 하나). 진행은 GET /admin/gen_gaps 의 job 으로 본다."""
+    if body.backend and body.backend not in llm.backends():
+        raise HTTPException(400, f"모르는 백엔드: {body.backend} (가능: {llm.backends()})")
+    return gapcheck.start_job(n=max(1, min(body.n, 60)), backend=body.backend)

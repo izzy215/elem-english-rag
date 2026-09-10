@@ -36,6 +36,10 @@
   .head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
   select.small{width:auto;flex:0 0 auto;font:inherit;font-size:.8rem;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
   .empty{color:var(--muted);font-size:.85rem;padding:10px 0}
+  .row3{display:flex;gap:6px;align-items:center}
+  input.small{font:inherit;font-size:.8rem;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
+  .btn.small{margin:0;padding:6px 14px;font-size:.82rem;width:auto}
+  table.mini td.ok{color:var(--primary)} table.mini td.bad{color:#B07514}
 </style>
 </head>
 <body>
@@ -96,9 +100,22 @@
       <table class="mini" id="logTable"></table>
       <div class="hint" id="logHint"></div>
       <h2 style="margin-top:16px;font-size:.95rem">우리 규칙으로 못 짚은 문장 · 데이터팀 안건</h2>
-      <div class="d">규칙 밖으로 고친 문장과 진단 실패 문장. 여기 자주 나오는 문법이 다음에 추가할 규칙이에요</div>
+      <div class="d">튜터가 우리 규칙으로 설명하지 못한 문장들. 여기 자주 나오는 문법이 다음에 추가할 규칙이에요</div>
       <table class="mini" id="gapTable"></table>
       <div class="hint" id="gapHint"></div>
+
+      <div class="head" style="margin-top:18px">
+        <h2 style="font-size:.95rem">생성 점검 — 모델이 만든 틀린 문장으로 튜터 시험하기</h2>
+        <div class="row3">
+          <select class="small" id="genBackend"></select>
+          <input class="small" id="genN" type="number" min="1" max="60" value="20" style="width:64px">
+          <button class="btn small" id="genBtn" onclick="runGen()">실행</button>
+        </div>
+      </div>
+      <div class="d">고른 모델이 초등학생 문장을 만들어요. 절반은 우리 규칙 38개에 <b>있는</b> 오류, 절반은 규칙에 <b>없는</b> 오류로요. 그 문장을 같은 모델이 튜터로 진단해요.
+        규칙에 없는 오류인데 튜터가 "맞는 문장"이라고 하면 그게 추가할 규칙 후보예요. 결과는 학생 GEN 으로 로그에 쌓이고 위 표에 "생성 점검"으로 올라와요. 1~3분 걸려요</div>
+      <div class="hint" id="genStatus"></div>
+      <table class="mini" id="genTable"></table>
     </section>
   </main>
   <div class="status" id="status"></div>
