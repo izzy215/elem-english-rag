@@ -109,6 +109,11 @@ def sentence_log(days: int = 7):
         "students": len({r.get("student") for r in rows}),
         "llm": dict(Counter(r.get("llm") or "?" for r in rows)),   # 어느 모델이 몇 문장 처리했나 (발표용)
         "rows": out,
+        # 처리 시간 (ms 평균): 전체 · 검색 · 모델 호출 수 — total_ms 가 있는 행만 (성공한 문장). 시연 때 "몇 초 걸리나" 답용
+        "timing": (lambda t: {"n": len(t), "total_ms": int(sum(x.get("total_ms") or 0 for x in t) / len(t)),
+                              "search_ms": int(sum(x.get("search_ms") or 0 for x in t) / len(t)),
+                              "llm_calls": round(sum(x.get("llm_calls") or 0 for x in t) / len(t), 1)} if t else None)(
+            [r for r in rows if r.get("total_ms")]),
         # 우리 규칙으로 못 짚은 문장 — 학생 로그의 규칙 밖(OTHER)·진단 실패(502) 최근 30개 + 생성 점검(tests/gen_gaps.py) 후보. 데이터팀 '빠진 규칙' 안건
         "gaps": gaps,
     }

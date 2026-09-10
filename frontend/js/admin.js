@@ -43,7 +43,19 @@ async function loadEval() {
       <div class="track"><i class="${x.hit_at_3 === best ? 'best' : ''}" style="width:${Math.round((x.hit_at_3 || 0) * 100)}%"></i></div>
       <span class="v">${pct(x.hit_at_3)}</span></div>`).join('') : '';
   const extra = [r.hit_at_5 != null ? `hit@5 ${pct(r.hit_at_5)} (/fix 가 받는 검색 후보 안 — tutor.py RAG_TOP_K=5 와 같이 바꿀 것)` : '', r.evaluated_at ? `${when(r.evaluated_at)} 측정` : '', r.index?.model ? esc(r.index.model) : ''].filter(Boolean).join(' · ');
-  $('#evalHint').innerHTML = (r.hit_at_3 >= .8 ? '목표(80%) 달성' : '목표 80%까지 ' + Math.round((.8 - r.hit_at_3) * 100) + '%p 남음') + (extra ? ' · ' + extra : '');
+  const stale = (r.stale && r.evaluation_hash) ? ' · <span class="pill warn">색인·시험지가 평가 뒤에 바뀜 — eval_rag 다시 돌려야 함</span>' : '';   // evaluation_hash 는 eval_rag 가 아직 안 써서(RAG 담당) 그 전엔 stale 이 항상 true → 값이 생긴 뒤에만 표시
+  $('#evalHint').innerHTML = (r.hit_at_3 >= .8 ? '목표(80%) 달성' : '목표 80%까지 ' + Math.round((.8 - r.hit_at_3) * 100) + '%p 남음') + (extra ? ' · ' + extra : '') + stale;
+  renderMiss(r.rows || []);
+}
+function renderMiss(rows) {   // 검색이 3위 안에 정답 규칙을 못 넣은 시험 문장 — 어느 규칙을 놓쳤고 대신 무엇을 골랐나 (RAG 담당·데이터팀이 볼 곳)
+  const miss = rows.filter(x => !x.is_normal && !x.hit_at_3);
+  if (!rows.length) { $('#missTable').innerHTML = ''; $('#missHint').textContent = ''; return; }
+  if (!miss.length) { $('#missTable').innerHTML = ''; $('#missHint').textContent = '놓친 문장 없음 — 오류 문장 전부 3위 안에 정답 규칙이 들어 있어요'; return; }
+  const name = c => `${esc(c.id)} ${esc(c.type || '')}`;
+  $('#missTable').innerHTML = `<tr><th>놓친 문장</th><th>정답 규칙</th><th>검색이 고른 1~3위</th></tr>` + miss.map(x => `
+    <tr><td>${esc(x.text)}</td><td><b>${esc(x.expected_rule_id)}</b></td>
+      <td>${(x.candidates || []).slice(0, 3).map(c => `${name(c)} <span style="color:var(--muted)">${(c.score ?? 0).toFixed(2)}</span>`).join(' · ')}${x.error ? ` <span class="pill warn">${esc(x.error)}</span>` : ''}</td></tr>`).join('');
+  $('#missHint').textContent = `놓친 문장 ${miss.length}개 — 이 규칙들의 설명문·예문을 보강하거나(데이터팀) 검색 방식을 손보는(RAG 담당) 근거`;
 }
 
 // ---------- 학생 문장 로그 ----------
@@ -57,7 +69,8 @@ async function loadLog() {
     return;
   }
   const llm = Object.entries(r.llm || {}).map(([k, v]) => `${esc(k)} ${v}`).join(' · ');
-  $('#logDesc').innerHTML = `문장 <b>${r.n}</b>개 · 맞음 ${r.ok_n} · 고침 ${r.n - r.ok_n} · 학생 ${r.students}명${llm ? ` · 처리 모델: ${llm}` : ''}`;
+  const tm = r.timing ? ` · 평균 응답 <b>${(r.timing.total_ms / 1000).toFixed(1)}초</b> (검색 ${(r.timing.search_ms / 1000).toFixed(1)}초 · 모델 호출 ${r.timing.llm_calls}회, ${r.timing.n}문장 기준)` : '';
+  $('#logDesc').innerHTML = `문장 <b>${r.n}</b>개 · 맞음 ${r.ok_n} · 고침 ${r.n - r.ok_n} · 학생 ${r.students}명${llm ? ` · 처리 모델: ${llm}` : ''}${tm}`;
   if (!r.rows.length) { $('#logTable').innerHTML = ''; $('#logHint').innerHTML = '<div class="empty">이 기간에 고친 문장이 없어요.</div>'; return; }
   $('#logTable').innerHTML = `<tr><th>규칙</th><th style="text-align:right">걸린 횟수</th><th style="text-align:right">학생 수</th><th>예시 문장 (최근)</th></tr>` + r.rows.map((x, i) => `
     <tr><td>${esc(x.name)} <span style="color:var(--muted);font-size:.75rem">${esc(x.rule_id)}</span></td>

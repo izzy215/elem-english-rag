@@ -222,7 +222,7 @@ sequenceDiagram
   E->>C: eval.csv 72문장 중 오류 65문장 각각 search(k=3) (정상 7은 채점 안 함)
   E-->>E: hit@3 · hit@1 → retrieval_eval_latest.json
   E->>A: /rag/eval runs 기록 (임베딩 모델별)
-  A-->>D: 정확도 카드 (hit@3 92% · hit@1 77%) · 채택 모델
+  A-->>D: 정확도 카드 (hit@3 89% · hit@1 77%) · 채택 모델
   Note over C: manifest.active_collection 이 가리키는 컬렉션을 /fix 가 사용
 ```
 
