@@ -99,9 +99,35 @@ def _followup_questions(rule_ids: list[str], faq_list: list[dict], exclude_id: s
     return out
 
 
-def _local_match(question: str, faq_list: list[dict], rule_list: list[dict]) -> dict | None:
-    """1순위 faq.jsonl(질문+variants), 2순위 rules.jsonl(유형명+짧은 힌트) 순으로 로컬 매칭.
-    둘 다 0.5 미만이거나 RAG 힌트와 크게 어긋나면(단어겹침 오탐 방지, 2026-09-10) None → 폴백."""
+def _word_match(question: str, words_pool: dict[str, dict]) -> dict | None:
+    """질문에 등장한 영단어가 words.csv(교재 어휘 전체, ~400개)에 정확히 있으면 그 뜻으로 답한다.
+    FAQ에 없는 대다수 교재 단어(예: play)가 계속 offtopic 처리되던 걸 확인해서 추가(2026-09-10)."""
+    for w in re.findall(r"[A-Za-z']+", question):
+        entry = words_pool.get(w.lower())
+        if entry:
+            answer = f"{entry['word']}는 '{entry['meaning']}'라는 뜻이에요."
+            if entry.get("example"):
+                answer += f" 예: {entry['example']}"
+            return {"answer": answer, "source": [], "offtopic": False, "suggested": []}
+    return None
+
+
+def _pattern_match(question: str, patterns_pool: list[dict], faq_list: list[dict]) -> dict | None:
+    """질문 문장이 patterns.csv(교재 예문 전체)와 크게 겹치면 그 뜻으로 답한다(예: "Good night!")."""
+    best, best_score = _best_match(question, patterns_pool, lambda p: [p["text"]])
+    if best_score < 0.6:
+        return None
+    rule_ids = [best["rule_id"]] if best.get("rule_id") else []
+    return {"answer": f"{best['text']}는 '{best['meaning']}'라는 뜻이에요.",
+            "source": [{"chunk_id": rid} for rid in rule_ids], "offtopic": False,
+            "suggested": _followup_questions(rule_ids, faq_list)}
+
+
+def _local_match(question: str, faq_list: list[dict], rule_list: list[dict],
+                  words_pool: dict[str, dict], patterns_pool: list[dict]) -> dict | None:
+    """1순위 faq.jsonl(질문+variants), 2순위 rules.jsonl(유형명+짧은 힌트), 3순위 patterns.csv(예문
+    전체 문장), 4순위 words.csv(단어 하나) 순으로 로컬 매칭. 전부 실패하거나 RAG 힌트와 크게 어긋나면
+    (단어겹침 오탐 방지, 2026-09-10) None → 폴백."""
     rag_rule_id, rag_score = _rag_hint_rule_id(question)
 
     def _rag_disagrees(rule_ids: list[str]) -> bool:
@@ -123,7 +149,13 @@ def _local_match(question: str, faq_list: list[dict], rule_list: list[dict]) -> 
                     "offtopic": False, "suggested": _followup_questions([rule["id"]], faq_list)}
         print(f"[ask] 로컬 매칭 {rule['id']}(단어겹침 {rule_score:.2f}) 이 RAG 힌트({rag_rule_id}, {rag_score:.2f})와 어긋나 폴백으로 넘김", flush=True)
 
-    return None
+    # 패턴(전체 문장) 매칭을 단어 매칭보다 먼저 본다 — "Good night!"가 그 안의 "night" 단어
+    # 매칭에 먼저 걸려버리면 더 정확한 문장 전체 뜻 대신 단어 하나 뜻만 나오는 문제가 있었음(2026-09-10)
+    pattern = _pattern_match(question, patterns_pool, faq_list)
+    if pattern:
+        return pattern
+
+    return _word_match(question, words_pool)
 
 
 def _log_entry(log_id: str) -> dict | None:
@@ -255,8 +287,11 @@ def ask(body: AskIn):
     if not all_faqs and not all_rules:
         return {"answer": "", "source": [], "offtopic": True, "error": "faq.jsonl/rules.jsonl 이 없음"}
 
-    # 1) 로컬 매칭 먼저 — faq/rules 안에서 바로 찾아지면 Gemini 호출 없이 즉시 반환
-    local = _local_match(question, all_faqs, all_rules)
+    words_pool = {w["word"].lower(): w for w in golden.all_words()}
+    patterns_pool = golden.all_patterns()
+
+    # 1) 로컬 매칭 먼저 — faq/rules/words/patterns 안에서 바로 찾아지면 Gemini 호출 없이 즉시 반환
+    local = _local_match(question, all_faqs, all_rules, words_pool, patterns_pool)
     if local is not None:
         return local
 

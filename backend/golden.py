@@ -110,6 +110,16 @@ def patterns(level: int, unit: str) -> list[dict]:
             for p in _read("patterns.csv") if int(p["level"]) == level and p["unit"] == unit]
 
 
+def all_words() -> list[dict]:
+    """전체 레벨·유닛의 단어 (챗봇 어휘 매칭용, ask.py)."""
+    return [w for lv in levels() for u in units(lv["level"]) for w in words(lv["level"], u["unit"])]
+
+
+def all_patterns() -> list[dict]:
+    """전체 레벨·유닛의 패턴 문장 (챗봇 예문 매칭용, ask.py)."""
+    return [p for lv in levels() for u in units(lv["level"]) for p in patterns(lv["level"], u["unit"])]
+
+
 def sentences(level: int, unit: str) -> list[dict]:
     """Plan A 화면(learn.html) 호환용 — patterns.csv 를 "문장" 모양으로 바꿔서 내보낸다.
     데이터 출처는 patterns()와 동일(patterns.csv), 응답 형태만 옛 sentences 계약에 맞춘다."""
