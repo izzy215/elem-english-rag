@@ -2,9 +2,9 @@
 규칙 연습 — 오답노트의 [이 규칙 연습하기] (PRD 4.4 · 7)   담당: 팀장
 
 GET  /api/drill?student=A&rule=R-01&count=2
-  → {drill_id, rule_id, rule_name, questions:[{id, sentence, target, choices}]}     (정답 위치는 서버만 안다)
+  → {drill_id, rule_id, rule_name, questions:[{id, sentence, target, choices, error_id}]}     (정답 위치는 서버만 안다)
 POST /api/drill/answer {student, drill_id, question_id, choice}
-  → {correct, answer, rule_text, done, all_correct, streak}
+  → {correct, answer, rule_text, done, all_correct, streak, overcome}
 
 재료: errors.jsonl 한 줄 = 문제 하나 (error 문장, target 밑줄 단어, fix 정답, distractors 오답 3개)
 판정: 한 묶음(count 문제)을 전부 맞히면 notebook streak +1, 하나라도 틀리면 0. streak 2 = 극복 (PRD 7)
@@ -78,7 +78,7 @@ def get_drill(student: str, rule: str, count: int = 2):
         })
 
     drill_id = "D-" + datetime.now().strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:4]
-    if len(_drills) >= _MAX_DRILLS:                       # 오래된 것부터 정리
+    if len(_drills) >= _MAX_DRILLS:                       # 오래된 것부터 정리 (dict 는 삽입 순서를 지키므로 앞쪽이 오래된 것)
         for k in list(_drills)[: _MAX_DRILLS // 2]:
             _drills.pop(k, None)
     _drills[drill_id] = {"student": student, "rule_id": rule, "questions": questions}

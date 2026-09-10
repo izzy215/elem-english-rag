@@ -3,8 +3,9 @@
 (docs/plan-B/local-llm-plan.md 작업 4 · RAG 담당은 임베딩 모델을 바꿀 때 eval_rag 와 같이 돌려 끝까지 효과를 본다)
 
 두 가지 조건:
-    기본        실제 파이프라인 = tutor.fix_internal (검색 상위 5 + 공통 규칙 + 검증·철자·규칙 밖 처리 전부). 유닛은 없음
-    --no-rag    검색 없이 규칙 전부를 프롬프트에 (RAG 없을 때 기준선. "RAG 유무 비교" 용)
+    기본        실제 파이프라인 = tutor.fix_internal (검색 상위 RAG_TOP_K + 공통 규칙 + 검증·철자·규칙 밖 처리 전부). 유닛은 없음(level 3, unit "")
+    --no-rag    검색 없이 규칙 전부(+SPELL·OTHER)를 프롬프트에 넣고 모델만 부른다 — 서버 검증 없음 (RAG 없을 때 기준선. "RAG 유무 비교" 용)
+                결과 json 의 문장별 항목은 조건에 따라 키가 다르다 (기본: mode·rank·spelling 포함, --no-rag: 없음)
 
 실행 (project 폴더에서, 가상환경 활성화 후):
     python -m tests.eval_fix                       # .env 의 LLM_BACKEND 하나만
@@ -13,7 +14,7 @@
     python -m tests.eval_fix --backend claude
     python -m tests.eval_fix --backend all         # 설정된 백엔드 전부 (gemini, claude, .env 의 LLM_ENDPOINTS 이름들)
     python -m tests.eval_fix --backend gemini,claude,groq,teacher   # 콤마로 직접 고르기
-    python -m tests.eval_fix --backend both --limit 3   # 앞 3문장만 (연습용)
+    python -m tests.eval_fix --backend local --limit 3   # 앞 3문장만 (연습용)
     python -m tests.eval_fix --backend local --label gemini-embedding   # 실행 이름 — 파일명·표 제목에 붙음 (임베딩 모델 바꿔 가며 비교할 때)
     python -m tests.eval_fix --backend local --no-rag                   # 검색 없이 규칙 전부 (기준선)
 
@@ -23,7 +24,7 @@
     fix_compare_latest.json / .md    가장 최근 실행의 복사본 (항상 덮어씀)
     --out 으로 이름을 직접 주면 그 이름으로만 저장 (latest 는 갱신 안 함)
 
-오답노트·문장 로그에는 기록하지 않는다 (fix_internal 은 record=False). 결과 json 에는 색인 정보(임베딩 모델·규칙 수·생성 시각)가 같이 남는다.
+오답노트·문장 로그에는 기록하지 않는다 (fix_internal 은 record=False). 결과 json 에는 색인 정보(임베딩 모델·제공자·규칙 수·생성 시각)가 같이 남는다.
 비용: 문장 수 × 백엔드 수 만큼 LLM 호출. 무료 등급이면 한도 주의.
 """
 from __future__ import annotations
@@ -54,14 +55,14 @@ def load_eval() -> list[dict]:
     return rows
 
 
-def build_prompt(text: str, rules: list[dict], level: int = 2, unit: str = "U3") -> str:
-    """tutor.fix() 와 똑같은 폴백 프롬프트 (규칙 전부). RAG 가 붙으면 candidates 를 검색 결과로 바꿔 'rag' 조건도 비교할 수 있다."""
+def build_prompt(text: str, rules: list[dict], level: int = 3, unit: str = "") -> str:
+    """--no-rag 용: tutor.diagnose() 의 폴백과 같은 프롬프트 (규칙 전부 + SPELL·OTHER). 유닛 없음 = 기본 경로(run_pipeline)와 같은 조건."""
     unit_row = golden.find_unit(level, unit) or {}
     return tutor._render(
         tutor.PROMPT_FILE.read_text(encoding="utf-8"),
         mission=unit_row.get("mission") or "(미션 없음 — 미션 확인은 ok=true 로)",
         hint_words=", ".join(unit_row.get("hint_words") or []) or "(없음)",
-        all_rules=tutor._rules_block(rules),
+        all_rules=tutor._rules_block(list(rules) + [tutor.SPELLING_RULE, tutor.OTHER_RULE]),
         sentence=text,
     )
 
@@ -108,7 +109,7 @@ def run_one(text: str, backend: str, rules: list[dict]) -> dict:
 
 
 def judge(row: dict, res: dict) -> str:
-    """✓ 정답 규칙 / ✓ 정상 유지 / ✗ 오교정(정상 문장을 고침) / ✗ 다른 규칙 / ! 실패"""
+    """✓ 정답 규칙 / ✓ 정상 유지 / ✗ 오교정(정상 문장을 고침) / ✗ 놓침(오류 문장을 ok) / ✗ 다른 규칙 / ! 실패"""
     if res["error"]:
         return "! 실패"
     if row["is_normal"]:
@@ -120,7 +121,7 @@ def judge(row: dict, res: dict) -> str:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--backend", default=None, help="gemini | claude | local | both(gemini+local) | all | 콤마 목록 (기본: .env 의 LLM_BACKEND)")
+    ap.add_argument("--backend", default=None, help="gemini | claude | <LLM_ENDPOINTS 이름> | all | 콤마 목록 (기본: .env 의 LLM_BACKEND)")
     ap.add_argument("--limit", type=int, default=0, help="앞 n 문장만")
     ap.add_argument("--out", default=None, help="저장 파일명 (기본: data/rag_eval/fix_compare_<시각>[_label].json + _latest 복사본)")
     ap.add_argument("--label", default="", help="실행 이름 (예: gemini-embedding). 파일명과 표 제목에 붙는다")

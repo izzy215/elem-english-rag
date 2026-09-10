@@ -4,14 +4,14 @@
 GET /api/notebook?student=A
   → {"active":[{rule_id, name, short, count, last, streak, examples:[{text, fixed, log_id, ts, unit}]}],
      "overcome":[{rule_id, name, count, last}],
-     "stats":{"spoken": 전체 문장 수, "by_unit": {"U3": n, ...}}}
+     "stats":{"spoken": 전체 문장 수, "by_unit": {"Unit03": n, ...}}}
 
 이 파일은 **읽기만** 한다. 쓰기는
   - tutor.py  /fix  → sentence_log.jsonl 한 줄, notebook.json count+1 · streak 0
   - drill.py  /drill/answer → drill_log.jsonl, notebook.json streak 갱신
 가 이미 하고 있다. 파일 형식은 PRD 5.2.
 
-chat.py(물어보기 챗)는 API 를 부르지 말고 notebook_summary(student) 를 import 해서 프롬프트 맥락으로 쓰면 된다:
+ask.py(물어보기 챗)는 notebook_text(student) 를, speak.py 는 notebook_summary(student) 를 import 해서 프롬프트 맥락으로 쓴다:
   "이 학생은 과거시제 3회 (최근: 'I go to the zoo yesterday.' → 'I went to the zoo yesterday.')"
 답의 근거는 여전히 rules·faq 조각이고, 이 요약은 개인화 맥락일 뿐이다.
 """
@@ -99,7 +99,7 @@ def notebook_summary(student: str, max_examples: int = 3) -> dict:
 
 
 def notebook_text(student: str) -> str:
-    """챗봇 프롬프트에 그대로 넣을 수 있는 한국어 요약 (chat.py 용)."""
+    """챗봇 프롬프트에 그대로 넣을 수 있는 한국어 요약 (ask.py 가 쓴다)."""
     s = notebook_summary(student, max_examples=1)
     if not s["active"] and not s["overcome"]:
         return "아직 오답노트가 비어 있음."

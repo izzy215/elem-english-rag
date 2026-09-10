@@ -6,10 +6,10 @@
 
 | 항목 | 값 | 이유 |
 |---|---|---|
-| 서비스 기본 백엔드 | `LLM_BACKEND=groq` (openai/gpt-oss-20b, 무료 티어) | Gemini 무료 한도(하루 20회) 회피. 2문장 시험에서 규칙 적중 2/2, 평균 1.5초로 가장 빠름 |
-| 실패 시 대체 | `LLM_FALLBACK=1` → gemini | 한도·연결·JSON 오류 때 그 요청만 Gemini 로. 콘솔 `[llm] groq 실패 → gemini 대체` |
-| 강의실 서버가 뜨면 | `LLM_BACKEND=teacher` | 한 줄 교체. 그 전까지 Groq 가 임시 |
-| 비교 실험 | `python -m tests.eval_fix --backend gemini,claude,groq` | 결과 `data/rag_eval/fix_compare.md` |
+| 서비스 기본 백엔드 | `LLM_BACKEND=local` (강의실 서버 Ollama qwen2.5:32b-instruct, 엔드포인트 이름 merge32b/local) | Gemini 무료 한도 회피. 비교 실험에서 Qwen 32b 가 로컬 중 최고. (초기엔 groq 임시 사용) |
+| 실패 시 대체 | `LLM_FALLBACK=1` → gemini | 한도·연결·JSON 오류 때 그 요청만 Gemini 로. 콘솔 `[llm] local 실패 → gemini 대체` |
+| 이름 바꿀 때 | `LLM_BACKEND=<이름>` | 한 줄 교체. 이름은 `.env` 의 `LLM_ENDPOINTS` 에 등록된 것만 (LLM_<NAME>_URL/KEY/MODEL) |
+| 비교 실험 | `python -m tests.eval_fix --backend gemini,claude,local` (이름은 `.env` `LLM_ENDPOINTS` 에 있어야 함) | 결과 `data/rag_eval/fix_compare_<시각>[_label].json/.md` + `fix_compare_latest.*` 복사본 |
 
 ## 1. 목표와 비목표
 
@@ -34,7 +34,7 @@ ask.py   /ask ─┴─▶ backend/llm.py ─┬─ gemini  (지금 쓰는 것, 
 ```
 
 - 호출부는 백엔드를 모른다. `.env` 한 줄로 바꾼다. 응답에 `llm: {backend, model, ms, fallback_from}`이 붙고 sentence_log에도 기록되므로 어느 모델이 답했는지 나중에 셀 수 있다.
-- `backend/llm.py`의 `_local()`은 OpenAI 호환 API를 부르는 코드까지 들어 있다. **TTS 팀원이 할 일은 "그 API가 강의실 서버에 떠 있게 하는 것"과 "우리 프롬프트로 JSON이 제대로 나오는지 확인"이다.**
+- `backend/llm.py`의 `_openai_compat(name, prompt, timeout)`은 OpenAI 호환 API를 부르는 코드까지 들어 있다 (이름별 URL·KEY·MODEL 은 `.env`). **TTS 팀원이 할 일은 "그 API가 강의실 서버에 떠 있게 하는 것"과 "우리 프롬프트로 JSON이 제대로 나오는지 확인"이다.**
 
 ## 3. 작업 순서와 완료 기준
 
@@ -77,14 +77,14 @@ LLM_BACKEND=teacher
 참고: 강의실 서버 접속은 SSH 터널(`ssh -L 11434:localhost:11434 research1@192.168.1.147`) 또는 같은 네트워크면 서버 IP로 직접 접속 가능(`http://192.168.1.147:11434`, OLLAMA_HOST=0.0.0.0). VSCode 자동 포트 포워딩·죽지 않은 옛 ssh 세션이 겹치면 응답이 안 오는 문제가 있었음(새로 깨끗하게 띄우면 해결). Ollama 는 `nohup ... &`로 띄워서 VSCode/SSH 세션을 닫아도 서버 재부팅 전까지 계속 돎.
 
 ### 작업 4. 비교 실험 (팀장 + TTS 팀원)
-`tests/eval_fix.py` (만들어 둠, `--backend gemini,claude,teacher,groq` 또는 `all`): eval.csv 10문장을 **같은 프롬프트·같은 규칙 조각**으로 Gemini·Claude·로컬에 각각 보내 표로 만든다.
+`tests/eval_fix.py` (만들어 둠, `--backend gemini,claude,<엔드포인트 이름>` 또는 `all` — 이름은 `.env` `LLM_ENDPOINTS` 에 등록된 것): 기본은 **실제 파이프라인 전체**(`tutor.fix_internal`, 검색 상위 5 + Unit·공통 규칙 + 검증·철자·규칙 밖 처리, fallback=False)로 eval.csv **72문장 전부**를 백엔드별로 돌려 표로 만든다. `--limit n` 으로 앞 n 문장만, `--no-rag` 는 검색 없이 규칙 전부를 넣는 기준선, `--label` 은 실행 이름(파일명·표 제목).
 
 | 문장 | 정답 규칙 | Gemini | Claude | 강의실 서버 7B | Groq 70B (무료) |
 |---|---|---|---|---|---|
 
 - [ ] 규칙 적중(rule_id 일치), 고친 문장 일치, 정상 문장 2개 오교정 여부, 평균 응답 시간
 - [ ] 모델 1개 더(후보 2) 돌려 보면 발표 표가 풍성해짐 (선택)
-- [ ] 결과는 `data/rag_eval/fix_compare.json`에 저장 (git 제외), 표는 발표 자료로
+- [x] 결과는 `data/rag_eval/fix_compare_<시각>[_label].json/.md` + `fix_compare_latest.*` 복사본에 저장 (git 제외). json 에 색인 정보(임베딩 모델 · 규칙 수 · 생성 시각)도 같이 기록. 표는 발표 자료로
 
 완료 기준: 10문장 × 2모델 표 하나. "근거 조각을 주면 7B도 n/10" 문장 하나.
 
@@ -95,7 +95,7 @@ ask.py가 Gemini를 직접 부르는 부분을 `llm.generate_json(prompt)`로 �
 
 | 파일 | 담당 | 상태 |
 |---|---|---|
-| backend/llm.py | 팀장 | ✅ 뼈대 완료 (gemini 구현, local 호출 코드 포함, 폴백) |
+| backend/llm.py | 팀장 | ✅ 완료 (gemini · claude · `LLM_ENDPOINTS` 의 OpenAI 호환 엔드포인트 이름별 호출, gemini 아닌 백엔드 실패 시 폴백, `LLM_TIMEOUT`) |
 | backend/config.py `LLM_*` | 팀장 | ✅ |
 | backend/tutor.py → llm 사용 | 팀장 | ✅ 응답·로그에 llm 정보 |
 | .env.example `LLM_*` | 팀장 | ✅ |

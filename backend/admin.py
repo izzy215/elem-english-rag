@@ -2,9 +2,10 @@
 관리자 화면 집계 — 담당: 팀장   (PRD 3.7 관리자 · 4.4 GET /admin/log)
 
 GET /admin/golden        골든 데이터 파일별 개수 + 색인 상태 (rules.jsonl 개수와 색인 개수가 다르면 index_stale)
-GET /admin/log?days=7    학생 문장 로그(data/student/sentence_log.jsonl) → 규칙별 걸린 횟수 · 학생 수 · 예시 문장
+GET /admin/log?days=7    학생 문장 로그(data/student/sentence_log.jsonl) → 규칙별 걸린 횟수 · 학생 수 · 예시 문장,
+                         모델별 처리 건수(llm), 우리 규칙으로 못 짚은 문장(gaps: 규칙 밖 + 진단 실패, 최근 30개)
 
-읽기만 한다. 골든·색인·학생 파일에 아무것도 쓰지 않는다.
+읽기만 한다. 골든·색인·학생 파일에 아무것도 쓰지 않는다 (로그를 읽을 때만 tutor 의 쓰기 자물쇠를 잠깐 잡는다).
 """
 from __future__ import annotations
 
@@ -27,7 +28,7 @@ FILES = [
     ("words.csv", "단어 · 뜻 · 예문", False),
     ("patterns.csv", "문장 패턴 · 뜻 · 규칙 id", False),
     ("errors.jsonl", "오류 문장 예시 — 연습 문제·평가용", False),
-    ("eval.csv", "시험지: 문장 → 정답 규칙 (색인 안 함)", False),
+    ("eval.csv", "시험지: 문장 → 정답 규칙", False),
 ]
 
 
@@ -97,4 +98,8 @@ def sentence_log(days: int = 7):
         "students": len({r.get("student") for r in rows}),
         "llm": dict(Counter(r.get("llm") or "?" for r in rows)),   # 어느 모델이 몇 문장 처리했나 (발표용)
         "rows": out,
+        # 우리 규칙으로 못 짚은 문장 — 규칙 밖(OTHER) 으로 고친 것 + 검증 실패로 502 난 것. 데이터팀 '빠진 규칙' 안건 (최근 것부터 30개)
+        "gaps": [{"ts": r.get("ts"), "text": r.get("text"), "fixed": r.get("fixed"), "kind": "규칙 밖" if r.get("rule_id") == "OTHER" else "진단 실패",
+                  "reason": r.get("failed") or ""}
+                 for r in reversed(rows) if r.get("rule_id") == "OTHER" or r.get("failed")][:30],
     }

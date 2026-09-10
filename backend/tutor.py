@@ -2,19 +2,24 @@
 튜터 — 내 문장 고쳐주기 (PRD 4.3)   담당: 팀장
 
 POST /api/fix  {student, level, unit, text, source}
-  → {ok, rule, runner_up, wrong, fix, fixed, why, source, more_errors, suggested_questions, mission, log_id, mode}
+  → {ok, rule{id,name,score,rank}, runner_up, wrong, fix, fixed, why, source, more_errors, full_fixed, spelling,
+     suggested_questions, mission, log_id, mode, fallback_reason, candidates, llm, timing}
 
 동작:
-  1. RAG 검색(rag.search_rules) 으로 학생 문장과 가장 가까운 규칙 상위 3개 → 1위 조각만 프롬프트에 (mode="rag")
-     검색 실패(색인 없음·임베딩 오류)면 규칙 전부를 프롬프트에 (mode="fallback", fallback_reason="search_error")
+  0. 철자 사전검사(_spell_precheck, pyspellchecker + 교재 단어) → 철자만 고친 문장으로 아래를 진행 (원문은 화면·로그용 orig)
+  1. RAG 검색(rag.search_rules) 으로 규칙 전부를 점수순으로 받는다 (점수·순위 표시용).
+     프롬프트에는 상위 RAG_TOP_K + 이 Unit 의 규칙(units.csv rule_ids) + 공통(unit=ALL) 규칙 + 가짜 규칙 SPELL·OTHER (mode="rag")
+     검색 실패(색인 없음·임베딩 오류·결과 0)면 규칙 전부 (mode="fallback", fallback_reason="search_error" | "no_results")
   2. 오늘의 미션(units.csv)과 함께 프롬프트(prompts/fix_fallback.txt)에 넣어 LLM(backend/llm.py) 에 JSON 으로만 답하게 한다
-  3. 모델이 답한 규칙 id 가 '전달한 근거 안' 에 있는지 검증 (밖이면 502). 근거·점수는 서버가 전달한 후보에서 구성
-  4. 학생 DB 에 문장 로그 + 오답노트 기록 (fix_internal() 은 기록 없이 같은 결과 — 평가용)
+  3. 검증: 규칙 id 가 전달한 근거 안인가, (wrong→fix) 가 학생 단어를 살린 고침인가(_pair_problem). 걸리면 1회 재생성,
+     그래도 안 되면 full_fixed 가 학생 단어뿐일 때 '규칙 밖(OTHER)' 으로 살리고 아니면 502 (실패도 sentence_log 에 남김).
+     철자 쌍이면 ok=true + spelling, 기능어 한 개 교체(is→are)는 _second_opinion 으로 한 번 더 확인, 고친 게 없는 답은 재시도 후 ok.
+  4. 학생 DB 에 문장 로그 + 오답노트 기록 (fix_internal() 은 기록 없이 같은 결과 — 비교 실험용). timing 에 단계별 시간
 
 threshold 는 아직 미설정 (RAG 담당 실측: 정상 문장이 오류 문장보다 검색 점수가 높음). 정오 판단은 모델의 ok 가 한다.
 화면(frontend/js/tutor.js)은 이 응답 형식을 이미 기다리고 있다. 필드 이름을 바꾸면 화면도 같이 바꿔야 한다.
 
-데이터 읽기는 전부 golden.py (TTS 팀원 소유, 공통): rules() · find_rule() · find_unit(). 골든/샘플 선택도 거기서 한다.
+데이터 읽기는 전부 golden.py (TTS 팀원 소유, 공통): rules() · find_rule() · find_unit() · faqs() · known_english_vocab(). 골든/샘플 선택도 거기서 한다.
 학생 DB: data/student/sentence_log.jsonl, notebook.json (PRD 5.2 형식, gitignore)
 """
 from __future__ import annotations
@@ -22,6 +27,7 @@ from __future__ import annotations
 import json
 import re
 import threading
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -37,16 +43,17 @@ PROMPT_FILE = Path(__file__).parent / "prompts" / "fix_fallback.txt"
 
 router = APIRouter(tags=["tutor"])
 _lock = threading.Lock()
-RAG_TOP_K = 5          # 프롬프트에 넣는 검색 후보 수 (검색 순위 표시용). 어순 규칙은 임베딩이 순서를 못 봐서 4~5위로 나와 5 로 둔다
+RAG_TOP_K = 5          # 규칙이 많을 때 프롬프트에 넣는 검색 후보 수 겸 응답 candidates·로그의 표시 개수. 어순 규칙이 4~5위로 나와 5 로 둔다
 # 프롬프트에만 끼워 넣는 '철자' 규칙 (rules.jsonl·색인·평가에는 없음). 모델이 철자 실수를 문법 규칙으로 억지로 맞추지 않게 출구를 준다
-# ('i hate vegetibals' 에서 hate→am 같은 답). 모델이 이 id 를 고르면 서버가 ok=true + 철자 안내로 바꾼다 (오답노트·규칙 카드에 안 감).
+# ('i hate vegetibals' 에서 hate→am 같은 답). 모델이 이 id 를 고르고 (wrong,fix) 가 한 단어 쌍이면 서버가 ok=true + 철자 안내로 바꾼다 (아니면 502).
 SPELLING_RULE = {"id": "SPELL", "type": "철자", "unit": "ALL",
                  "text": "단어의 철자가 틀린 경우. 문법은 맞는데 글자만 틀렸으면 이 규칙을 고르고 wrong=틀린 철자, fix=맞는 철자. 틀린 예: I like aple."}
 # 프롬프트에만 끼워 넣는 '규칙 밖' 출구. 참고 규칙 어디에도 안 맞는 문제(단어가 남거나 빠짐: 'I went to go to zoo')를 모델이 억지로
-# 다른 규칙에 끼워 맞추지 않게 한다. 서버는 학생 단어로만 된 문장(기능어 추가·삭제만)일 때만 받아서 규칙·오답노트 없이 "이렇게 말해요" 로 보여준다.
+# 다른 규칙에 끼워 맞추지 않게 한다. 서버는 _student_words_only 를 통과한 문장(학생 단어·그 변형·기능어만, 2단어 넘게 안 늘어남)일 때만 받아서
+# 규칙·오답노트 없이 "✎ 우리 규칙 밖이에요" 카드로 보여준다.
 OTHER_RULE = {"id": "OTHER", "type": "규칙 밖", "unit": "ALL",
               "text": "참고 규칙 어디에도 맞지 않는 문제(단어가 남거나 빠짐 등). 이 규칙을 고르면 wrong·fix 는 null 로 두고, fixed 와 full_fixed 에 학생이 쓴 단어만으로 자연스럽게 고친 문장을 쓴다. 새 단어를 넣지 않는다."}
-RAG_ALL_IF_LE = 12     # 규칙이 이 수 이하(샘플 9개)면 검색으로 후보를 좁히지 않고 전부 넣는다. 점수·순위는 그대로 표시
+RAG_ALL_IF_LE = 12     # 규칙이 이 수 이하(샘플 9개)면 검색으로 후보를 좁히지 않고 전부 넣는다. 화면·로그엔 상위 RAG_TOP_K 만 표시
 # 규칙이 많을 때(실제 38개) 프롬프트 = 검색 상위 RAG_TOP_K + 이 Unit 의 규칙(units.csv rule_ids) + 공통(unit=ALL) 규칙.
 # 검색만으로는 관사(R-38) 같은 공통 규칙이 후보 밖으로 밀린다 ('I drew zoo yesterday' 에서 R-38 이 22위) → 관사를 붙였다 안 붙였다 하는 원인
 
@@ -64,15 +71,39 @@ def _rules_block(rule_list: list[dict]) -> str:
     return "\n".join(f"- [{r['id']}] {r['type']}: {r['text']}" for r in rule_list)
 
 
-def _ask_llm(prompt: str, backend: str | None = None, fallback: bool | None = None) -> dict:
+def _ask_llm(prompt: str, backend: str | None = None, fallback: bool | None = None, timing: dict | None = None) -> dict:
     """JSON 만 받는다. 어느 모델(Gemini/로컬)을 쓸지는 backend/llm.py 와 .env 의 LLM_BACKEND 가 정한다.
-    backend·fallback 은 비교 실험(tests/eval_fix.py)이 호출별로 지정할 때만 쓴다 — 서비스 경로는 None."""
-    return llm.generate_json(prompt, backend=backend, fallback=fallback)
+    backend·fallback 은 비교 실험(tests/eval_fix.py)이 호출별로 지정할 때만 쓴다 — 서비스 경로는 None. timing 이 있으면 호출 시간·횟수를 누적."""
+    t0 = time.perf_counter()
+    try:
+        return llm.generate_json(prompt, backend=backend, fallback=fallback)
+    finally:
+        if timing is not None:
+            timing["llm_ms"] += int((time.perf_counter() - t0) * 1000)
+            timing["llm_calls"] += 1
+
+
+def _tidy(sentence: str) -> str:
+    """표기 통일: 앞뒤 공백 제거, 첫 글자 대문자, 끝에 문장부호 없으면 마침표."""
+    out = (sentence or "").strip()
+    if not out:
+        return out
+    out = out[0].upper() + out[1:]
+    return out if out[-1] in ".!?" else out + "."
+
+
+_DUP = re.compile(r"\b(\w+)\s+\1\b", flags=re.IGNORECASE)   # 'to to', 'the the' 같은 겹말
+_BAD_ART = re.compile(r"\b(a|an|the)\s+(a|an|the)\b", flags=re.IGNORECASE)   # 'a an elephant' — 모델이 관사 빼고 wrong 범위를 잡았을 때
+
+
+def _broken(sentence: str) -> bool:
+    """한 곳만 바꾼 결과가 겹말·관사 겹침으로 깨졌는지."""
+    return bool(_DUP.search(sentence) or _BAD_ART.search(sentence))
 
 
 def _single_fix(text: str, wrong: str | None, fix: str | None) -> str | None:
     """학생 문장에서 wrong 한 단어(구)만 fix 로 바꾼 문장. wrong 이 문장에 없으면 None.
-    Gemini 가 지시를 어기고 여러 곳을 한꺼번에 고쳐 와도, 화면에는 '1위 규칙 하나만 고친 문장' 을 보여 주기 위해 서버가 다시 만든다.
+    모델이 지시를 어기고 여러 곳을 한꺼번에 고쳐 와도, 화면에는 '1위 규칙 하나만 고친 문장' 을 보여 주기 위해 서버가 다시 만든다.
     그래야 [다시 고쳐줘] 2차에서 나머지 오류가 실제로 잡힌다 (PRD 7: 1위만 고치고 more_errors)."""
     if not wrong or not fix:
         return None
@@ -123,6 +154,7 @@ def _pair_problem(text: str, wrong: str | None, fix: str | None, rule_type: str 
     """모델이 준 (wrong → fix) 쌍이 '학생 단어를 규칙에 맞게 고친 것' 인지 확인. 문제가 있으면 이유 문자열, 없으면 None.
     허용: 변형(draw→drew, eat→is eating), 기능어 추가(lion→a lion, I sorry→I am sorry, go zoo→go to the zoo), 어순 규칙의 재배열.
     거절: 다른 단어로 교체(lastyear→yesterday), 문장 다른 곳 단어를 끌어옴(yesterday→saw = 어순 바꾸기 시도), 내용어를 새로 지어냄.
+    wrong 은 최대 4단어, 시간 표현(yesterday/tomorrow …)은 학생의 뜻이라 바꾸는 답을 거절한다.
     규칙 38개 기준으로 다시 짬 — 예전 '한 단어만' 기준은 be동사·전치사 추가 규칙(R-01·R-17·R-24·R-35 …)을 전부 거절했다."""
     if not wrong or not fix:
         return "wrong/fix 비어 있음"
@@ -155,7 +187,7 @@ def _pair_problem(text: str, wrong: str | None, fix: str | None, rule_type: str 
     for t in w:
         if t in others:
             others.remove(t)
-    pulled = [x for x in new_content + [x for x in f if x not in _FUNC_WORDS and x not in w] if x in others]
+    pulled = [x for x in f if x not in _FUNC_WORDS and x not in w and not any(_related(x, t) for t in w) and x in others]
     if pulled:                                               # fix 가 문장 다른 곳에 이미 있는 단어 → 어순 바꾸기 시도 (yesterday→saw)
         return f"fix={fix!r} 가 문장에 이미 있는 단어 {pulled} (어순 변경 시도)"
     return None
@@ -218,9 +250,26 @@ def _apply_spelling(text: str, pairs: list[dict]) -> str:
     return text
 
 
+_SWAP_WORDS = _FUNC_WORDS | {"this", "these", "that", "those"}
+
+
+def _second_opinion(text: str, fixed: str, backend: str | None, fallback: bool | None, timing: dict | None = None) -> bool:
+    """be동사·관사 같은 기능어 한 개를 바꾼 답은 소형 모델이 맞는 문장도 뒤집는 경우가 잦다 ('My family is good' → are → 다시 is).
+    원문과 고친 문장을 나란히 주고 어느 쪽이 맞는지 한 번 더 묻는다. True = 고친 문장(B)이 맞다고 확인됨 (모델 교정 유지).
+    A 또는 both 면 False → 호출부가 원문을 맞는 문장(ok)으로 둔다. LLM 호출 자체가 실패하면 True (기존 답 유지)."""
+    prompt = ("두 영어 문장 중 문법에 맞는 것을 고르세요. 초등 영어 기준. 둘 다 맞으면 both. 다른 말 없이 JSON 만: "
+              '{"answer": "A" 또는 "B" 또는 "both"}' + "\n" + f"A: {text}" + "\n" + f"B: {fixed}")
+    try:
+        out = _ask_llm(prompt, backend, fallback, timing)
+    except llm.LLMError:
+        return True
+    ans = str(out.get("answer", "")).strip().upper()
+    return ans not in ("A", "BOTH")
+
+
 def _spelling_pairs(text: str, full_fixed: str) -> list[dict]:
     """ok=true 인데 모델이 full_fixed 에 철자만 고쳐 준 경우 (read→red, dreass→dress) 그 쌍을 뽑는다.
-    단어 수가 같고, 다른 단어가 전부 '같은 단어의 변형(_related)' 일 때만 인정. 단어가 늘거나 딴 단어로 바뀌었으면 [] (철자 아님 → 원문 유지)."""
+    단어 수가 같고, 다른 단어가 전부 철자 쌍(_is_typo) 일 때만 인정. 단어가 늘거나 어형 변화·딴 단어로 바뀌었으면 [] (철자 아님 → 원문 유지)."""
     src, dst = _tokens(text), _tokens(full_fixed)
     if not dst or len(src) != len(dst):
         return []
@@ -231,7 +280,7 @@ def _spelling_pairs(text: str, full_fixed: str) -> list[dict]:
 
 
 def _is_typo(a: str, b: str) -> bool:
-    """철자 실수로 볼 수 있는 쌍인가: 글자 1~2개 차이이고, 어형 변화(go→went, cat→cats, eat→eating)는 아님."""
+    """철자 실수로 볼 수 있는 쌍인가: 글자 1~2개(7글자 이상은 3개) 차이이고, 기능어 교체나 어형 변화(go→went, cat→cats, eat→eating)는 아님."""
     if a in _FUNC_WORDS or b in _FUNC_WORDS:                # am→is, a→an 같은 문법 교체는 철자가 아님
         return False
     if b in _IRREGULAR.get(a, set()) or a in _IRREGULAR.get(b, set()):
@@ -254,8 +303,8 @@ def _edit_distance(a: str, b: str) -> int:
 
 
 def _student_words_only(text: str, fixed: str) -> str | None:
-    """규칙 밖(OTHER) 답 검증. 고친 문장이 학생 단어 + 기능어(관사·be동사·전치사)만으로 되어 있고 원문과 다르면 None, 아니면 이유.
-    단어를 지우는 건 허용(went to go to → went to), 새 내용어를 넣는 건 거절."""
+    """규칙 밖(OTHER) 답 검증. 고친 문장이 학생 단어(와 그 변형 go→went) + 기능어(관사·be동사·전치사)만으로 되어 있고,
+    원문과 다르며, 2단어 넘게 길어지지 않았으면 None, 아니면 이유. 단어를 지우는 건 허용(went to go to → went to), 새 내용어는 거절."""
     src, dst = _tokens(text), _tokens(fixed)
     if not dst:
         return "고친 문장이 비어 있음"
@@ -270,7 +319,7 @@ def _student_words_only(text: str, fixed: str) -> str | None:
 
 
 def _full_fixed_ok(text: str, full_fixed: str, fix: str | None) -> bool:
-    """full_fixed 가 학생 단어로만 이뤄졌는지. 관사·fix 단어 외에 새 단어가 2개 넘게 들어오거나 문장이 2단어 넘게 길어지면 거부."""
+    """full_fixed 가 학생 문장에서 크게 벗어나지 않았는지 (느슨한 검사). 관사·fix 단어 외에 새 단어가 2개 넘게 들어오거나 문장이 2단어 넘게 길어지면 거부."""
     src, dst = _tokens(text), _tokens(full_fixed)
     if not dst:
         return False
@@ -279,8 +328,9 @@ def _full_fixed_ok(text: str, full_fixed: str, fix: str | None) -> bool:
     return len(new_words) <= 2 and len(dst) <= len(src) + 2
 
 
-def _search_candidates(text: str, k: int = 3) -> tuple[list[dict], str, str | None]:
-    """RAG 검색 (rag.py 의 search_rules, RAG 담당). 반환: (후보 목록 score 내림차순, mode, fallback_reason)
+def _search_candidates(text: str, k: int) -> tuple[list[dict], str, str | None]:
+    """RAG 검색 (rag.py 의 search_rules, RAG 담당). 반환: (후보 목록, mode, fallback_reason). 호출부는 k=규칙 전부.
+    후보는 score 내림차순이되, rag.py 의 어휘 안전망(R-01)이 걸리면 그 규칙이 순서와 무관하게 뒤에 붙을 수 있다 (k=전체면 해당 없음).
     - 검색 성공 → ([{id,type,text,unit,score}, …], "rag", None)
     - 색인 없음·임베딩/질의 실패(indexing.IndexUnavailableError) 나 그 외 예외 → ([], "fallback", "search_error")
     - 결과 0건 → ([], "fallback", "no_results")
@@ -308,6 +358,18 @@ def _search_candidates(text: str, k: int = 3) -> tuple[list[dict], str, str | No
 # ─────────────────────────────────────────────
 # 학생 DB (PRD 5.2)
 # ─────────────────────────────────────────────
+def _log_failure(orig: str, student: str, level: int, unit: str, source_kind: str, reason: str, record: bool, llm_info: dict | None = None) -> None:
+    """검증 실패로 502 를 돌려주는 문장도 로그에 남긴다 (rule_id 없음, failed=이유). 규칙이 없어서 못 고친 문장 = 데이터팀이 규칙을 보탤 재료."""
+    if not record:
+        return
+    _log_sentence({
+        "log_id": "L-" + datetime.now().strftime("%Y%m%d-%H%M%S%f")[:-3], "ts": datetime.now().isoformat(timespec="seconds"),
+        "student": student, "level": level, "unit": unit, "text": orig, "source": source_kind,
+        "rule_id": None, "ok": None, "fixed": None, "failed": reason[:200], "mode": None,
+        "llm": (llm_info or {}).get("backend"), "llm_ms": (llm_info or {}).get("ms"),
+    })
+
+
 def _log_sentence(row: dict) -> None:
     STUDENT_DIR.mkdir(parents=True, exist_ok=True)
     with _lock, (STUDENT_DIR / "sentence_log.jsonl").open("a", encoding="utf-8") as f:
@@ -344,7 +406,7 @@ _STOP = {"i", "a", "an", "the", "to", "at", "in", "on", "of", "and", "is", "am",
 
 def _suggest_questions(rule: dict | None, text: str) -> list[str]:
     """더 물어보기 칩. 원칙: /ask 가 답할 수 있고(FAQ·규칙 조각 안) **방금 문장과 관련 있는** 것만. 둘 다 아니면 비워 둔다.
-    1) 틀린 규칙에 연결된 FAQ  2) 학생 문장의 단어가 들어 있는 FAQ (question·variants·example 의 영어 단어와 겹침)
+    1) 틀린 규칙에 연결된 FAQ  2) 학생 문장의 단어가 들어 있는 FAQ (question·variants 의 영어 단어와 겹침, 예문은 제외)
     3) 틀렸으면 "규칙명 예문 더 보여줘" (규칙 조각으로 답 가능). Unit 공통 질문으로 채우지 않는다 — 문장과 무관한 칩은 신뢰를 깎는다."""
     faqs = golden.faqs()
     words = {w for w in _tokens(text) if len(w) >= 3 and w not in _STOP}
@@ -366,7 +428,7 @@ def _suggest_questions(rule: dict | None, text: str) -> list[str]:
     return out[:3]
 
 
-def diagnose(text: str, level: int = 2, unit: str = "", student: str = "A", source_kind: str = "typed", record: bool = True,
+def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", source_kind: str = "typed", record: bool = True,
              backend: str | None = None, fallback: bool | None = None) -> dict:
     """/fix 의 본체. record=False 면 sentence_log·notebook 에 아무것도 쓰지 않는다 (RAG 담당 생성 평가용 → fix_internal)."""
     text = (text or "").strip()
@@ -382,8 +444,11 @@ def diagnose(text: str, level: int = 2, unit: str = "", student: str = "A", sour
         raise HTTPException(503, "rules.jsonl 이 없음 (data/golden/ 또는 _sample-B/)")
     unit_row = golden.find_unit(level, unit) or {}
 
-    # 1) 검색은 규칙 전부를 받아 둔다 (점수·순위 표시용, 38개라 비용 없음). 프롬프트엔 상위 RAG_TOP_K + Unit 규칙 + 공통 규칙. 검색 실패면 규칙 전부 (폴백)
+    # 1) 검색은 규칙 전부를 받아 둔다 (점수·순위 표시용, 38개라 비용 없음). 프롬프트엔 상위 RAG_TOP_K + Unit 규칙 + 공통 규칙 (규칙이 RAG_ALL_IF_LE 이하면 전부)
+    #    + 가짜 규칙 SPELL·OTHER. 검색 실패면 규칙 전부 (폴백)
+    t_start = time.perf_counter()
     cands, mode, fallback_reason = _search_candidates(text, k=len(all_rules))
+    timing = {"search_ms": int((time.perf_counter() - t_start) * 1000), "llm_ms": 0, "llm_calls": 0, "total_ms": 0}   # 단계별 시간 (로그·관리자용)
     if mode == "rag":
         if len(cands) != len(all_rules):                    # 색인이 rules.jsonl 과 다름 (데이터 갱신 뒤 --rebuild 안 함)
             print(f"[fix] 경고: 색인 {len(cands)}개 ≠ rules.jsonl {len(all_rules)}개 → python -m backend.indexing --rebuild 필요", flush=True)
@@ -397,7 +462,7 @@ def diagnose(text: str, level: int = 2, unit: str = "", student: str = "A", sour
     else:
         prompt_rules = all_rules
     prompt_rules = list(prompt_rules) + [SPELLING_RULE, OTHER_RULE]
-    allowed_ids = {r["id"] for r in prompt_rules}          # 모델이 고를 수 있는 규칙 = 실제로 전달한 것만 (+ SPELL)
+    allowed_ids = {r["id"] for r in prompt_rules}          # 모델이 고를 수 있는 규칙 = 실제로 전달한 것만 (SPELL·OTHER 포함)
 
     prompt = _render(
         PROMPT_FILE.read_text(encoding="utf-8"),
@@ -407,17 +472,17 @@ def diagnose(text: str, level: int = 2, unit: str = "", student: str = "A", sour
         sentence=text,
     )
     shown = [(c["id"], round(c["score"], 3)) for c in cands[:RAG_TOP_K]] if cands else [r["id"] for r in all_rules]
-    extra = [r["id"] for r in prompt_rules[RAG_TOP_K:]] if cands else []
-    print(f"[fix] student={student} unit={unit} mode={mode}{' (' + fallback_reason + ')' if fallback_reason else ''} candidates={shown} +unit/공통={extra} text={text!r}", flush=True)
+    extra = [r["id"] for r in prompt_rules[RAG_TOP_K:] if r["id"] not in (SPELLING_RULE["id"], OTHER_RULE["id"])] if cands else []
+    print(f"[fix] student={student} unit={unit} mode={mode}{' (' + fallback_reason + ')' if fallback_reason else ''} candidates={shown} +추가규칙={extra} text={text!r}", flush=True)
 
-    # 2) 생성 → 3) 검증. 검증에 걸리면 이유를 덧붙여 한 번 더 생성, 그래도 안 되면 502
+    # 2) 생성 → 3) 검증. 검증에 걸리면 이유를 덧붙여 한 번 더 생성, 그래도 안 되면 full_fixed 가 학생 단어뿐일 때 규칙 밖(OTHER)으로 살리고 아니면 502
     problem = None
     for attempt in (1, 2):
-        sent = prompt if attempt == 1 else prompt + f"\n\n## 다시: 직전 답이 규칙 위반이었다 ({problem}). 4번 규칙대로 wrong 은 문장에 있는 단어 하나, fix 는 그 단어를 바꾼 것만 쓴다."
+        sent = prompt if attempt == 1 else prompt + f"\n\n## 다시: 직전 답이 규칙 위반이었다 ({problem}). wrong 은 학생 문장에 실제로 있는 말(보통 한 단어, 어순 규칙이면 구간 전체), fix 는 그 말을 규칙에 맞게 바꾼 것만 쓴다. 학생이 안 쓴 단어를 넣거나 시간 표현을 바꾸지 않는다."
         if settings.log_prompt:                                  # 모델에 실제로 보내는 프롬프트 전문 (LOG_PROMPT=0 으로 끔)
             print(f"[fix] ── 프롬프트 ({attempt}차, {len(sent)}자, 규칙 {len(prompt_rules)}개) ──\n{sent}\n[fix] ── 프롬프트 끝 ──", flush=True)
         try:
-            out = _ask_llm(sent, backend, fallback)
+            out = _ask_llm(sent, backend, fallback, timing)
         except llm.LLMError as e:                            # 할당량·네트워크·JSON 파싱
             raise HTTPException(502, str(e))
         llm_info = out.pop("_llm", {})
@@ -456,6 +521,7 @@ def diagnose(text: str, level: int = 2, unit: str = "", student: str = "A", sour
             out["wrong"] = out["fix"] = None
             out["why"] = "우리 교과서 규칙으로는 짚기 어려운 부분이에요. 이렇게 말하면 자연스러워요."   # 잘못 짚은 규칙의 설명은 버린다
         else:
+            _log_failure(orig, student, level, unit, source_kind, problem, record, llm_info)
             raise HTTPException(502, f"모델 답이 규칙에 안 맞아 버렸어요 ({problem}). 다시 [고쳐줘]를 눌러 주세요.")
     other = (not ok) and rule_id == OTHER_RULE["id"]
     typo_pair = None
@@ -466,7 +532,15 @@ def diagnose(text: str, level: int = 2, unit: str = "", student: str = "A", sour
             print(f"[fix] 철자({wt[0]}→{ft[0]}) — 규칙 {rule_id} → 문법 ok 로 전환, 철자만 안내", flush=True)
             ok = True
         elif rule_id == SPELLING_RULE["id"]:                 # 철자 규칙인데 한 단어 쌍이 아니면 답으로 못 씀
+            _log_failure(orig, student, level, unit, source_kind, f"철자 규칙인데 단어 쌍 아님 {out.get('wrong')!r}→{out.get('fix')!r}", record, llm_info)
             raise HTTPException(502, f"모델이 철자 규칙을 골랐지만 단어 쌍이 아님 ({out.get('wrong')!r}→{out.get('fix')!r}). 다시 [고쳐줘]를 눌러 주세요.")
+    if not ok and not other:                                 # 기능어 한 개 바꾼 답(is→are, a→an)은 한 번 더 확인 — 맞는 문장을 뒤집는 오교정 방지
+        wt, ft = _tokens(out.get("wrong") or ""), _tokens(out.get("fix") or "")
+        if len(wt) == 1 and len(ft) == 1 and wt[0] in _SWAP_WORDS and ft[0] in _SWAP_WORDS:
+            cand = _single_fix(text, out.get("wrong"), out.get("fix")) or (out.get("fixed") or "")
+            if not _second_opinion(text, cand, backend, fallback, timing):
+                print(f"[fix] 재확인: {wt[0]}→{ft[0]} 고침이 더 맞다고 못 함 → 원문 유지(ok)", flush=True)
+                ok = True
     rule = golden.find_rule(rule_id) if not ok else None
 
     raw_fixed = (out.get("fixed") or text).strip()
@@ -477,10 +551,12 @@ def diagnose(text: str, level: int = 2, unit: str = "", student: str = "A", sour
         print(f"[fix] 모델이 여러 곳을 고침 → 1위 규칙만 반영: {fixed!r} → {single!r}", flush=True)
     if single:
         fixed = single                                       # 표기(첫 글자 대문자·마침표)는 항상 서버 기준으로 통일
+        if _broken(single) and not _broken(raw_fixed) and _student_words_only(text, raw_fixed) is None:
+            fixed = _tidy(raw_fixed)                         # 모델이 wrong 범위를 한 단어 짧게 잡아('go to go'→'go to') 겹말이 생기면 모델 문장을 쓴다
+            print(f"[fix] 한 곳만 바꾼 문장에 겹말 → 모델 문장 사용: {single!r} → {fixed!r}", flush=True)
     full_fixed = (out.get("full_fixed") or "").strip() or fixed
     if other:                                                # 규칙 밖: 고친 문장 하나뿐. 표기(첫 글자·마침표)는 _single_fix 와 같은 기준으로
-        fx = full_fixed.strip(); fx = fx[0].upper() + fx[1:]
-        fixed = full_fixed = fx if fx[-1] in ".!?" else fx + "."
+        fixed = full_fixed = _tidy(full_fixed)
     if not ok and not other and not _full_fixed_ok(text, full_fixed, out.get("fix")):   # 학생이 안 쓴 내용을 덧붙인 문장('to the zoo and …')은 버린다
         print(f"[fix] full_fixed 에 새 내용이 들어가 버림: {full_fixed!r} → {fixed!r}", flush=True)
         full_fixed = fixed
@@ -488,6 +564,7 @@ def diagnose(text: str, level: int = 2, unit: str = "", student: str = "A", sour
     if ok and typo_pair and not spelling:                    # 모델의 full_fixed 에 다른 것도 섞여 있으면 (wrong→fix) 한 쌍만 반영
         full_fixed = _single_fix(text, typo_pair[0], typo_pair[1]) or text
         spelling = _spelling_pairs(orig, full_fixed)
+    timing["total_ms"] = int((time.perf_counter() - t_start) * 1000)
     log_id = "L-" + datetime.now().strftime("%Y%m%d-%H%M%S%f")[:-3]
     mission = out.get("mission") if isinstance(out.get("mission"), dict) else {"ok": True, "nudge": ""}
 
@@ -524,8 +601,9 @@ def diagnose(text: str, level: int = 2, unit: str = "", student: str = "A", sour
         "log_id": log_id,
         "mode": mode,
         "fallback_reason": fallback_reason,                    # "search_error" | "no_results" | None
-        "candidates": [{"id": c["id"], "name": c["type"], "score": round(c["score"], 4)} for c in cands[:RAG_TOP_K]],   # 검색 상위 k (관리자·실험용)
+        "candidates": [{"id": c["id"], "name": c["type"], "score": round(c["score"], 4)} for c in cands[:RAG_TOP_K]],   # 검색 상위 RAG_TOP_K (관리자·실험용)
         "llm": llm_info,                                       # {"backend","model","ms","fallback_from"} — 비교 실험·관리자용
+        "timing": timing,                                      # {"search_ms","llm_ms","llm_calls","total_ms"} — 발표용 근거 박스·로그
     }
 
     if record:
@@ -537,17 +615,19 @@ def diagnose(text: str, level: int = 2, unit: str = "", student: str = "A", sour
             "mission_ok": result["mission"]["ok"], "mode": mode, "fallback_reason": fallback_reason,
             "top_score": round(top["score"], 4) if top else None,
             "llm": llm_info.get("backend"), "llm_ms": llm_info.get("ms"),
+            "total_ms": timing["total_ms"], "search_ms": timing["search_ms"], "llm_calls": timing["llm_calls"],
         })
         if rule:
             _notebook_add(student, rule["id"], log_id)
+    print(f"[fix] 시간: 전체 {timing['total_ms']}ms = 검색 {timing['search_ms']}ms + 모델 {timing['llm_ms']}ms ({timing['llm_calls']}회) + 나머지", flush=True)
     print(f"[fix] 결과: ok={ok} rule={rule['id'] if rule else None} mode={mode} fixed={result['fixed']!r} more_errors={result['more_errors']} "
           f"mission_ok={result['mission']['ok']} log_id={log_id}{'' if record else ' (기록 안 함)'}", flush=True)
     return result
 
 
-def fix_internal(text: str, level: int = 2, unit: str = "", backend: str | None = None, fallback: bool | None = None) -> dict:
+def fix_internal(text: str, level: int = 3, unit: str = "", backend: str | None = None, fallback: bool | None = None) -> dict:
     """POST /fix 와 같은 로직이되 sentence_log·notebook 에 기록하지 않는다. 반환 형식은 /fix 응답과 동일.
-    RAG 담당의 생성 평가(tests/eval_rag.py --with-generation)용 (인계문서 6번). HTTPException 은 그대로 올라간다."""
+    tests/eval_fix.py(모델·조건 비교)가 쓴다. RAG 담당의 생성 평가(eval_rag --with-generation, 예정)도 이걸 부르면 된다. HTTPException 은 그대로 올라간다."""
     return diagnose(text, level=level, unit=unit, student="EVAL", source_kind="eval", record=False, backend=backend, fallback=fallback)
 
 

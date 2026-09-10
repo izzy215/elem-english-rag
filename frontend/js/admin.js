@@ -1,5 +1,5 @@
 /* 관리자 (PRD 3.7 · docs/plan-B/mockup.html 관리자 웹)
- * 골든 데이터 파일별 개수(/api/admin/golden) · RAG 정확도(/api/rag/eval) · 학생 문장 로그(/api/admin/log)
+ * 골든 데이터 파일별 개수(/api/admin/golden) · RAG 정확도(/api/rag/eval) · 학생 문장 로그 + 우리 규칙으로 못 짚은 문장(/api/admin/log 의 rows·gaps)
  * 서버에 아직 없는 API(404)면 그 패널만 "서버 재시작 필요" 로 두고 나머지는 그린다.
  */
 const pct = v => v == null ? '–' : Math.round(v * 100) + '%';
@@ -42,7 +42,7 @@ async function loadEval() {
     <div class="bar"><span>${esc(x.label)}</span>
       <div class="track"><i class="${x.hit_at_3 === best ? 'best' : ''}" style="width:${Math.round((x.hit_at_3 || 0) * 100)}%"></i></div>
       <span class="v">${pct(x.hit_at_3)}</span></div>`).join('') : '';
-  const extra = [r.hit_at_5 != null ? `hit@5 ${pct(r.hit_at_5)} (/fix 가 받는 후보 5개 안)` : '', r.evaluated_at ? `${when(r.evaluated_at)} 측정` : '', r.index?.model ? esc(r.index.model) : ''].filter(Boolean).join(' · ');
+  const extra = [r.hit_at_5 != null ? `hit@5 ${pct(r.hit_at_5)} (/fix 가 받는 검색 후보 안 — tutor.py RAG_TOP_K=5 와 같이 바꿀 것)` : '', r.evaluated_at ? `${when(r.evaluated_at)} 측정` : '', r.index?.model ? esc(r.index.model) : ''].filter(Boolean).join(' · ');
   $('#evalHint').innerHTML = (r.hit_at_3 >= .8 ? '목표(80%) 달성' : '목표 80%까지 ' + Math.round((.8 - r.hit_at_3) * 100) + '%p 남음') + (extra ? ' · ' + extra : '');
 }
 
@@ -63,6 +63,14 @@ async function loadLog() {
     <tr><td>${esc(x.name)} <span style="color:var(--muted);font-size:.75rem">${esc(x.rule_id)}</span></td>
       <td class="n">${i === 0 ? `<b>${x.count}</b>` : x.count}</td><td class="n">${x.students}</td><td>${esc(x.example)}</td></tr>`).join('');
   $('#logHint').textContent = 'data/student/sentence_log.jsonl 집계 · 맞은 문장(ok)은 개수에만 들어가요';
+  renderGaps(r.gaps || []);
+}
+function renderGaps(gaps) {
+  if (!gaps.length) { $('#gapTable').innerHTML = ''; $('#gapHint').innerHTML = '<div class="empty">이 기간에는 없어요.</div>'; return; }
+  $('#gapTable').innerHTML = `<tr><th>때</th><th>학생 문장</th><th>구분</th><th>고친 문장 / 이유</th></tr>` + gaps.map(g => `
+    <tr><td class="n">${esc(when(g.ts))}</td><td>${esc(g.text)}</td><td><span class="pill ${g.kind === '규칙 밖' ? 'idx' : 'warn'}">${esc(g.kind)}</span></td>
+      <td>${esc(g.fixed || g.reason)}</td></tr>`).join('');
+  $('#gapHint').textContent = `${gaps.length}건 (최근 30개까지)`;
 }
 
 (async function init() {
