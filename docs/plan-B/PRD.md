@@ -310,5 +310,5 @@ drill_log.jsonl     {"ts":"...","student":"A","rule_id":"R-01","correct":true}
 | 고친 문장 듣기 | 미구현 · 보류 (`/tts/text` 없음) |
 | 단어 4지선다 | △ 시간 남으면 |
 | 챗 턴 제한 · 추천 질문 출처 | 3턴 · faq.jsonl 에서 |
-| BigQuery 주간 리포트 | 11일차 여유 시. sentence_log → 집계 → Gemini 리포트 문장 (관리자 패널) |
+| BigQuery 주간 리포트 | 11일차 여유 시. sentence_log → 집계 → Gemini 리포트 문장 (관리자 패널) · 지시서 bigquery-report-plan.md |
 | 표현 익히기 범위 | 단어 8 + 패턴 3 (축소) |
