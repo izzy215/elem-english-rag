@@ -12,7 +12,7 @@ project/
 │   ├─ rag.py         ✓ Chroma 검색 → /rag/search · /rag/eval (search_rules, 순수 임베딩 순위 — 어휘 안전망은 0910 제거) — RAG 담당
 │   ├─ indexing.py    ✓ 색인 생성·검증 (`python -m backend.indexing --rebuild` / `--validate-only`) — RAG 담당
 │   ├─ embedding.py   ✓ gemini-embedding-001 (3072차원) 임베딩 — RAG 담당
-│   ├─ tutor.py       ✓ /fix 내 문장 고쳐주기 (RAG 검색 + 후보 규칙 + LLM + 서버 검증 · 철자 · 규칙 밖) — 팀장
+│   ├─ tutor.py       ✓ /fix 내 문장 고쳐주기 (RAG 검색 + 후보 규칙 + LLM + 서버 검증 · 철자 · 규칙 밖). 검증 허용 목록은 errors.jsonl 에서 생성(_allow) — 팀장
 │   ├─ llm.py         ✓ LLM 스위치 (LLM_BACKEND=gemini | claude | 엔드포인트 이름, 실패 시 gemini 폴백) — 팀장
 │   ├─ ask.py         ✓ /ask 물어보기 챗 (FAQ 로컬 매칭 + LLM, RAG 연결 예정) — TTS 팀원
 │   ├─ student.py     ✓ 오답노트 읽기 /notebook (쓰기는 tutor.py · drill.py 가 함) — 팀장
@@ -47,7 +47,7 @@ project/
 │   ├─ plan-B/        ✓ 확정 — 내 문장 고쳐주기 튜터 (기획서 · PRD · 목업 · 데이터 계획 · 다이어그램)
 │   ├─ archive/plan-A/  보관 — 단어 4지선다 안
 │   └─ common/        아키텍처 흐름도 · 데이터 파이프라인 원본 그림
-├─ tests/             평가셋 돌리는 스크립트 등
+├─ tests/             평가셋 돌리는 스크립트 등 (check_allowlist.py: 검증 허용 목록이 errors.jsonl 을 다 덮는지 — LLM 호출 없음)
 ├─ .env.example       설정 항목 (복사해서 .env 로)
 └─ requirements.txt
 ```
