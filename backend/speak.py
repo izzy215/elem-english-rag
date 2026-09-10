@@ -195,20 +195,11 @@ def _rag_rule_hint(text: str) -> dict | None:
         return None
 
 
-_ENGLISH_STOPWORDS = {
-    "a", "an", "the", "i", "you", "he", "she", "we", "they", "it", "is", "are", "was", "were",
-    "am", "be", "been", "being", "do", "does", "did", "have", "has", "had", "to", "of", "in",
-    "on", "at", "for", "with", "from", "as", "and", "but", "or", "if", "this", "that", "these",
-    "those", "will", "would", "can", "could", "my", "your", "his", "her", "our", "their",
-    "write", "go", "goes", "want", "know", "let", "me", "not", "no", "so", "one",
-    "what", "why", "how", "who", "when", "where", "mean", "means", "please", "right",
-}
-
-
 def _vocab_words_in(text: str, vocab_set: set[str]) -> set[str]:
-    """text 안에서 vocab_set(소문자)에 있는 "의미 있는" 영단어만 뽑는다 — 관사·be동사·전치사 같은
-    문법 단어는 목록에 있어도 힌트로 안 씀(2026-09-10, "have"/"to"/"write" 가 힌트를 흐리는 걸 확인)."""
-    return {w for w in re.findall(r"[A-Za-z']+", text.lower()) if w in vocab_set and w not in _ENGLISH_STOPWORDS}
+    """text 안에서 vocab_set(소문자)에 있는 영단어를 뽑는다. 불용어 필터 없이 그대로 —
+    "what" 같은 흔한 단어가 힌트로 잡혀 병합이 완전 영어 문장으로 새는 경우가 있음(2026-09-10,
+    알려진 한계로 감수하고 보류 — 다른 방식으로 재검토 예정)."""
+    return {w for w in re.findall(r"[A-Za-z']+", text.lower()) if w in vocab_set}
 
 
 def _avg_logprob(result: dict) -> float:
