@@ -7,12 +7,13 @@ Ollama처럼 별도 프로세스로 nohup 실행). 이 프로젝트 앱이 임�
     pip install fastapi uvicorn sentence-transformers
     nohup python embed_server.py > embed_server.log 2>&1 &
 
-backend/embedding.py 쪽에서 쓰려면 .env 에 EMBEDDING_BACKEND=remote,
-EMBEDDING_REMOTE_URL=http://192.168.1.147:8002 추가.
+팀원마다 원하는 모델을 요청에서 골라 쓸 수 있다(whisper_server.py의 모델 이름별 캐시와 동일한
+패턴) — 서버 재시작 없이 여러 모델을 동시에 테스트 가능. 단, 모델마다 GPU 메모리를 새로 쓰니
+너무 많은 대형 모델을 한꺼번에 캐시하면 GPU 메모리가 부족해질 수 있다(필요하면 서버 재시작으로
+캐시 비우기). tests/embedding_backend_compare.py --backend remote --model <이름> 으로 지정.
 
-서버 하나당 모델 하나만 상시 로드한다(GPU 메모리 절약) — 다른 모델로 테스트하려면
-EMBED_SERVER_MODEL 바꿔서 재시작. 2026-09-10 실측(hit@1, n=65) 기준 로컬 후보 중
-최고는 intfloat/multilingual-e5-base(0.7231) — 기본값으로 지정해둠.
+2026-09-10 로컬 실측(hit@1, n=65) 기준 로컬 후보 중 최고는 intfloat/multilingual-e5-base
+(0.7231) — 요청에 model을 안 주면 이걸 기본값으로 씀.
 """
 import os
 
@@ -21,16 +22,23 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 
-MODEL_NAME = os.environ.get("EMBED_SERVER_MODEL", "intfloat/multilingual-e5-base")
+DEFAULT_MODEL = os.environ.get("EMBED_SERVER_MODEL", "intfloat/multilingual-e5-base")
 PORT = int(os.environ.get("EMBED_SERVER_PORT", "8002"))
 
 app = FastAPI()
-_model = SentenceTransformer(MODEL_NAME, device="cuda")
+_models: dict[str, "SentenceTransformer"] = {}   # 모델 이름별 캐시 — 팀원마다 다른 모델 요청해도 한 번만 로드
+
+
+def _get_model(name: str):
+    if name not in _models:
+        _models[name] = SentenceTransformer(name, device="cuda")
+    return _models[name]
 
 
 class EmbedIn(BaseModel):
     texts: list[str]
     task_type: str = "RETRIEVAL_DOCUMENT"   # "RETRIEVAL_DOCUMENT" | "RETRIEVAL_QUERY"
+    model: str = DEFAULT_MODEL
 
 
 def _needs_e5_prefix(name: str) -> bool:
@@ -39,17 +47,18 @@ def _needs_e5_prefix(name: str) -> bool:
 
 @app.post("/embed")
 def embed(body: EmbedIn):
+    model = _get_model(body.model)
     texts = body.texts
-    if _needs_e5_prefix(MODEL_NAME):
+    if _needs_e5_prefix(body.model):
         prefix = "passage: " if body.task_type == "RETRIEVAL_DOCUMENT" else "query: "
         texts = [prefix + t for t in texts]
-    vectors = _model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
-    return {"embeddings": [[float(x) for x in v] for v in vectors], "model": MODEL_NAME}
+    vectors = model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
+    return {"embeddings": [[float(x) for x in v] for v in vectors], "model": body.model}
 
 
 @app.get("/health")
 def health():
-    return {"ok": True, "model": MODEL_NAME, "device": str(_model.device)}
+    return {"ok": True, "models_loaded": list(_models.keys()), "default_model": DEFAULT_MODEL}
 
 
 if __name__ == "__main__":

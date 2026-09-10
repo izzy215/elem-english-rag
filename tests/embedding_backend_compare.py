@@ -10,8 +10,9 @@ backend.embedding 모듈의 embed_documents/embed_query 를 바꿔치기(monkeyp
     python -m tests.embedding_backend_compare --backend gemini
     python -m tests.embedding_backend_compare --backend local --model intfloat/multilingual-e5-base
         (pip install sentence-transformers 필요)
-    python -m tests.embedding_backend_compare --backend remote --url http://192.168.1.147:8002
-        (강의실 서버에 backend/embed_server.py 를 먼저 띄워둬야 함)
+    python -m tests.embedding_backend_compare --backend remote --url http://192.168.1.147:8002 --model BAAI/bge-m3
+        (강의실 서버에 backend/embed_server.py 를 먼저 띄워둬야 함. --model 로 원하는 모델을
+        자유롭게 골라 쓸 수 있음 — 서버가 처음 요청받은 모델이면 그때 GPU에 로드해 캐시함)
 
 주의: 실행하면 data/chroma/ 의 실제 색인을 그 백엔드로 다시 만든다 — data/chroma/ 는 팀원과
 공유되는 게 아니라 각자 로컬 파일이라 안전함(.gitignore). 다 써보고 원래 쓰던 백엔드로
@@ -117,7 +118,11 @@ def _patch_remote(url: str, model_name: str) -> None:
     def _embed(texts: list[str], task_type: str) -> list[list[float]]:
         if not texts:
             return []
-        resp = requests.post(url.rstrip("/") + "/embed", json={"texts": texts, "task_type": task_type}, timeout=30)
+        resp = requests.post(
+            url.rstrip("/") + "/embed",
+            json={"texts": texts, "task_type": task_type, "model": model_name},
+            timeout=60,   # 서버가 이 모델을 처음 요청받으면 그 자리에서 로드하느라 오래 걸릴 수 있음
+        )
         resp.raise_for_status()
         vectors = resp.json()["embeddings"]
         if vectors:
