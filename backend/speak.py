@@ -195,6 +195,21 @@ def _rag_rule_hint(text: str) -> dict | None:
         return None
 
 
+_ENGLISH_STOPWORDS = {
+    "a", "an", "the", "i", "you", "he", "she", "we", "they", "it", "is", "are", "was", "were",
+    "am", "be", "been", "being", "do", "does", "did", "have", "has", "had", "to", "of", "in",
+    "on", "at", "for", "with", "from", "as", "and", "but", "or", "if", "this", "that", "these",
+    "those", "will", "would", "can", "could", "my", "your", "his", "her", "our", "their",
+    "write", "go", "goes", "want", "know", "let", "me", "not", "no", "so", "one",
+}
+
+
+def _vocab_words_in(text: str, vocab_set: set[str]) -> set[str]:
+    """text 안에서 vocab_set(소문자)에 있는 "의미 있는" 영단어만 뽑는다 — 관사·be동사·전치사 같은
+    문법 단어는 목록에 있어도 힌트로 안 씀(2026-09-10, "have"/"to"/"write" 가 힌트를 흐리는 걸 확인)."""
+    return {w for w in re.findall(r"[A-Za-z']+", text.lower()) if w in vocab_set and w not in _ENGLISH_STOPWORDS}
+
+
 def _avg_logprob(result: dict) -> float:
     """model.transcribe() 결과의 세그먼트별 평균 로그확률(Whisper 자체 신뢰도)을 평균낸다.
     0에 가까울수록(덜 음수) 자신 있게 들었다는 뜻. 세그먼트가 없으면(무음 등) 아주 낮은 값."""
@@ -225,7 +240,9 @@ def hybrid_stt(audio_base64: str, mime: str, student: str = "") -> str:
     병합 실패 시 한국어 강제 인식 결과를 그대로 반환한다."""
     unit, rule_id, level = _recent_context(student)
     unit_scope = list({unit, *_notebook_units(student)} - {None}) if unit else _notebook_units(student)
-    vocab = ", ".join(golden.known_english_vocab(unit_scope or None))
+    vocab_list = golden.known_english_vocab(unit_scope or None)
+    vocab = ", ".join(vocab_list)
+    vocab_set = {v.lower() for v in vocab_list}
 
     # initial_prompt 로 vocab 힌트를 줘봤으나 오탐·반복 루프가 더 늘어 실측상 안 씀(2026-09-09)
     korean_guess, ko_conf = _transcribe(audio_base64, mime, "ko")
@@ -241,7 +258,8 @@ def hybrid_stt(audio_base64: str, mime: str, student: str = "") -> str:
         print(f"[hybrid_stt] en 강제가 한글 없고 신뢰도도 더 높아 그대로 사용", flush=True)
         return english_guess
     print(f"[hybrid_stt] unit={unit} rule_id={rule_id} vocab={vocab!r}", flush=True)
-    rag_hit = _rag_rule_hint(korean_guess)  # rag.py 완성 전까지는 항상 None
+    rag_hit = _rag_rule_hint(korean_guess)
+    print(f"[hybrid_stt] rag_hit={rag_hit['id'] if rag_hit else None}", flush=True)
     rule = golden.find_rule(rule_id) if rule_id else None
     unit_info = golden.find_unit(level, unit) if (unit and level) else None
     if rag_hit:
@@ -252,6 +270,13 @@ def hybrid_stt(audio_base64: str, mime: str, student: str = "") -> str:
         topic_line = f'이 학생은 지금 "{unit_info["title"]}" 유닛 내용에 대해 물어보는 중이다.\n'
     else:
         topic_line = ""
+    # en 강제 인식에만 걸린 학습 단어(ko 강제가 다른 소리로 잘못 들었을 가능성) — 신뢰도로는 못
+    # 걸러내서(en 신뢰도가 항상 더 낮게 나옴, 2026-09-10 실측: cat/friend 등) 단어 등장 여부로 직접 힌트
+    en_only_words = _vocab_words_in(english_guess, vocab_set) - _vocab_words_in(korean_guess, vocab_set)
+    word_hint = ""
+    if en_only_words:
+        word_hint = f'주의: (B)에는 있는데 (A)에는 없는 학습 단어가 있다: {", ".join(sorted(en_only_words))} — (A)가 이 단어를 다른 소리로 잘못 들었을 가능성이 높으니 이 단어를 살려서 합쳐라.\n'
+        print(f"[hybrid_stt] word_hint={en_only_words}", flush=True)
     prompt = f"""아래는 초등학생이 영어 수업 챗봇에게 "질문이나 요청"을 하나 말한 음성을, 로컬
 STT(Whisper)로 두 번 받아쓴 결과다(이 마이크는 챗봇한테 뭔가를 묻거나 부탁하는 용도로만 쓴다 —
 "왜 ~예요?"처럼 물음표로 끝나는 질문일 수도 있고, "~보여줘"/"~만들어줘"/"~알려줘"처럼 부탁하는
@@ -261,14 +286,15 @@ STT(Whisper)로 두 번 받아쓴 결과다(이 마이크는 챗봇한테 뭔가
 - (B) 영어라고 가정하고 받아쓴 결과: "{english_guess}"
 
 이 학생은 한국어 질문/요청 안에 아래 영어 수업 단어 목록 중 하나 이상을 섞어서 말하고 있다: {vocab}
-{topic_line}
+{topic_line}{word_hint}
 A는 한국어 조사/어미(예: 은, 는, 예요, 이에요)는 맞을 가능성이 높지만 그 안의 영어 단어를 한국어 발음으로 잘못 옮겼을 수 있고,
 B는 영어 단어 자체는 맞게 알아들었을 가능성이 높지만 나머지 한국어 부분은 엉뚱한 영어로 잘못 들었을 수 있다.
 두 결과와 단어 목록(+방금 다루던 규칙이 있다면 그 맥락)을 참고해서, 실제로 학생이 챗봇에게 물어보거나
 부탁했을 것 같은 한국어+영어 혼용 문장 하나만 출력해라. 목록에 있는 단어를 쓸 땐 목록에 적힌 형태
 그대로 써라(예: eats 를 eat 로 바꾸지 말 것).
-중요: A와 B가 서로 너무 달라서 공통된 문장을 짐작하기 어려우면, 억지로 새 문장을 지어내지 말고
-A를 그대로 출력해라. 학생 문장은 기본적으로 한국어 질문/요청이니, 결과가 영어 평서문 전체로
+중요: A와 B가 서로 너무 달라서 공통된 문장을 짐작하기 어려우면(단, 위 "주의" 힌트에 나온 단어는
+예외 — 그 단어만은 살려서 A에 반영해라), 억지로 새 문장을 지어내지 말고 A를 그대로 출력해라.
+학생 문장은 기본적으로 한국어 질문/요청이니, 결과가 영어 평서문 전체로
 바뀌거나 챗봇과 무관한 일반 사실 설명이 되면 안 된다.
 출력 형식: 문장 하나만, 있는 그대로의 순수 텍스트로 출력해라. JSON·중괄호·따옴표로 감싸기·코드펜스는
 절대 쓰지 말 것. 그리고 이건 번역이 아니다 — A/B에 나온 단어를 그대로 골라 이어붙이기만 하고,
