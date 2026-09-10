@@ -125,9 +125,7 @@ def _pattern_match(question: str, patterns_pool: list[dict], faq_list: list[dict
 
 def _local_match(question: str, faq_list: list[dict], rule_list: list[dict],
                   words_pool: dict[str, dict], patterns_pool: list[dict]) -> dict | None:
-    """1순위 faq.jsonl(질문+variants), 2순위 rules.jsonl(유형명+짧은 힌트), 3순위 patterns.csv(예문
-    전체 문장), 4순위 words.csv(단어 하나) 순으로 로컬 매칭. 전부 실패하거나 RAG 힌트와 크게 어긋나면
-    (단어겹침 오탐 방지, 2026-09-10) None → 폴백."""
+    """faq→rules→patterns→words 순으로 로컬 매칭. 전부 실패하거나 RAG 힌트와 어긋나면 None → 폴백."""
     rag_rule_id, rag_score = _rag_hint_rule_id(question)
 
     def _rag_disagrees(rule_ids: list[str]) -> bool:
@@ -340,9 +338,7 @@ def ask(body: AskIn):
     answer = out.get("answer") or ""
     offtopic = bool(out.get("offtopic"))
     if offtopic and len(answer.strip()) >= 15:
-        # "목록에 없으면 답하지 마라"는 지시를 모델이 offtopic=true 로는 지키면서도
-        # answer 에는 실제로 유용한 설명을 주는 경우가 잦음(2026-09-10 실측, banana 등 —
-        # 프롬프트가 정한 "진짜 못 답함" 응답("선생님한테 물어볼까?")은 짧다) → 이땐 offtopic 취소
+        # 모델이 offtopic=true 라면서도 answer 는 유용하게 주는 경우가 잦음 — 진짜 못 답한 응답은 짧다
         print(f"[ask] offtopic=true인데 answer가 길어서(len={len(answer)}) offtopic 취소", flush=True)
         offtopic = False
 
