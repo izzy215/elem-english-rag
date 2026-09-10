@@ -35,15 +35,28 @@ K_MIN, K_MAX = 1, 10   # 현재 규칙 8개 기준 여유 있게 잡은 상한. 
 # 검색에 끼워넣는 게 아니라 "이 규칙이 실제로 관련 있을 가능성이 있는 문장"일 때만 작동한다.
 _LEXICAL_SAFETY_NET: dict[str, dict[str, set[str]]] = {
     "R-01": {
-        # errors.jsonl 의 R-01 오답 예문(26개)에서 실제로 쓰인 형용사 — 임의 확장이 아니라 데이터 근거
+        # errors.jsonl 의 R-01 오답 예문(26개)에서 실제로 쓰인 형용사 + 2026-09-10 홀드아웃
+        # 검증(docs/RAG_0910/RAG_0910_작업요약.md §4)에서 놓친 "sleepy"류 유의어를 초등 수준
+        # 흔한 형용사로 확장. R-01 규칙 자체가 "형용사 전부"를 대상으로 하므로 목록이 넓을수록
+        # 규칙 취지에 맞다 — exclude(아래)가 오탐 방지를 맡는다.
         "trigger": {
             "sorry", "polite", "formal", "endangered", "colorful", "bright", "pale", "vivid",
             "humid", "foggy", "seasonal", "annual", "temperate", "punctual", "urban", "happy",
             "sad", "angry", "tired", "hungry", "excited", "scared", "surprised", "bored",
             "nervous", "spacious",
+            # 유의어·추가 흔한 형용사 (2026-09-10 확장)
+            "sleepy", "thirsty", "sick", "hurt", "upset", "worried", "curious", "proud",
+            "shy", "brave", "jealous", "confused", "embarrassed", "lonely", "cold", "hot",
+            "warm", "cool", "busy", "ready", "late", "early", "kind", "rude", "smart",
+            "clever", "silly", "funny", "strange", "weird", "easy", "difficult", "heavy",
+            "light", "strong", "weak", "clean", "dirty", "wet", "dry", "full", "empty",
+            "rich", "poor", "beautiful", "pretty", "ugly", "cute", "delicious", "sweet",
+            "loud", "quiet", "safe", "dangerous", "famous", "popular",
         },
-        # be동사가 이미 있으면 "빠진" 문장이 아니므로 안전망을 걸지 않는다
+        # be동사가 이미 있으면 "빠진" 문장이 아니므로 안전망을 걸지 않는다 — 축약형(she's,
+        # they're, I'm)도 잡아야 하므로 토큰 자체와 접미사(끝나는 형태) 둘 다 확인한다
         "exclude": {"am", "is", "are", "was", "were", "be", "being", "been"},
+        "exclude_suffix": ("'m", "'re", "'s"),
     },
 }
 
@@ -60,6 +73,8 @@ def _apply_lexical_safety_net(text: str, ranked: list[dict], out: list[dict]) ->
         if not (tokens & cond["trigger"]):
             continue
         if tokens & cond.get("exclude", set()):
+            continue
+        if any(t.endswith(cond.get("exclude_suffix", ())) for t in tokens):
             continue
         boosted = next((c for c in ranked if c["id"] == rule_id), None)
         if boosted:
