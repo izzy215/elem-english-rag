@@ -1,0 +1,24 @@
+# 시연 문장 세트 — "시연 모델 결정" 비교용 (python -m tests.eval_fix --sentences tests/demo_sentences.txt --backend <이름>)
+# 한 줄 한 문장. '#' 로 시작하는 줄은 주석. 문장 뒤 "  # 메모" 는 표의 메모 칸에 들어간다.
+# 정답 규칙은 없다 — 표에는 결과 종류(맞음 / 규칙 id / 규칙 밖 / 실패)와 고친 문장만 적힌다.
+
+# ── PRD 2장 데모 시나리오 (docs/plan-B/PRD.md) ──
+I go to the zoo yesterday  # 데모 3~5: 과거시제 go→went (근거 R-31, 2위 관사)
+I saw a rabbit.  # 데모 2: 표현 익히기 패턴 문장 (맞는 문장)
+
+# ── 2026-09-10 문제가 됐던 문장 ──
+i went to go to zoo
+i went to go to the zoo tomorrow
+my family is good
+I am wearing a read dreass.
+i hate vegetibals
+nice meet you
+I drew zoo yesterday.
+I saw a elephant.
+He tired after school.
+My mother don't like cooking spicy food.
+
+# ── 맞는 문장 (오교정 확인용) ──
+I want to go to the zoo.
+She likes apples.
+I went to the park yesterday.

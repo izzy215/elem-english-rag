@@ -43,7 +43,19 @@ async function loadEval() {
       <div class="track"><i class="${x.hit_at_3 === best ? 'best' : ''}" style="width:${Math.round((x.hit_at_3 || 0) * 100)}%"></i></div>
       <span class="v">${pct(x.hit_at_3)}</span></div>`).join('') : '';
   const extra = [r.hit_at_5 != null ? `hit@5 ${pct(r.hit_at_5)} (/fix 가 받는 검색 후보 안 — tutor.py RAG_TOP_K=5 와 같이 바꿀 것)` : '', r.evaluated_at ? `${when(r.evaluated_at)} 측정` : '', r.index?.model ? esc(r.index.model) : ''].filter(Boolean).join(' · ');
-  $('#evalHint').innerHTML = (r.hit_at_3 >= .8 ? '목표(80%) 달성' : '목표 80%까지 ' + Math.round((.8 - r.hit_at_3) * 100) + '%p 남음') + (extra ? ' · ' + extra : '');
+  const stale = (r.stale && r.evaluation_hash) ? ' · <span class="pill warn">색인·시험지가 평가 뒤에 바뀜 — eval_rag 다시 돌려야 함</span>' : '';   // evaluation_hash 는 eval_rag 가 아직 안 써서(RAG 담당) 그 전엔 stale 이 항상 true → 값이 생긴 뒤에만 표시
+  $('#evalHint').innerHTML = (r.hit_at_3 >= .8 ? '목표(80%) 달성' : '목표 80%까지 ' + Math.round((.8 - r.hit_at_3) * 100) + '%p 남음') + (extra ? ' · ' + extra : '') + stale;
+  renderMiss(r.rows || []);
+}
+function renderMiss(rows) {   // 검색이 3위 안에 정답 규칙을 못 넣은 시험 문장 — 어느 규칙을 놓쳤고 대신 무엇을 골랐나 (RAG 담당·데이터팀이 볼 곳)
+  const miss = rows.filter(x => !x.is_normal && !x.hit_at_3);
+  if (!rows.length) { $('#missTable').innerHTML = ''; $('#missHint').textContent = ''; return; }
+  if (!miss.length) { $('#missTable').innerHTML = ''; $('#missHint').textContent = '놓친 문장 없음 — 오류 문장 전부 3위 안에 정답 규칙이 들어 있어요'; return; }
+  const name = c => `${esc(c.id)} ${esc(c.type || '')}`;
+  $('#missTable').innerHTML = `<tr><th>놓친 문장</th><th>정답 규칙</th><th>검색이 고른 1~3위</th></tr>` + miss.map(x => `
+    <tr><td>${esc(x.text)}</td><td><b>${esc(x.expected_rule_id)}</b></td>
+      <td>${(x.candidates || []).slice(0, 3).map(c => `${name(c)} <span style="color:var(--muted)">${(c.score ?? 0).toFixed(2)}</span>`).join(' · ')}${x.error ? ` <span class="pill warn">${esc(x.error)}</span>` : ''}</td></tr>`).join('');
+  $('#missHint').textContent = `놓친 문장 ${miss.length}개 — 이 규칙들의 설명문·예문을 보강하거나(데이터팀) 검색 방식을 손보는(RAG 담당) 근거`;
 }
 
 // ---------- 학생 문장 로그 ----------
@@ -57,7 +69,8 @@ async function loadLog() {
     return;
   }
   const llm = Object.entries(r.llm || {}).map(([k, v]) => `${esc(k)} ${v}`).join(' · ');
-  $('#logDesc').innerHTML = `문장 <b>${r.n}</b>개 · 맞음 ${r.ok_n} · 고침 ${r.n - r.ok_n} · 학생 ${r.students}명${llm ? ` · 처리 모델: ${llm}` : ''}`;
+  const tm = r.timing ? ` · 평균 응답 <b>${(r.timing.total_ms / 1000).toFixed(1)}초</b> (검색 ${(r.timing.search_ms / 1000).toFixed(1)}초 · 모델 호출 ${r.timing.llm_calls}회, ${r.timing.n}문장 기준)` : '';
+  $('#logDesc').innerHTML = `문장 <b>${r.n}</b>개 · 맞음 ${r.ok_n} · 고침 ${r.n - r.ok_n} · 학생 ${r.students}명${llm ? ` · 처리 모델: ${llm}` : ''}${tm}`;
   if (!r.rows.length) { $('#logTable').innerHTML = ''; $('#logHint').innerHTML = '<div class="empty">이 기간에 고친 문장이 없어요.</div>'; return; }
   $('#logTable').innerHTML = `<tr><th>규칙</th><th style="text-align:right">걸린 횟수</th><th style="text-align:right">학생 수</th><th>예시 문장 (최근)</th></tr>` + r.rows.map((x, i) => `
     <tr><td>${esc(x.name)} <span style="color:var(--muted);font-size:.75rem">${esc(x.rule_id)}</span></td>
@@ -67,14 +80,52 @@ async function loadLog() {
 }
 function renderGaps(gaps) {
   if (!gaps.length) { $('#gapTable').innerHTML = ''; $('#gapHint').innerHTML = '<div class="empty">이 기간에는 없어요.</div>'; return; }
-  $('#gapTable').innerHTML = `<tr><th>때</th><th>학생 문장</th><th>구분</th><th>고친 문장 / 이유</th></tr>` + gaps.map(g => `
-    <tr><td class="n">${esc(when(g.ts))}</td><td>${esc(g.text)}</td><td><span class="pill ${g.kind === '규칙 밖' ? 'idx' : 'warn'}">${esc(g.kind)}</span></td>
-      <td>${esc(g.fixed || g.reason)}</td></tr>`).join('');
-  $('#gapHint').textContent = `${gaps.length}건 (최근 30개까지)`;
+  $('#gapTable').innerHTML = `<tr><th>때</th><th>학생 문장</th><th>어떻게 걸렸나</th><th>쓴 모델</th><th>고친 문장 / 이유</th></tr>` + gaps.map(g => `
+    <tr><td class="n">${esc(when(g.ts))}</td><td>${esc(g.text)}</td><td><span class="pill ${g.kind === '규칙 밖' ? 'idx' : g.kind === '생성 점검' ? 'ok' : 'warn'}">${esc(g.kind)}</span></td>
+      <td class="f">${esc(g.llm || '')}</td><td>${g.kind === '생성 점검' ? `${esc(g.reason)}${g.fixed ? ` · 만든 모델의 정답: ${esc(g.fixed)}` : ''}` : esc(g.fixed || g.reason)}</td></tr>`).join('');
+  $('#gapHint').textContent = `${gaps.length}건 · "규칙 밖" = 튜터가 규칙 없이 고침, "진단 실패" = 튜터가 고치지 못함 (둘 다 학생 로그) · "생성 점검" = 아래 패널에서 만든 문장 중 우리 규칙에 없는 오류인데 튜터가 맞다고 한 것 (만든 모델의 판단이라 사람이 확인)`;
+}
+
+// ---------- 생성 점검 (POST /api/admin/gen_gaps → 백그라운드, GET 으로 진행·결과) ----------
+const RES = { ok: ['맞는 문장이라고 함', 'ok'], rule: ['규칙으로 고침', ''], OTHER: ['규칙 없이 고침(규칙 밖)', 'bad'], fail: ['고치지 못함(오류)', 'bad'], llm_err: ['모델 호출 실패', 'bad'] };
+let genTimer = null;
+async function loadGen() {
+  let r = null;
+  try { r = await api('/api/admin/gen_gaps'); }
+  catch (e) { $('#genStatus').innerHTML = e.status === 404 ? '<span class="tag">서버 재시작 필요</span> <code>/api/admin/gen_gaps</code> (backend/gapcheck.py)' : '읽기 실패: ' + esc(e.message); return; }
+  const sel = $('#genBackend');
+  if (!sel.options.length) sel.innerHTML = (r.backends || []).map(b => `<option value="${esc(b)}" ${b === r.default_backend ? 'selected' : ''}>${esc(b)}${b === r.default_backend ? ' (.env 기본)' : ''}</option>`).join('');
+  const j = r.job || {};
+  $('#genBtn').disabled = !!j.running;
+  if (j.running) {
+    $('#genStatus').innerHTML = `⏳ ${esc(j.backend)} 로 ${j.done}/${j.total} 진단 중… ${esc((j.log || []).slice(-1)[0] || '문장 만드는 중')}`;
+    if (!genTimer) genTimer = setInterval(loadGen, 3000);
+    return;
+  }
+  if (genTimer) { clearInterval(genTimer); genTimer = null; loadLog(); }
+  const g = r.latest || {};
+  if (j.error) { $('#genStatus').innerHTML = `<span class="pill warn">실패</span> ${esc(j.error)}`; }
+  else if (!g.results) { $('#genStatus').innerHTML = '<div class="empty">아직 돌린 적이 없어요. 모델을 고르고 [실행]을 눌러 주세요.</div>'; $('#genTable').innerHTML = ''; return; }
+  else {
+    const t = g.tally || {};
+    $('#genStatus').innerHTML = `최근 실행 ${esc(when(g.ran_at))} · <b>${esc(g.backend)}:${esc(g.model || '')}</b> · 문장 ${g.results.length}개 — 맞는 문장이라고 함 ${t.ok} · 규칙으로 고침 ${t.rule} · 규칙 없이 고침 ${t.OTHER} · 고치지 못함 ${t.fail} · 모델 호출 실패 ${t.llm_err}`
+      + ` · <b>빠진 규칙 후보 ${(g.missed_outside || []).length}</b> (우리 규칙에 없는 오류로 만들었는데 튜터가 맞다고 한 문장)`;
+  }
+  $('#genTable').innerHTML = `<tr><th>#</th><th>튜터에 넣은 문장</th><th>어떤 오류로 만들었나 (만든 모델 말)</th><th>우리 규칙에 있는 오류?</th><th>튜터가 한 일</th><th>자세히</th></tr>` + (g.results || []).map((x, i) => `
+    <tr><td class="n">${i + 1}</td><td>${esc(x.text)}${x.correct && x.correct !== x.text ? `<div style="color:var(--muted);font-size:.75rem">정답(모델): ${esc(x.correct)}</div>` : ''}</td>
+      <td>${esc(x.intended)}</td><td>${x.inside ? '있음' : '<b>없음</b>'}</td>
+      <td class="${RES[x.result]?.[1] || ''}">${RES[x.result]?.[0] || esc(x.result)}${!x.inside && x.result === 'ok' ? ' ⚠ 규칙이 없어 놓쳤을 수 있음' : x.inside && x.result === 'ok' ? ' ⚠ 규칙이 있는데 놓침' : ''}</td><td>${esc(x.detail)}</td></tr>`).join('');
+}
+async function runGen() {
+  const n = parseInt($('#genN').value) || 20, backend = $('#genBackend').value || null;
+  $('#genBtn').disabled = true; $('#genStatus').textContent = '시작하는 중…';
+  try { await api('/api/admin/gen_gaps', { method: 'POST', body: JSON.stringify({ n, backend }) }); }
+  catch (e) { $('#genStatus').innerHTML = '시작 실패: ' + esc(e.message); $('#genBtn').disabled = false; return; }
+  loadGen();
 }
 
 (async function init() {
   renderTopbar({ crumbs: false });      // 관리자 화면은 학습 위치(Level·Unit)와 무관
   const h = await showHealth();
-  await Promise.all([loadGolden(h), loadEval(), loadLog()]);
+  await Promise.all([loadGolden(h), loadEval(), loadLog(), loadGen()]);
 })();

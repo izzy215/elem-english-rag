@@ -39,6 +39,7 @@
 | 설계서 | design-screens · design-quiz · design-backlog | (작성 예정: design-tutor · design-chat · design-rag) |
 | 다이어그램 | overview.svg | diagrams.md (유스케이스 · 시퀀스 4 · Mermaid) |
 | 로컬 LLM 연동 (선생님 GPU 서버) | — | local-llm-plan.md (llm.py 스위치 · Ollama · 비교 실험 · TTS 팀원) |
+| BigQuery 주간 리포트 (2주차) | — | bigquery-report-plan.md (적재 스크립트 · /admin/report · 리포트 문장 · 관리자 패널 — 작업 지시서, 미착수) |
 | RAG 작업지시서 | — | [RAG_0909/rag-implementation-work-order_v0.2.md](RAG_0909/rag-implementation-work-order_v0.2.md) (RAG 팀원) |
 | 골든 데이터 샘플 | data/golden/_sample | data/golden/_sample-B |
 

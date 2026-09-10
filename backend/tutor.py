@@ -7,11 +7,11 @@ POST /api/fix  {student, level, unit, text, source}
 
 동작:
   0. 철자 사전검사(_spell_precheck, pyspellchecker + 교재 단어) → 철자만 고친 문장으로 아래를 진행 (원문은 화면·로그용 orig)
-  1. RAG 검색(rag.search_rules) 으로 규칙 전부를 점수순으로 받는다 (점수·순위 표시용).
+  1. RAG 검색(rag.search_rules) 으로 규칙 전부를 점수순으로 받는다 (점수·순위 표시용). 검색 결과는 순수 임베딩 순위 (어휘 안전망 없음 — 2026-09-10 제거, 데이터로 보강).
      프롬프트에는 상위 RAG_TOP_K + 이 Unit 의 규칙(units.csv rule_ids) + 공통(unit=ALL) 규칙 + 가짜 규칙 SPELL·OTHER (mode="rag")
      검색 실패(색인 없음·임베딩 오류·결과 0)면 규칙 전부 (mode="fallback", fallback_reason="search_error" | "no_results")
   2. 오늘의 미션(units.csv)과 함께 프롬프트(prompts/fix_fallback.txt)에 넣어 LLM(backend/llm.py) 에 JSON 으로만 답하게 한다
-  3. 검증: 규칙 id 가 전달한 근거 안인가, (wrong→fix) 가 학생 단어를 살린 고침인가(_pair_problem). 걸리면 1회 재생성,
+  3. 검증: 규칙 id 가 전달한 근거 안인가, (wrong→fix) 가 학생 단어를 살린 고침인가(_pair_problem — 허용 목록은 errors.jsonl 에서 만듦, _allow). 걸리면 1회 재생성,
      그래도 안 되면 full_fixed 가 학생 단어뿐일 때 '규칙 밖(OTHER)' 으로 살리고 아니면 502 (실패도 sentence_log 에 남김).
      철자 쌍이면 ok=true + spelling, 기능어 한 개 교체(is→are)는 _second_opinion 으로 한 번 더 확인, 고친 게 없는 답은 재시도 후 ok.
   4. 학생 DB 에 문장 로그 + 오답노트 기록 (fix_internal() 은 기록 없이 같은 결과 — 비교 실험용). timing 에 단계별 시간
@@ -53,7 +53,6 @@ SPELLING_RULE = {"id": "SPELL", "type": "철자", "unit": "ALL",
 # 규칙·오답노트 없이 "✎ 우리 규칙 밖이에요" 카드로 보여준다.
 OTHER_RULE = {"id": "OTHER", "type": "규칙 밖", "unit": "ALL",
               "text": "참고 규칙 어디에도 맞지 않는 문제(단어가 남거나 빠짐 등). 이 규칙을 고르면 wrong·fix 는 null 로 두고, fixed 와 full_fixed 에 학생이 쓴 단어만으로 자연스럽게 고친 문장을 쓴다. 새 단어를 넣지 않는다."}
-RAG_ALL_IF_LE = 12     # 규칙이 이 수 이하(샘플 9개)면 검색으로 후보를 좁히지 않고 전부 넣는다. 화면·로그엔 상위 RAG_TOP_K 만 표시
 # 규칙이 많을 때(실제 38개) 프롬프트 = 검색 상위 RAG_TOP_K + 이 Unit 의 규칙(units.csv rule_ids) + 공통(unit=ALL) 규칙.
 # 검색만으로는 관사(R-38) 같은 공통 규칙이 후보 밖으로 밀린다 ('I drew zoo yesterday' 에서 R-38 이 22위) → 관사를 붙였다 안 붙였다 하는 원인
 
@@ -119,43 +118,115 @@ def _single_fix(text: str, wrong: str | None, fix: str | None) -> str | None:
 
 
 _ARTICLES = {"a", "an", "the"}
-# 불규칙 변화 (어간이 안 겹치는 것들). 그 외 한 단어 교체는 어간(앞 2글자)이 같아야 "같은 단어의 변형" 으로 본다
-_IRREGULAR = {"go": {"went", "goes", "going"}, "see": {"saw", "sees", "seeing"}, "eat": {"ate", "eats", "eating"}, "have": {"had", "has", "having"},
-              "do": {"did", "does", "doing"}, "am": {"was", "is", "are"}, "is": {"was", "am", "are"}, "are": {"were", "am", "is"}, "was": {"were", "am", "is"},
-              "were": {"was", "are"}, "be": {"am", "is", "are", "was", "were"}, "run": {"ran"}, "come": {"came"}, "take": {"took"}, "give": {"gave"},
-              "make": {"made"}, "get": {"got"}, "buy": {"bought"}, "drink": {"drank"}, "swim": {"swam"}, "sing": {"sang"},
-              "sit": {"sat"}, "write": {"wrote"}, "ride": {"rode"}, "ring": {"rang"}, "begin": {"began"}, "meet": {"met"}, "feel": {"felt"},
-              "keep": {"kept"}, "sleep": {"slept"}, "leave": {"left"}, "bring": {"brought"}, "think": {"thought"}, "catch": {"caught"},
-              "teach": {"taught"}, "tell": {"told"}, "sell": {"sold"}, "find": {"found"}, "stand": {"stood"}, "win": {"won"}, "know": {"knew"},
-              "grow": {"grew"}, "throw": {"threw"}, "draw": {"drew"}, "fly": {"flew"}, "wear": {"wore"}, "speak": {"spoke"}, "break": {"broke"},
-              "drive": {"drove"}, "hear": {"heard"}, "say": {"said"}, "pay": {"paid"}, "read": {"read"}, "lose": {"lost"}, "send": {"sent"},
-              "build": {"built"}, "hold": {"held"}, "fall": {"fell"}, "forget": {"forgot"}, "hide": {"hid"}, "bite": {"bit"}, "feed": {"fed"},
-              "this": {"these"}, "these": {"this"}, "that": {"those"}, "those": {"that"}, "much": {"many"}, "many": {"much"},
-              "a": {"an", "the"}, "an": {"a", "the"}, "the": {"a", "an"}, "child": {"children"}, "man": {"men"}, "woman": {"women"}, "foot": {"feet"}, "tooth": {"teeth"}, "mouse": {"mice"}}
-_TIME_WORDS = {"yesterday", "today", "tomorrow", "now", "ago", "last", "next", "week", "year", "month", "morning", "night"}   # 우리 규칙은 시간 표현을 바꾸지 않는다
+
+# ─────────────────────────────────────────────
+# 모델 답 검증에 쓰는 허용 목록
+#
+# 원칙: "규칙이 덧붙이거나 바꿀 수 있는 말" 은 코드에 손으로 적지 않고 errors.jsonl 의 (target → fix) 에서 만든다 (_allow).
+#   - 덧붙이는 말: fix 에는 있고 target 에는 없는 단어 (I sorry → I am sorry 의 am, grandmother → my grandmother 의 my)
+#   - 바꾸는 말: 한 단어 교체 쌍 (This → It, of → about, is → are)
+#   2행 이상에서 나온 것은 전 규칙에서 허용, 1행뿐인 것은 그 규칙을 골랐을 때만 허용 (playing → playing baseball 은 R-19 에서만).
+# 테스트에서 정당한 고침이 거절되면 코드가 아니라 그 규칙의 오답 예시를 errors.jsonl 에 한 줄 보탠다 (규칙 연습·평가에도 같이 쓰인다).
+# 코드에 남기는 것은 두 가지뿐:
+#   _CORE_ADD        문법 기능어의 핵심 (관사·be·do·조동사·not·to·축약형). 데이터와 무관하게 언제나 덧붙일 수 있다
+#   _IRREGULAR_BASE  불규칙 변화표. 공통 규칙(R-31 과거시제·R-33 복수형 …)의 오답 예시가 errors.jsonl 에 아직 없어 데이터로 못 만든다.
+#                    데이터팀이 채우면 줄인다. tests/check_allowlist.py 가 "데이터가 덮는 범위 / 아직 코드에만 있는 것" 을 보고한다.
+# ─────────────────────────────────────────────
+_CORE_ADD = _ARTICLES | {"am", "is", "are", "was", "were", "be", "been", "being", "do", "does", "did", "will", "can", "not", "to",
+                         "don't", "doesn't", "didn't", "isn't", "aren't", "wasn't", "weren't", "can't", "won't", "i'm", "it's"}   # 축약형도 기능어 (don't→doesn't 는 철자가 아니라 문법)
+_IRREGULAR_BASE = {"go": {"went", "goes", "going"}, "see": {"saw", "sees", "seeing"}, "eat": {"ate", "eats", "eating"}, "have": {"had", "has", "having"},
+                   "do": {"did", "does", "doing"}, "am": {"was", "is", "are"}, "is": {"was", "am", "are"}, "are": {"were", "am", "is"}, "was": {"were", "am", "is"},
+                   "were": {"was", "are"}, "be": {"am", "is", "are", "was", "were"}, "run": {"ran"}, "come": {"came"}, "take": {"took"}, "give": {"gave"},
+                   "make": {"made"}, "get": {"got"}, "buy": {"bought"}, "drink": {"drank"}, "swim": {"swam"}, "sing": {"sang"},
+                   "sit": {"sat"}, "write": {"wrote"}, "ride": {"rode"}, "ring": {"rang"}, "begin": {"began"}, "meet": {"met"}, "feel": {"felt"},
+                   "keep": {"kept"}, "sleep": {"slept"}, "leave": {"left"}, "bring": {"brought"}, "think": {"thought"}, "catch": {"caught"},
+                   "teach": {"taught"}, "tell": {"told"}, "sell": {"sold"}, "find": {"found"}, "stand": {"stood"}, "win": {"won"}, "know": {"knew"},
+                   "grow": {"grew"}, "throw": {"threw"}, "draw": {"drew"}, "fly": {"flew"}, "wear": {"wore"}, "speak": {"spoke"}, "break": {"broke"},
+                   "drive": {"drove"}, "hear": {"heard"}, "say": {"said"}, "pay": {"paid"}, "read": {"read"}, "lose": {"lost"}, "send": {"sent"},
+                   "build": {"built"}, "hold": {"held"}, "fall": {"fell"}, "forget": {"forgot"}, "hide": {"hid"}, "bite": {"bit"}, "feed": {"fed"},
+                   "this": {"these"}, "these": {"this"}, "that": {"those"}, "those": {"that"}, "much": {"many"}, "many": {"much"},
+                   "a": {"an", "the"}, "an": {"a", "the"}, "the": {"a", "an"}, "child": {"children"}, "man": {"men"}, "woman": {"women"}, "foot": {"feet"}, "tooth": {"teeth"}, "mouse": {"mice"}}
+_TIME_WORDS = {"yesterday", "today", "tomorrow", "now", "ago", "last", "next", "week", "year", "month", "morning", "night"}   # 우리 규칙은 시간 표현을 없애거나 바꾸지 않는다
 
 
 def _tokens(t: str) -> list[str]:
     return re.findall(r"[a-z']+", (t or "").lower())
 
 
-# 규칙이 "덧붙일 수 있는" 기능어. be동사 추가(I sorry→I am sorry), 관사 추가(lion→a lion), 전치사·조동사 추가(go zoo→go to the zoo).
-# 이 밖의 새 단어(내용어)가 fix 에 들어오면 학생이 안 쓴 말을 지어낸 것으로 보고 거절한다.
-_FUNC_WORDS = _ARTICLES | {"am", "is", "are", "was", "were", "be", "been", "being", "do", "does", "did", "will", "can", "not",
-                           "to", "in", "on", "at", "under", "of", "for", "with", "by", "there", "much", "many", "some", "any", "and"}
+def _related_base(a: str, b: str) -> bool:
+    """같은 단어의 변형인가 — 코드만으로 판단 (어간 앞 2글자 또는 불규칙표). _allow 를 만들 때와 그 밖의 기본 검사에 쓴다."""
+    return a == b or (len(a) >= 2 and a[:2] == b[:2]) or b in _IRREGULAR_BASE.get(a, set()) or a in _IRREGULAR_BASE.get(b, set())
 
 
-def _related(a: str, b: str) -> bool:
-    """같은 단어의 변형인가 (draw/drew, eat/eating, lion/lions, read/red 같은 철자 차이 포함). 어간 앞 2글자 또는 불규칙표."""
-    return a == b or (len(a) >= 2 and a[:2] == b[:2]) or b in _IRREGULAR.get(a, set()) or a in _IRREGULAR.get(b, set())
+_ALLOW: dict | None = None
+_ALLOW_KEY: tuple | None = None
 
 
-def _pair_problem(text: str, wrong: str | None, fix: str | None, rule_type: str = "") -> str | None:
+def _allow() -> dict:
+    """errors.jsonl 에서 만든 허용 목록 (파일이 바뀌면 다시 만든다).
+      added          2행 이상에서 규칙이 덧붙인 단어 → 전 규칙 허용            (my, is, a, the, am, in, on, it, an, about, of …)
+      added_by_rule  {규칙 id: 그 규칙 오답 예시가 덧붙인 단어}  → 그 규칙일 때만 (R-19: baseball, R-20: stamps)
+      swap           2행 이상 나온 한 단어 교체 쌍 {a: {b, …}} 양방향        (this↔it, of↔about, is↔are, a↔an)
+      swap_by_rule   {규칙 id: {a: {b}}} 1행뿐인 교체 쌍은 그 규칙일 때만
+    철자 규칙(type 에 '철자')의 예시는 뺀다 — aple→apple 을 어형 변화로 오인해 철자 감지가 죽지 않게."""
+    global _ALLOW, _ALLOW_KEY
+    path = golden._dir() / "errors.jsonl"
+    key = (str(path), path.stat().st_mtime if path.exists() else None)
+    if _ALLOW is not None and key == _ALLOW_KEY:
+        return _ALLOW
+    from collections import defaultdict
+    added_rows: dict[str, set] = defaultdict(set)              # 단어 → 나온 행 id
+    swap_rows: dict[tuple, set] = defaultdict(set)             # (a,b) → 나온 행 id
+    added_by_rule: dict[str, set] = defaultdict(set)
+    swap_by_rule: dict[str, dict] = defaultdict(lambda: defaultdict(set))
+    spelling_rules = {r["id"] for r in golden.rules() if "철자" in (r.get("type") or "")}
+    for e in golden.errors():
+        rid = e.get("rule_id") or ""
+        if rid in spelling_rules:
+            continue
+        t, f = _tokens(e.get("target", "")), _tokens(e.get("fix", ""))
+        if not t or not f:
+            continue
+        for x in f:
+            if x not in t and not any(_related_base(x, w) for w in t):
+                added_rows[x].add(e["id"]); added_by_rule[rid].add(x)
+        if len(t) == 1 and len(f) == 1 and t[0] != f[0]:
+            for a, b in ((t[0], f[0]), (f[0], t[0])):
+                swap_rows[(a, b)].add(e["id"]); swap_by_rule[rid][a].add(b)
+    swap: dict[str, set] = defaultdict(set)
+    for (a, b), ids in swap_rows.items():
+        if len(ids) >= 2:
+            swap[a].add(b)
+    _ALLOW = {"added": {w for w, ids in added_rows.items() if len(ids) >= 2},
+              "added_by_rule": {k: set(v) for k, v in added_by_rule.items()},
+              "swap": dict(swap),
+              "swap_by_rule": {k: {a: set(b) for a, b in v.items()} for k, v in swap_by_rule.items()},
+              "added_rows": {w: len(ids) for w, ids in added_rows.items()}, "swap_rows": {k: len(v) for k, v in swap_rows.items()}}
+    _ALLOW_KEY = key
+    return _ALLOW
+
+
+def _func_words(rule_id: str = "") -> set[str]:
+    """규칙이 덧붙일 수 있는 말 = 핵심 기능어 + 데이터가 2행 이상 보여 준 단어 (+ 이 규칙의 오답 예시가 보여 준 단어)."""
+    al = _allow()
+    return _CORE_ADD | al["added"] | al["added_by_rule"].get(rule_id, set())
+
+
+def _related(a: str, b: str, rule_id: str = "") -> bool:
+    """같은 단어의 변형이거나(draw/drew, lion/lions, read/red 같은 철자 차이 포함) 데이터가 보여 준 교체 쌍(this→it, of→about)인가."""
+    if _related_base(a, b):
+        return True
+    al = _allow()
+    return b in al["swap"].get(a, set()) or b in al["swap_by_rule"].get(rule_id, {}).get(a, set())
+
+
+def _pair_problem(text: str, wrong: str | None, fix: str | None, rule_type: str = "", rule_id: str = "") -> str | None:
     """모델이 준 (wrong → fix) 쌍이 '학생 단어를 규칙에 맞게 고친 것' 인지 확인. 문제가 있으면 이유 문자열, 없으면 None.
-    허용: 변형(draw→drew, eat→is eating), 기능어 추가(lion→a lion, I sorry→I am sorry, go zoo→go to the zoo), 어순 규칙의 재배열.
-    거절: 다른 단어로 교체(lastyear→yesterday), 문장 다른 곳 단어를 끌어옴(yesterday→saw = 어순 바꾸기 시도), 내용어를 새로 지어냄.
-    wrong 은 최대 4단어, 시간 표현(yesterday/tomorrow …)은 학생의 뜻이라 바꾸는 답을 거절한다.
-    규칙 38개 기준으로 다시 짬 — 예전 '한 단어만' 기준은 be동사·전치사 추가 규칙(R-01·R-17·R-24·R-35 …)을 전부 거절했다."""
+    허용: 변형(draw→drew, eat→is eating), 기능어·데이터가 보여 준 단어 추가(lion→a lion, I sorry→I am sorry, grandmother→my grandmother),
+          데이터가 보여 준 교체(This→It, of→about), 어순 규칙의 재배열, 말을 지우기만 한 것(very too→too, went to go→went).
+    거절: 다른 단어로 교체(lastyear→yesterday), 문장 다른 곳 단어를 끌어옴(yesterday→saw = 어순 바꾸기 시도), 내용어를 새로 지어냄,
+          시간 표현(yesterday/tomorrow …)을 없애거나 바꿈. wrong 은 최대 4단어.
+    허용 목록은 errors.jsonl 에서 만든다 (_allow). 정당한 고침이 여기서 거절되면 코드가 아니라 errors.jsonl 에 예시를 보탠다."""
     if not wrong or not fix:
         return "wrong/fix 비어 있음"
     w, f = _tokens(wrong), _tokens(fix)
@@ -173,21 +244,26 @@ def _pair_problem(text: str, wrong: str | None, fix: str | None, rule_type: str 
         # 규칙이 맞는지는 모델 몫, 서버 검증은 '학생이 안 쓴 문장을 지어냈나' 만 막는다 → 아래 일반 검사로 넘긴다
     if len(w) > 4:
         return f"wrong 이 너무 김 (4단어 초과): {wrong!r}"
-    content_w = [t for t in w if t not in _FUNC_WORDS]
-    if any(t in _TIME_WORDS for t in content_w):
-        return f"wrong={wrong!r} 은 시간 표현 (규칙이 바꾸는 대상이 아님 — 어순 변경 시도)"
-    for t in content_w:                                      # 학생의 내용어는 fix 에 (그대로든 변형이든) 남아 있어야 한다
-        if not any(_related(t, x) for x in f):
+    func = _func_words(rule_id)
+    rel = lambda a, b: _related(a, b, rule_id)
+    lost_time = [t for t in w if t in _TIME_WORDS and t not in f]
+    if lost_time:                                            # 시간 표현을 없애거나 바꾼 답 (Good morning Mom → Good morning, Mom! 처럼 남아 있으면 통과)
+        return f"wrong={wrong!r} 의 시간 표현 {lost_time} 을 없앰 (규칙이 바꾸는 대상이 아님 — 어순 변경 시도)"
+    if set(f) <= set(w) and len(f) < len(w):                 # 말을 지우기만 함 (very too→too, went to go→went): 지어낸 단어가 없다
+        return None
+    content_w = [t for t in w if t not in func]
+    for t in content_w:                                      # 학생의 내용어는 fix 에 (그대로든 변형이든 데이터가 보여 준 교체든) 남아 있어야 한다
+        if not any(rel(t, x) for x in f):
             return f"fix={fix!r} 에 wrong 의 {t!r} 가 없음 (다른 단어로 교체)"
-    extra = [x for x in f if not any(_related(x, t) for t in w)]
-    new_content = [x for x in extra if x not in _FUNC_WORDS]
+    extra = [x for x in f if not any(rel(x, t) for t in w)]
+    new_content = [x for x in extra if x not in func]
     if new_content:
-        return f"fix={fix!r} 에 학생이 안 쓴 단어 {new_content} (관사·be동사·전치사만 덧붙일 수 있음)"
+        return f"fix={fix!r} 에 학생이 안 쓴 단어 {new_content} (기능어와 errors.jsonl 이 보여 준 단어만 덧붙일 수 있음)"
     others = _tokens(text)
     for t in w:
         if t in others:
             others.remove(t)
-    pulled = [x for x in f if x not in _FUNC_WORDS and x not in w and not any(_related(x, t) for t in w) and x in others]
+    pulled = [x for x in f if x not in func and x not in w and not any(rel(x, t) for t in w) and x in others]
     if pulled:                                               # fix 가 문장 다른 곳에 이미 있는 단어 → 어순 바꾸기 시도 (yesterday→saw)
         return f"fix={fix!r} 가 문장에 이미 있는 단어 {pulled} (어순 변경 시도)"
     return None
@@ -250,7 +326,9 @@ def _apply_spelling(text: str, pairs: list[dict]) -> str:
     return text
 
 
-_SWAP_WORDS = _FUNC_WORDS | {"this", "these", "that", "those"}
+def _swap_words() -> set[str]:
+    """기능어 한 개 교체(is→are, a→an, this→it)로 보는 단어 — _second_opinion 대상."""
+    return _func_words() | {"this", "these", "that", "those", "it"}
 
 
 def _second_opinion(text: str, fixed: str, backend: str | None, fallback: bool | None, timing: dict | None = None) -> bool:
@@ -281,9 +359,9 @@ def _spelling_pairs(text: str, full_fixed: str) -> list[dict]:
 
 def _is_typo(a: str, b: str) -> bool:
     """철자 실수로 볼 수 있는 쌍인가: 글자 1~2개(7글자 이상은 3개) 차이이고, 기능어 교체나 어형 변화(go→went, cat→cats, eat→eating)는 아님."""
-    if a in _FUNC_WORDS or b in _FUNC_WORDS:                # am→is, a→an 같은 문법 교체는 철자가 아님
+    if a in _func_words() or b in _func_words():            # am→is, a→an 같은 문법 교체는 철자가 아님
         return False
-    if b in _IRREGULAR.get(a, set()) or a in _IRREGULAR.get(b, set()):
+    if b in _IRREGULAR_BASE.get(a, set()) or a in _IRREGULAR_BASE.get(b, set()) or b in _allow()["swap"].get(a, set()):   # 불규칙 변화·데이터의 교체 쌍(this→it)은 철자가 아님
         return False
     for suf in ("s", "es", "ed", "d", "ing", "ly", "er", "est"):
         if b == a + suf or a == b + suf:
@@ -310,7 +388,7 @@ def _student_words_only(text: str, fixed: str) -> str | None:
         return "고친 문장이 비어 있음"
     if dst == src:
         return "고친 문장이 원문과 같음"
-    new_words = [t for t in dst if t not in src and t not in _FUNC_WORDS and not any(_related(t, w) for w in src)]
+    new_words = [t for t in dst if t not in src and t not in _func_words() and not any(_related(t, w) for w in src)]
     if new_words:
         return f"학생이 안 쓴 단어 {new_words}"
     if len(dst) > len(src) + 2:
@@ -330,7 +408,7 @@ def _full_fixed_ok(text: str, full_fixed: str, fix: str | None) -> bool:
 
 def _search_candidates(text: str, k: int) -> tuple[list[dict], str, str | None]:
     """RAG 검색 (rag.py 의 search_rules, RAG 담당). 반환: (후보 목록, mode, fallback_reason). 호출부는 k=규칙 전부.
-    후보는 score 내림차순이되, rag.py 의 어휘 안전망(R-01)이 걸리면 그 규칙이 순서와 무관하게 뒤에 붙을 수 있다 (k=전체면 해당 없음).
+    후보는 score 내림차순 (순수 임베딩 순위. 예전 R-01 어휘 안전망은 2026-09-10 rag.py 에서 제거 — 규칙 데이터 보강으로 대체).
     - 검색 성공 → ([{id,type,text,unit,score}, …], "rag", None)
     - 색인 없음·임베딩/질의 실패(indexing.IndexUnavailableError) 나 그 외 예외 → ([], "fallback", "search_error")
     - 결과 0건 → ([], "fallback", "no_results")
@@ -444,7 +522,7 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         raise HTTPException(503, "rules.jsonl 이 없음 (data/golden/ 또는 _sample-B/)")
     unit_row = golden.find_unit(level, unit) or {}
 
-    # 1) 검색은 규칙 전부를 받아 둔다 (점수·순위 표시용, 38개라 비용 없음). 프롬프트엔 상위 RAG_TOP_K + Unit 규칙 + 공통 규칙 (규칙이 RAG_ALL_IF_LE 이하면 전부)
+    # 1) 검색은 규칙 전부를 받아 둔다 (점수·순위 표시용, 38개라 비용 없음). 프롬프트엔 상위 RAG_TOP_K + Unit 규칙 + 공통 규칙
     #    + 가짜 규칙 SPELL·OTHER. 검색 실패면 규칙 전부 (폴백)
     t_start = time.perf_counter()
     cands, mode, fallback_reason = _search_candidates(text, k=len(all_rules))
@@ -453,10 +531,7 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         if len(cands) != len(all_rules):                    # 색인이 rules.jsonl 과 다름 (데이터 갱신 뒤 --rebuild 안 함)
             print(f"[fix] 경고: 색인 {len(cands)}개 ≠ rules.jsonl {len(all_rules)}개 → python -m backend.indexing --rebuild 필요", flush=True)
         extra_ids = set(unit_row.get("rule_ids") or []) | {r["id"] for r in all_rules if r.get("unit") == "ALL"}
-        if len(all_rules) <= RAG_ALL_IF_LE:
-            prompt_rules = list(cands)
-        else:
-            prompt_rules = cands[:RAG_TOP_K] + [c for c in cands[RAG_TOP_K:] if c["id"] in extra_ids]
+        prompt_rules = cands[:RAG_TOP_K] + [c for c in cands[RAG_TOP_K:] if c["id"] in extra_ids]
         seen = {r["id"] for r in prompt_rules}              # 색인에 없는 Unit·공통 규칙은 rules.jsonl 에서 보충
         prompt_rules += [r for r in all_rules if r["id"] in extra_ids and r["id"] not in seen]
     else:
@@ -477,6 +552,7 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
 
     # 2) 생성 → 3) 검증. 검증에 걸리면 이유를 덧붙여 한 번 더 생성, 그래도 안 되면 full_fixed 가 학생 단어뿐일 때 규칙 밖(OTHER)으로 살리고 아니면 502
     problem = None
+    first_nochange = False                                   # 1차 답이 '고친 게 없음' 이었나 (2차가 지어낸 답이면 1차 판단을 채택)
     for attempt in (1, 2):
         sent = prompt if attempt == 1 else prompt + f"\n\n## 다시: 직전 답이 규칙 위반이었다 ({problem}). wrong 은 학생 문장에 실제로 있는 말(보통 한 단어, 어순 규칙이면 구간 전체), fix 는 그 말을 규칙에 맞게 바꾼 것만 쓴다. 학생이 안 쓴 단어를 넣거나 시간 표현을 바꾸지 않는다."
         if settings.log_prompt:                                  # 모델에 실제로 보내는 프롬프트 전문 (LOG_PROMPT=0 으로 끔)
@@ -492,6 +568,7 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         _n = lambda x: re.sub(r"[.!?\s]+$", "", str(x or "")).strip().lower()
         nochange = not ok and ((out.get("wrong") or "").strip() == (out.get("fix") or "").strip() or _n(out.get("fixed")) == _n(text))
         if nochange and attempt == 1:                        # 고친 게 없는 답(hate→hate). 한 번은 다시 시킨다 — 'I drew zoo yesterday' 처럼 진짜 틀린 곳을 놓친 걸 수도
+            first_nochange = True
             problem = ("wrong 과 fix 가 같아서 고친 게 없음. 참고 규칙을 하나씩 문장에 대조해 보라 — 특히 관사(a/an 빠짐), 복수형(-s), 시제, be동사. "
                        "정말 고칠 곳이 없으면 ok=true 로, 있으면 실제로 바뀐 단어를 fix 에")
             print(f"[fix] 검증 실패(1차): {problem}", flush=True)
@@ -507,7 +584,7 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
             problem = None if reason is None else f"규칙 밖 답인데 {reason}"
         elif not ok:
             rt = (golden.find_rule(rule_id) or {}).get("type", "")
-            problem = _pair_problem(text, out.get("wrong"), out.get("fix"), rt)
+            problem = _pair_problem(text, out.get("wrong"), out.get("fix"), rt, rule_id)
         else:
             problem = None
         if problem is None:
@@ -515,7 +592,11 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         print(f"[fix] 검증 실패({attempt}차): {problem}", flush=True)
     if problem is not None:
         salvage = (out.get("full_fixed") or "").strip()
-        if not ok and salvage and _student_words_only(text, salvage) is None:   # 규칙은 잘못 짚었지만 문장 제안은 학생 단어뿐 → 규칙 밖으로 살림
+        if first_nochange:                                   # 1차는 고칠 곳을 못 찾았고, 다시 시킨 2차는 지어낸 답이라 거절됨 ('i wore a gin yesterday' → wore→wearing)
+            print(f"[fix] 1차 '고친 게 없음' + 2차 검증 실패({problem}) → 억지 답 대신 1차 판단 채택: 맞는 문장", flush=True)   # 502 대신 ok. 우리 규칙 안에서 맞는 문장으로 본다
+            ok, rule_id, problem = True, "", None
+            out["wrong"] = out["fix"] = out["fixed"] = out["full_fixed"] = None   # 2차의 지어낸 고침은 화면·철자 안내에 쓰지 않는다
+        elif not ok and salvage and _student_words_only(text, salvage) is None:   # 규칙은 잘못 짚었지만 문장 제안은 학생 단어뿐 → 규칙 밖으로 살림
             print(f"[fix] 검증 2회 실패 → 규칙 밖으로 전환 (full_fixed={salvage!r})", flush=True)
             rule_id, problem = OTHER_RULE["id"], None
             out["wrong"] = out["fix"] = None
@@ -536,7 +617,7 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
             raise HTTPException(502, f"모델이 철자 규칙을 골랐지만 단어 쌍이 아님 ({out.get('wrong')!r}→{out.get('fix')!r}). 다시 [고쳐줘]를 눌러 주세요.")
     if not ok and not other:                                 # 기능어 한 개 바꾼 답(is→are, a→an)은 한 번 더 확인 — 맞는 문장을 뒤집는 오교정 방지
         wt, ft = _tokens(out.get("wrong") or ""), _tokens(out.get("fix") or "")
-        if len(wt) == 1 and len(ft) == 1 and wt[0] in _SWAP_WORDS and ft[0] in _SWAP_WORDS:
+        if len(wt) == 1 and len(ft) == 1 and wt[0] in _swap_words() and ft[0] in _swap_words():
             cand = _single_fix(text, out.get("wrong"), out.get("fix")) or (out.get("fixed") or "")
             if not _second_opinion(text, cand, backend, fallback, timing):
                 print(f"[fix] 재확인: {wt[0]}→{ft[0]} 고침이 더 맞다고 못 함 → 원문 유지(ok)", flush=True)

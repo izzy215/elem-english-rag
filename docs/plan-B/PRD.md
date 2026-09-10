@@ -16,7 +16,7 @@
 | RAG 입구 | ① 문장 → 규칙 (`/fix`) ② 질문 → 설명 조각 (`/ask`, **RAG 연결 예정** — 지금은 FAQ 매칭 + LLM) |
 | DB 조회 (RAG 아님) | 오답노트 · 패턴 · 단어 · 규칙 연습 문제 |
 | RAG의 역할 | **깔때기**(다양한 질문·라벨 없는 문장 → 올바른 조각) + **목줄**(조각 밖 내용 생성 금지). 지식 확장이 아님 → [docs/README 공통 전제](../README.md) |
-| 발표 핵심 | "🎙 → 검색 점수 → went + 근거" / "문장→규칙 hit@3 92% (65문항, hit@1 77%)" / "DB와 RAG를 구분해 썼다" |
+| 발표 핵심 | "🎙 → 검색 점수 → went + 근거" / "문장→규칙 hit@3 89% (65문항, hit@1 77%)" / "DB와 RAG를 구분해 썼다" |
 
 ## 2. 사용자 시나리오 (데모 60초)
 
@@ -123,7 +123,7 @@ GET /rag/search?q=I go to the zoo yesterday&level=3&k=3
 → {"query":"...","chunks":[{"id":"R-31","type":"과거시제","text":"어제(yesterday), 지난주(last week)…","unit":"ALL","score":0.45},
                             {"id":"R-34","type":"관사","text":"…","unit":"ALL","score":0.38}, ...],
    "threshold":null,"score_type":"cosine_similarity"}
-   파이썬에서는 rag.search_rules(text, k) → [{id,type,text,unit,score}]. kind 구분 없음(규칙 조각만 색인). R-01(형용사+be동사)은 어휘 안전망(lexical safety net)으로 보강
+   파이썬에서는 rag.search_rules(text, k) → [{id,type,text,unit,score}]. kind 구분 없음(규칙 조각만 색인). 어휘 안전망(lexical safety net)은 2026-09-10 제거 — 순수 임베딩 순위만 쓰고 R-01 같은 약점은 규칙 데이터 보강으로 해결
    역할: 질문/문장의 표현이 어떻든 올바른 조각에 도착시키는 것(깔때기). hit@3 = 이 도착률
    threshold 는 쓰지 않는다(null). "해당 없음"은 점수가 아니라 /fix 의 모델 판정(ok=true)으로
 
@@ -285,7 +285,7 @@ drill_log.jsonl     {"ts":"...","student":"A","rule_id":"R-01","correct":true}
 
 | 지표 | 목표 | 측정 |
 |---|---|---|
-| 문장 → 규칙 hit@3 | ≥ 80% (실제 92.31%, hit@1 76.92%) | eval.csv 72 (채점 65) · `/rag/eval` |
+| 문장 → 규칙 hit@3 | ≥ 80% (실제 89.23%, hit@1 76.92% — 검색 안전망 제거 후 09-10 재측정) | eval.csv 72 (채점 65) · `/rag/eval` |
 | 정상 문장 오탐 | ≤ 1/7 | eval 의 NONE 7개. 검색 평가는 정상 문장 오탐을 판정하지 않음 → `/fix` 기준 (tests/eval_fix.py) |
 | `/fix` JSON 성공률 | ≥ 95% | sentence_log |
 | 데모 | 시나리오 8단계 통과 | 리허설 |
@@ -310,5 +310,5 @@ drill_log.jsonl     {"ts":"...","student":"A","rule_id":"R-01","correct":true}
 | 고친 문장 듣기 | 미구현 · 보류 (`/tts/text` 없음) |
 | 단어 4지선다 | △ 시간 남으면 |
 | 챗 턴 제한 · 추천 질문 출처 | 3턴 · faq.jsonl 에서 |
-| BigQuery 주간 리포트 | 11일차 여유 시. sentence_log → 집계 → Gemini 리포트 문장 (관리자 패널) |
+| BigQuery 주간 리포트 | 11일차 여유 시. sentence_log → 집계 → Gemini 리포트 문장 (관리자 패널) · 지시서 bigquery-report-plan.md |
 | 표현 익히기 범위 | 단어 8 + 패턴 3 (축소) |

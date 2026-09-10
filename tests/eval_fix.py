@@ -17,6 +17,12 @@
     python -m tests.eval_fix --backend local --limit 3   # 앞 3문장만 (연습용)
     python -m tests.eval_fix --backend local --label gemini-embedding   # 실행 이름 — 파일명·표 제목에 붙음 (임베딩 모델 바꿔 가며 비교할 때)
     python -m tests.eval_fix --backend local --no-rag                   # 검색 없이 규칙 전부 (기준선)
+    python -m tests.eval_fix --sentences tests/demo_sentences.txt --backend local   # eval.csv 대신 이 파일의 문장 (시연 모델 비교용)
+    python -m tests.eval_fix --sentences tests/demo_sentences.txt --backend gemini --limit 5 --sleep 5   # gemini 는 분당 15회 → 줄이거나 간격
+
+--sentences 파일: 한 줄 한 문장, '#' 로 시작하는 줄은 주석, 문장 뒤 "  # 메모" 는 표의 메모 칸. 정답 규칙이 없으므로 ✓/✗ 판정 대신
+    결과 종류(맞음 / R-xx 고침 / 규칙 밖 고침 / ! 실패)와 고친 문장만 표에 적는다. 파일 이름·latest 규칙은 같다.
+--sleep 초: 문장 사이 대기. 기본은 gemini 만 5초(gapcheck 와 같음), 그 외 0.
 
 결과 (data/rag_eval/, git 제외) — 실행마다 시각이 붙은 새 파일 + 가장 최근 것의 복사본:
     fix_compare_20260908-1627.json   문장별 원본 응답 (고친 문장·full_fixed·ms 등)
@@ -53,6 +59,35 @@ def load_eval() -> list[dict]:
         r["expected_rule_id"] = (r.get("expected_rule_id") or "").strip()
         r["is_normal"] = r["expected_rule_id"] in ("", "NONE")
     return rows
+
+
+def load_sentences(path: Path) -> list[dict]:
+    """--sentences 파일 → eval 행과 같은 모양 (expected_rule_id="", is_normal=None → 정답 없음)."""
+    rows = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        text, _, note = line.partition(" #")
+        if text.strip():
+            rows.append({"text": text.strip(), "expected_rule_id": "", "is_normal": None, "note": note.strip()})
+    return rows
+
+
+def _norm(t: str) -> str:
+    return (t or "").strip().rstrip(".!?").casefold()
+
+
+def kind_of(res: dict) -> str:
+    """--sentences 용 (정답 없음): 맞음 / R-xx / 규칙 밖 / ! 실패 — ✓✗ 판정 없이 결과 종류만."""
+    if res["error"]:
+        return "! 실패"
+    if res["ok"]:
+        sp = res.get("spelling") or []
+        return "맞음" + (" (철자 " + ", ".join(f"{x['wrong']}→{x['fix']}" for x in sp) + ")" if sp else "")
+    if res["rule_id"] == "OTHER":
+        return "규칙 밖"
+    return str(res["rule_id"])
 
 
 def build_prompt(text: str, rules: list[dict], level: int = 3, unit: str = "") -> str:
@@ -126,12 +161,15 @@ def main() -> None:
     ap.add_argument("--out", default=None, help="저장 파일명 (기본: data/rag_eval/fix_compare_<시각>[_label].json + _latest 복사본)")
     ap.add_argument("--label", default="", help="실행 이름 (예: gemini-embedding). 파일명과 표 제목에 붙는다")
     ap.add_argument("--no-rag", action="store_true", help="검색 없이 규칙 전부를 프롬프트에 (RAG 없을 때 기준선)")
+    ap.add_argument("--sentences", default=None, help="eval.csv 대신 이 파일의 문장 (한 줄 한 문장, # 주석). 정답 없음 → 결과 종류만 표시")
+    ap.add_argument("--sleep", type=float, default=None, help="문장 사이 대기 초 (기본: gemini 5, 그 외 0)")
     args = ap.parse_args()
+    demo = args.sentences is not None
     label = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in args.label.strip())
 
     b = (args.backend or settings.llm_backend or "gemini").lower()
     backends = llm.backends() if b == "all" else [x.strip() for x in b.split(",") if x.strip()]
-    rows = load_eval()
+    rows = load_sentences(Path(args.sentences)) if demo else load_eval()
     if args.limit:
         rows = rows[: args.limit]
     rules = golden.rules()
@@ -144,22 +182,36 @@ def main() -> None:
     except Exception:
         index = None
     cond = "규칙 전부 (검색 없음)" if args.no_rag else f"RAG 파이프라인 (검색 상위 {tutor.RAG_TOP_K} + 공통 규칙, 임베딩 {index['model'] if index else '색인 없음'})"
-    print(f"eval {len(rows)}문장 × {backends} · 규칙 {len(rules)}개 · {cond}" + (f" · 실행 이름 {label}" if label else "")
+    src = f"시연 {len(rows)}문장 ({Path(args.sentences).name})" if demo else f"eval {len(rows)}문장"
+    print(f"{src} × {backends} · 규칙 {len(rules)}개 · {cond}" + (f" · 실행 이름 {label}" if label else "")
           + " · 모델 " + ", ".join(f"{b}={llm._model_of(b)}" for b in backends), flush=True)
 
     results = []
+    called: set[str] = set()                                 # 백엔드별 첫 호출 뒤부터 대기 (gapcheck 와 같은 방식)
     for i, row in enumerate(rows, 1):
         entry = {"text": row["text"], "expected": row["expected_rule_id"], "is_normal": row["is_normal"], "note": row.get("note", ""), "by": {}}
         for b in backends:
+            wait = args.sleep if args.sleep is not None else (5.0 if b == "gemini" else 0.0)
+            if b in called and wait:
+                time.sleep(wait)
+            called.add(b)
             res = run_one(row["text"], b, rules) if args.no_rag else run_pipeline(row["text"], b)
-            res["judge"] = judge(row, res)
+            res["judge"] = kind_of(res) if demo else judge(row, res)
             entry["by"][b] = res
-            print(f"  [{i:2}/{len(rows)}] {b:6} {res['judge']:12} {res['ms']:>6}ms  {row['text']!r}" + (f"  ← {res['error']}" if res["error"] else ""), flush=True)
+            shown = f"  → {res['fixed']!r}" if demo and res["fixed"] and not res["ok"] else ""
+            print(f"  [{i:2}/{len(rows)}] {b:6} {res['judge']:12} {res['ms']:>6}ms  {row['text']!r}{shown}" + (f"  ← {res['error']}" if res["error"] else ""), flush=True)
         results.append(entry)
 
     # 합계
     summary = {}
     for b in backends:
+        if demo:                                             # 정답 없음 → 결과 종류별 개수만
+            js = [e["by"][b]["judge"] for e in results]
+            ms = [e["by"][b]["ms"] for e in results if not e["by"][b]["error"]]
+            summary[b] = {"ok": sum(1 for j in js if j.startswith("맞음")), "rule": sum(1 for j in js if j.startswith("R-")),
+                          "other": sum(1 for j in js if j == "규칙 밖"), "failures": sum(1 for j in js if j == "! 실패"),
+                          "avg_ms": int(sum(ms) / len(ms)) if ms else None, "model": next((e["by"][b]["model"] for e in results if e["by"][b]["model"]), None)}
+            continue
         n_err = sum(1 for e in results if not e["is_normal"])
         n_norm = sum(1 for e in results if e["is_normal"])
         hit = sum(1 for e in results if not e["is_normal"] and e["by"][b]["judge"] == "✓")
@@ -174,22 +226,40 @@ def main() -> None:
     if args.out is None:
         args.out = str(OUT_DIR / f"fix_compare_{stamp}.json")
     out = {"ran_at": datetime.now().isoformat(timespec="seconds"), "label": label, "condition": cond, "no_rag": args.no_rag,
+           "sentences": str(Path(args.sentences)) if demo else None,
            "index": index, "prompt_file": tutor.PROMPT_FILE.name, "rules_n": len(rules),
            "backends": backends, "summary": summary, "results": results}
     Path(args.out).write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
 
     # 마크다운 표 — 화면에 찍고 같은 이름의 .md 로도 저장 (발표 자료에 붙이기용)
-    md_lines = [f"# /fix 비교 실험{' — ' + label if label else ''} — {out['ran_at']} · eval {len(rows)}문장 · 규칙 {len(rules)}개 · {cond} · 프롬프트 {tutor.PROMPT_FILE.name}", ""]
-    md_lines.append("| 문장 | 정답 | " + " | ".join(f"{b} ({summary[b]['model']})" for b in backends) + " |")
-    md_lines.append("|---|---|" + "---|" * len(backends))
-    for e in results:
-        cells = [f"{e['by'][b]['judge']} {e['by'][b]['ms']}ms" for b in backends]
-        md_lines.append(f"| {e['text']} | {'정상' if e['is_normal'] else e['expected']} | " + " | ".join(cells) + " |")
-    md_lines.append("| **규칙 적중** | | " + " | ".join(f"**{summary[b]['rule_hit']}**" for b in backends) + " |")
-    md_lines.append("| **정상 문장 유지** | | " + " | ".join(summary[b]["normal_kept"] for b in backends) + " |")
-    md_lines.append("| **평균 응답** | | " + " | ".join(f"{summary[b]['avg_ms']}ms" for b in backends) + " |")
-    md_lines += ["", "판정: ✓ 정답 규칙 · ✗ R-xx 다른 규칙 · ✗ 놓침(ok) · ✓ 정상 유지 · ✗ 오교정 · ! 실패(호출 오류)",
-                 "고친 문장 등 원본 응답은 같은 이름의 .json 참고."]
+    md_lines = [f"# /fix 비교 실험{' — ' + label if label else ''} — {out['ran_at']} · {src} · 규칙 {len(rules)}개 · {cond} · 프롬프트 {tutor.PROMPT_FILE.name}", ""]
+    if demo:                                                 # 정답 없음: 결과 종류 + 고친 문장 + 시간. 판정 기호 없음
+        md_lines.append("| 문장 | 메모 | " + " | ".join(f"{b} ({summary[b]['model']})" for b in backends) + " |")
+        md_lines.append("|---|---|" + "---|" * len(backends))
+        for e in results:
+            cells = []
+            for b in backends:
+                r = e["by"][b]
+                fixed = "" if r["ok"] or not r["fixed"] else f" · {r['fixed']}"
+                if fixed and r.get("full_fixed") and _norm(r["full_fixed"]) != _norm(r["fixed"]):   # 대소문자·끝 마침표만 다르면 생략
+                    fixed += f" (전부: {r['full_fixed']})"
+                cells.append(f"{r['judge']}{fixed} · {r['ms']}ms")
+            md_lines.append(f"| {e['text']} | {e['note']} | " + " | ".join(cells) + " |")
+        md_lines.append("| **맞음 / 규칙 / 규칙 밖 / 실패** | | " + " | ".join(f"**{summary[b]['ok']} / {summary[b]['rule']} / {summary[b]['other']} / {summary[b]['failures']}**" for b in backends) + " |")
+        md_lines.append("| **평균 응답** | | " + " | ".join(f"{summary[b]['avg_ms']}ms" for b in backends) + " |")
+        md_lines += ["", "칸: 결과 종류 · 고친 문장 · 응답 시간. 맞음 = 고칠 게 없다고 봄 · R-xx = 그 규칙으로 고침 · 규칙 밖 = OTHER 로 고침 · ! 실패 = 검증 실패·호출 오류",
+                     "정답 규칙이 없는 세트라 ✓/✗ 판정은 없다. 사람이 보고 판단한다. 원본 응답은 같은 이름의 .json 참고."]
+    else:
+        md_lines.append("| 문장 | 정답 | " + " | ".join(f"{b} ({summary[b]['model']})" for b in backends) + " |")
+        md_lines.append("|---|---|" + "---|" * len(backends))
+        for e in results:
+            cells = [f"{e['by'][b]['judge']} {e['by'][b]['ms']}ms" for b in backends]
+            md_lines.append(f"| {e['text']} | {'정상' if e['is_normal'] else e['expected']} | " + " | ".join(cells) + " |")
+        md_lines.append("| **규칙 적중** | | " + " | ".join(f"**{summary[b]['rule_hit']}**" for b in backends) + " |")
+        md_lines.append("| **정상 문장 유지** | | " + " | ".join(summary[b]["normal_kept"] for b in backends) + " |")
+        md_lines.append("| **평균 응답** | | " + " | ".join(f"{summary[b]['avg_ms']}ms" for b in backends) + " |")
+        md_lines += ["", "판정: ✓ 정답 규칙 · ✗ R-xx 다른 규칙 · ✗ 놓침(ok) · ✓ 정상 유지 · ✗ 오교정 · ! 실패(호출 오류)",
+                     "고친 문장 등 원본 응답은 같은 이름의 .json 참고."]
     md = "\n".join(md_lines)
     print("\n" + md)
     md_path = Path(args.out).with_suffix(".md")

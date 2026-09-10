@@ -103,7 +103,7 @@ sequenceDiagram
   Note over TU: 철자 사전검사 (pyspellchecker, 교재 단어 우선)
 
   TU->>RG: search_rules(text, k=전체)
-  Note over RG: 문장 임베딩(gemini-embedding-001) → 규칙 조각과 코사인 비교<br/>kind · threshold 없음 · R-01 은 어휘 안전망 보강
+  Note over RG: 문장 임베딩(gemini-embedding-001) → 규칙 조각과 코사인 비교<br/>kind · threshold · 어휘 안전망 없음 (순수 임베딩 순위)
   RG-->>TU: [{R-31 과거시제 0.45}, {R-34 관사 0.38}, ...] 38개 전부 (점수 · 순위)
   Note over UI: 화면: ② RAG 규칙 검색 ✓
 
@@ -222,7 +222,7 @@ sequenceDiagram
   E->>C: eval.csv 72문장 중 오류 65문장 각각 search(k=3) (정상 7은 채점 안 함)
   E-->>E: hit@3 · hit@1 → retrieval_eval_latest.json
   E->>A: /rag/eval runs 기록 (임베딩 모델별)
-  A-->>D: 정확도 카드 (hit@3 92% · hit@1 77%) · 채택 모델
+  A-->>D: 정확도 카드 (hit@3 89% · hit@1 77%) · 채택 모델
   Note over C: manifest.active_collection 이 가리키는 컬렉션을 /fix 가 사용
 ```
 
