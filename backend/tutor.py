@@ -552,6 +552,7 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
 
     # 2) 생성 → 3) 검증. 검증에 걸리면 이유를 덧붙여 한 번 더 생성, 그래도 안 되면 full_fixed 가 학생 단어뿐일 때 규칙 밖(OTHER)으로 살리고 아니면 502
     problem = None
+    first_nochange = False                                   # 1차 답이 '고친 게 없음' 이었나 (2차가 지어낸 답이면 1차 판단을 채택)
     for attempt in (1, 2):
         sent = prompt if attempt == 1 else prompt + f"\n\n## 다시: 직전 답이 규칙 위반이었다 ({problem}). wrong 은 학생 문장에 실제로 있는 말(보통 한 단어, 어순 규칙이면 구간 전체), fix 는 그 말을 규칙에 맞게 바꾼 것만 쓴다. 학생이 안 쓴 단어를 넣거나 시간 표현을 바꾸지 않는다."
         if settings.log_prompt:                                  # 모델에 실제로 보내는 프롬프트 전문 (LOG_PROMPT=0 으로 끔)
@@ -567,6 +568,7 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         _n = lambda x: re.sub(r"[.!?\s]+$", "", str(x or "")).strip().lower()
         nochange = not ok and ((out.get("wrong") or "").strip() == (out.get("fix") or "").strip() or _n(out.get("fixed")) == _n(text))
         if nochange and attempt == 1:                        # 고친 게 없는 답(hate→hate). 한 번은 다시 시킨다 — 'I drew zoo yesterday' 처럼 진짜 틀린 곳을 놓친 걸 수도
+            first_nochange = True
             problem = ("wrong 과 fix 가 같아서 고친 게 없음. 참고 규칙을 하나씩 문장에 대조해 보라 — 특히 관사(a/an 빠짐), 복수형(-s), 시제, be동사. "
                        "정말 고칠 곳이 없으면 ok=true 로, 있으면 실제로 바뀐 단어를 fix 에")
             print(f"[fix] 검증 실패(1차): {problem}", flush=True)
@@ -590,7 +592,11 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         print(f"[fix] 검증 실패({attempt}차): {problem}", flush=True)
     if problem is not None:
         salvage = (out.get("full_fixed") or "").strip()
-        if not ok and salvage and _student_words_only(text, salvage) is None:   # 규칙은 잘못 짚었지만 문장 제안은 학생 단어뿐 → 규칙 밖으로 살림
+        if first_nochange:                                   # 1차는 고칠 곳을 못 찾았고, 다시 시킨 2차는 지어낸 답이라 거절됨 ('i wore a gin yesterday' → wore→wearing)
+            print(f"[fix] 1차 '고친 게 없음' + 2차 검증 실패({problem}) → 억지 답 대신 1차 판단 채택: 맞는 문장", flush=True)   # 502 대신 ok. 우리 규칙 안에서 맞는 문장으로 본다
+            ok, rule_id, problem = True, "", None
+            out["wrong"] = out["fix"] = out["fixed"] = out["full_fixed"] = None   # 2차의 지어낸 고침은 화면·철자 안내에 쓰지 않는다
+        elif not ok and salvage and _student_words_only(text, salvage) is None:   # 규칙은 잘못 짚었지만 문장 제안은 학생 단어뿐 → 규칙 밖으로 살림
             print(f"[fix] 검증 2회 실패 → 규칙 밖으로 전환 (full_fixed={salvage!r})", flush=True)
             rule_id, problem = OTHER_RULE["id"], None
             out["wrong"] = out["fix"] = None
