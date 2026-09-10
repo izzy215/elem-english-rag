@@ -88,6 +88,7 @@ def _openai_compat(name: str, prompt: str, timeout: float) -> str:
         "temperature": 0.2,
         "response_format": {"type": "json_object"},   # Ollama ≥0.5 · vLLM · Groq · OpenRouter 지원. 미지원이면 위 system 지시에 기댄다
         "stream": False,
+        "keep_alive": "30m",   # Ollama 기본 5분이라 대화 간격이 뜨면 모델이 언로드돼 다음 호출이 콜드스타트(수 초~십수 초, 2026-09-10 실측)됨. 30분으로 늘려 완화
     }
     headers = {"Content-Type": "application/json", "User-Agent": "elem-english-rag/0.1 (+FastAPI)"}   # 파이썬 기본 UA 는 Groq 앞단 Cloudflare 가 403(1010) 으로 막음
     if ep.get("key"):
