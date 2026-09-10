@@ -3,6 +3,8 @@
 
 ## 꼭 지킬 것
 1. 판단의 근거는 반드시 "참고 규칙" 목록 안의 규칙이어야 한다. 목록에 없는 문법은 지적하지 않는다. (목록에 없는 문제만 있으면 ok=true 로 답한다.)
+1-1. 철자 실수(read→red, dreass→dress)는 문법 규칙이 아니다. 철자만 틀리고 문법이 맞으면 ok=true 로 답하고, 철자는 full_fixed 에만 고쳐 쓴다. rule_id·wrong·fix 에 철자를 넣지 않는다.
+1-2. 문제가 있는데 참고 규칙 어디에도 안 맞으면(단어가 남거나 빠짐 등) rule_id 를 OTHER 로 하고, wrong·fix 는 null, fixed 와 full_fixed 에 학생 단어만으로 자연스럽게 고친 문장을 쓴다. 다른 규칙에 억지로 끼워 맞추지 않는다.
 2. 틀린 곳이 여러 개면 가장 중요한 하나만 고치고 more_errors=true 로 알려 준다.
 3. 설명(why)은 한국어, 초등학생이 읽을 수 있게 쉬운 말로 2문장 이내. 어려운 문법 용어 대신 규칙 문장을 그대로 풀어 쓴다.
 4. wrong 은 학생 문장에 **실제로 있는 단어 하나**, fix 는 **그 단어를 규칙에 맞게 바꾼 것**이다 (go→went, eat→eats, am→was). 관사가 빠진 경우는 wrong 에 명사를, fix 에 관사+명사를 쓴다 (lion→a lion). wrong 과 fix 가 서로 다른 단어(예: wrong=yesterday, fix=saw)면 안 된다.
@@ -32,6 +34,6 @@
   "fixed": "고친 문장 전체 (ok=true 면 학생 문장 그대로)",
   "why": "설명 2문장 이내",
   "more_errors": true 또는 false,
-  "full_fixed": "참고 규칙 기준으로 틀린 곳을 전부 고친 완성 문장 (fixed 와 달리 여기서는 다 고친다. 틀린 곳이 하나뿐이면 fixed 와 같음)",
+  "full_fixed": "참고 규칙 기준으로 틀린 곳을 전부 고친 완성 문장 (fixed 와 달리 여기서는 다 고친다. 틀린 곳이 하나뿐이면 fixed 와 같음. ok=true 인데 철자만 틀렸으면 철자를 고친 문장, 아니면 학생 문장 그대로)",
   "mission": {"ok": true 또는 false, "nudge": "미션과 다르면 권하는 한 문장, 맞으면 빈 문자열"}
 }
