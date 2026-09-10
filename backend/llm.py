@@ -10,7 +10,7 @@ LLM 제공자 스위치 — Gemini(기본) · Claude(Anthropic API) · 강의실
     ANTHROPIC_API_KEY=sk-ant-...            claude 백엔드 키 (console.anthropic.com). 무료 등급 없음 — 선불 크레딧
     LLM_CLAUDE_MODEL=claude-opus-5          Claude 모델 id
     LLM_ENDPOINTS=groq,teacher              OpenAI 호환 엔드포인트 이름 목록 (원하는 만큼). 이름마다 아래 세 줄
-    LLM_GROQ_URL=https://api.groq.com/openai/v1   LLM_GROQ_KEY=gsk_...   LLM_GROQ_MODEL=llama-3.3-70b-versatile
+    LLM_GROQ_URL=https://api.groq.com/openai/v1   LLM_GROQ_KEY=gsk_...   LLM_GROQ_MODEL=openai/gpt-oss-20b
     LLM_TEACHER_URL=http://<선생님서버>:11434/v1   (Ollama 는 키 없음)   LLM_TEACHER_MODEL=qwen2.5:7b-instruct
     LLM_LOCAL_URL / _MODEL / _API_KEY       예전 설정. 있으면 'local' 이름으로 자동 등록
     LLM_TIMEOUT=30                          초. 로컬이 이보다 느리면 실패 처리
@@ -121,7 +121,7 @@ def _claude(prompt: str, timeout: float) -> str:
     if _claude_client is None:
         _claude_client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=timeout, max_retries=1)
     kwargs = {}
-    if not settings.claude_model.startswith("claude-haiku"):   # effort 는 Opus/Sonnet 5 계열만 지원. Haiku 4.5 는 넣으면 400
+    if not settings.claude_model.startswith("claude-haiku"):   # effort 는 Opus/Sonnet 5 계열만 지원. 여기선 haiku 접두사만 제외하므로 구세대 id 를 넣으면 400 이 날 수 있다
         kwargs["output_config"] = {"effort": "low"}             # 단답 교정 작업이라 낮은 effort 로 충분 (adaptive thinking 은 켜 둔 채)
     try:
         resp = _claude_client.messages.create(

@@ -3,7 +3,7 @@
 프로젝트 루트의 .env 파일을 읽어 설정값을 한 곳에서 제공한다.
 
 다른 파일에서는 이렇게 쓴다:
-    from config import settings
+    from backend.config import settings
     settings.gemini_api_key
     settings.gemini_model
 
@@ -35,9 +35,6 @@ class Settings:
     llm_backend: str = "gemini"
     anthropic_api_key: str = ""
     claude_model: str = "claude-opus-5"
-    llm_local_url: str = ""
-    llm_local_model: str = ""
-    llm_local_api_key: str = ""
     llm_endpoints: dict = None          # {이름: {url, key, model}} — OpenAI 호환 엔드포인트 여러 개 (LLM_ENDPOINTS=groq,teacher + LLM_GROQ_URL …)
     llm_timeout: float = 30.0
     llm_fallback: bool = True
@@ -75,9 +72,6 @@ settings = Settings(
     llm_backend=_get("LLM_BACKEND", "gemini").lower(),
     anthropic_api_key=_get("ANTHROPIC_API_KEY"),
     claude_model=_get("LLM_CLAUDE_MODEL", "claude-opus-5"),
-    llm_local_url=_get("LLM_LOCAL_URL"),
-    llm_local_model=_get("LLM_LOCAL_MODEL", "qwen2.5:7b-instruct"),
-    llm_local_api_key=_get("LLM_LOCAL_API_KEY"),
     llm_timeout=float(_get("LLM_TIMEOUT", "30") or 30),
     llm_fallback=_get("LLM_FALLBACK", "1") not in ("0", "false", "no"),
     llm_endpoints=_endpoints(),
@@ -92,3 +86,4 @@ if __name__ == "__main__":
     print(f"모델:      {settings.gemini_model} / TTS {settings.gemini_tts_model} ({settings.gemini_tts_voice})")
     print(f"앱 제목:   {settings.app_title} · 학습자 {settings.learner_name}")
     print(f"음원 캐시: {settings.audio_cache_dir}")
+    print(f"LLM:       기본 {settings.llm_backend} · 엔드포인트 {sorted((settings.llm_endpoints or {}).keys())} · 폴백 {settings.llm_fallback}")

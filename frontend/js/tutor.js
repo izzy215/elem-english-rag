@@ -1,6 +1,6 @@
-/* 내 문장 말해보기 (핵심) — 🎙 STT(팀원 API) 또는 ⌨ 입력 → /fix (서버 없으면 화면 폴백 진단) → 오답노트 기록 */
+/* 내 문장 말해보기 (핵심) — 🎙 STT(팀원 API) 또는 ⌨ 입력 → /fix (서버가 404 일 때만 화면 임시 진단) → 오답노트 기록 */
 const state = requireState('level', 'unit');
-let text = '', source = 'typed', typing = false, round = 0, continuing = false;   // round: 같은 문장을 몇 번째 고치는 중인지 (다시 고쳐줘 최대 2회)
+let text = '', source = 'typed', typing = false, round = 0, continuing = false;   // round: 같은 문장을 몇 번째 고치는 중인지 (최대 2차 = 다시 고쳐줘 버튼 1회)
 
 // 진단 결과 영역만 초기화 (입력 문장은 그대로). 새 문장을 치면 이전 카드·단계·칩이 이어 붙지 않게
 function clearResults() {
@@ -45,19 +45,20 @@ async function record() {
   } catch (e) { btn.classList.remove('rec'); btn.textContent = '🎙 말하기'; btn.onclick = record; showResult('#tNote', esc(e.message), 'bad'); }
 }
 let rounds = [];   // 이 문장의 회차별 /fix 결과 [1차, 2차]. 발표용 토글 때 전부 다시 그리려고 보관
-// 진단 카드. 근거 박스는 두 겹 — 학생용(기본): 규칙 한 줄 / 발표·개발용(상단 학생 칩 길게 누르기): id·검색 점수·순위·2위·후보·원문·모드
+// 진단 카드. 근거 박스는 두 겹 — 학생용(기본): 규칙 한 줄 / 발표·개발용(상단 학생 칩 길게 누르기·더블클릭): id·점수·순위·2위·후보 5·원문·모델·시간·모드
 function evidenceBox(r) {
   const rule = ruleOf(r.rule.id);
   if (!DEV.on()) return `<div class="src">📚 <b>${esc(rule?.short || r.rule.name)}</b></div>`;
   const title = r.mode === 'rag' ? 'RAG가 찾은 근거' : r.mode === 'fallback' ? '참고한 규칙 (검색 없이 전체 규칙 중 고름)' : '참고한 규칙 (화면 샘플)';
   const cands = (r.candidates || []).map((c, i) => `${i + 1}위 ${esc(c.name)} ${c.score}`).join(' · ');
-  const llm = r.llm ? `${esc(r.llm.backend)}:${esc(r.llm.model || '')} ${r.llm.ms}ms${r.llm.fallback_from ? ` (${esc(r.llm.fallback_from)} 실패 → 대체)` : ''}` : '';
+  const tm = r.timing ? ` · 전체 ${r.timing.total_ms}ms (검색 ${r.timing.search_ms}ms · 모델 ${r.timing.llm_ms}ms ×${r.timing.llm_calls})` : '';
+  const llm = r.llm ? `${esc(r.llm.backend)}:${esc(r.llm.model || '')} ${r.llm.ms}ms${r.llm.fallback_from ? ` (${esc(r.llm.fallback_from)} 실패 → 대체)` : ''}${tm}` : '';
   return `<div class="src">📚 <b>${title}</b> · ${esc(r.source?.chunk_id || '')}${r.rule.score != null ? ` · 검색 점수 ${r.rule.score}${r.rule.rank ? ` (${r.rule.rank}위)` : ''}` : ''}${r.runner_up ? ` · 다른 후보 ${r.runner_up.rank ? r.runner_up.rank + '위 ' : ''}${esc(r.runner_up.name)} ${r.runner_up.score}` : ''}
     <br><span style="opacity:.8;white-space:normal;word-break:keep-all;overflow-wrap:anywhere">${esc(r.source?.text || '')}</span>
     ${cands ? `<br><span style="opacity:.7">검색 후보: ${cands}</span>` : ''}${llm ? `<br><span style="opacity:.7">모델: ${llm}</span>` : ''}</div>`;
 }
 function diagHTML(r, n, isLast) {
-  const badge = !DEV.on() ? '' : r.mode === 'local' ? `<div class="src" style="opacity:.75">서버 /fix 구현 전 · 화면 임시 진단 (규칙 샘플 기준)</div>`
+  const badge = !DEV.on() ? '' : r.mode === 'local' ? `<div class="src" style="opacity:.75">서버 /fix 없음(404) · 화면 임시 진단 (규칙 샘플 기준)</div>`
     : r.mode === 'fallback' ? `<div class="src" style="opacity:.75">서버 /fix · RAG 검색 실패로 규칙 전체를 넣는 폴백 모드${r.fallback_reason ? ' (' + esc(r.fallback_reason) + ')' : ''}</div>` : '';
   const spell = (r.spelling || []).length ? `<div class="hint" style="margin-top:10px">✏️ 철자만 살짝 고치면</div><div class="fixed">${spellHTML(r.fixed, r.spelling)}</div>` : '';
   if (r.ok) return `<div class="type ok">${n > 1 ? '✓ 이제 다 맞았어요!' : '✓ 잘 썼어요!'}</div><div class="fixed">${esc(r.fixed)}</div><div class="why">${esc(r.why)}</div>${spell}${badge}`;
@@ -81,21 +82,26 @@ function renderAll() {   // 이전 회차는 흐린 카드(버튼 없음)로 위
 }
 window.addEventListener('devview', () => { if (rounds.length) renderAll(); });
 async function runFix() {
-  if (!text) return; $('#fixBtn').disabled = true; $('#steps').style.display = 'grid'; $('#diag').style.display = 'none';
+  if (!text || BUSY) return; $('#fixBtn').disabled = true; $('#steps').style.display = 'grid'; $('#diag').style.display = 'none';
   const st = ['#st1', '#st2', '#st3']; st.forEach(s => $(s).className = 'step'); $('#st1').className = 'step on';
+  const t0 = performance.now();
+  setBusy(true, '✨ 고치는 중… 잠깐만요');                       // 상단 진행바 + 하단 메시지, 다른 버튼 잠금 (speak 와 같은 방식)
+  const tick = setInterval(() => { const s = Math.round((performance.now() - t0) / 1000); if (s >= 3) $('#loadmsg').textContent = `✨ 고치는 중… ${s}초`; }, 1000);
   const p = fixSentence(text, { level: state.level.level, unit: state.unit.unit, source });
   await new Promise(r => setTimeout(r, 350)); $('#st1').className = 'step done'; $('#st2').className = 'step on';
-  let r; try { r = await p; console.log(`[fix] ${round + 1}차 응답`, r); }
-  catch (e) { $('#st2').className = 'step'; $('#diag').style.display = 'block'; $('#diag').innerHTML = `<div class="type">서버 진단 실패</div><div class="why">${esc(e.message)}</div><div class="src">잠시 후 다시 [고쳐줘]를 눌러 보세요.</div>`; $('#fixBtn').disabled = false; return; }
+  let r; try { r = await p; if (DEV.on()) console.log(`[fix] ${round + 1}차 응답 ${Math.round(performance.now() - t0)}ms`, r); }
+  catch (e) { clearInterval(tick); setBusy(false); $('#st2').className = 'step'; $('#diag').style.display = 'block'; $('#diag').innerHTML = `<div class="type">서버 진단 실패</div><div class="why">${esc(e.message)}</div><div class="src">잠시 후 다시 [고쳐줘]를 눌러 보세요.</div>`; $('#fixBtn').disabled = false; return; }
+  clearInterval(tick); setBusy(false);
   $('#st2').className = 'step done'; $('#st3').className = 'step on'; await new Promise(x => setTimeout(x, 350)); $('#st3').className = 'step done';
+  $('#st3').title = `${Math.round(performance.now() - t0)}ms`;
   round++;
   const d = $('#diag'); d.style.display = 'block';
   rounds.push(r); renderAll();
   if (!r.ok) {
-    NB.addWrong(state.student, r.rule.id, text, r.fixed, r.log_id);   // 서버 /notebook 이 생기기 전까지 오답노트 화면용 로컬 기록 (서버가 있으면 화면이 서버 것을 씀)
+    NB.addWrong(state.student, r.rule.id, text, r.fixed, r.log_id);   // 브라우저 사본 (정식 기록은 서버 notebook.json — 화면은 서버 것을 먼저 쓴다)
   }
   const m = checkMission(text, r);
-  if (m && !m.ok) showResult('#missionNote', `🎯 ${esc(m.nudge)}${m.local ? ' <span style="opacity:.6;font-weight:500">(서버 /fix 미션 판단 전 · 힌트 단어만 확인)</span>' : ''}`, 'todo'); else hideResult('#missionNote');
+  if (m && !m.ok) showResult('#missionNote', `🎯 ${esc(m.nudge)}${m.local ? ' <span style="opacity:.6;font-weight:500">(서버 없이 힌트 단어만 확인한 결과)</span>' : ''}`, 'todo'); else hideResult('#missionNote');
   localStorage.setItem(`spoken_${state.student}_${state.unit.unit}_${Date.now()}`, '1'); S.set({ lastFix: { log_id: r.log_id, rule_id: r.rule?.id || null } });
   const chips = $('#askChips'); chips.style.display = 'flex';
   chips.innerHTML = `<span class="hint" style="width:100%;margin:0">더 물어보기</span>` + (r.suggested_questions || []).map(q => `<button class="chip" onclick='openChat({rule_id:${JSON.stringify(r.rule?.id || null)},log_id:${JSON.stringify(r.log_id)}}).then(()=>askChat(${JSON.stringify(q)}))'>${esc(q)}</button>`).join('') + `<button class="chip" onclick='openChat({rule_id:${JSON.stringify(r.rule?.id || null)},log_id:${JSON.stringify(r.log_id)}})'>🙋 직접 물어보기</button>`;

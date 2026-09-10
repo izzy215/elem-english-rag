@@ -33,10 +33,10 @@ flowchart LR
 
   subgraph ext["외부 · 내부 시스템"]
     direction TB
-    STT[["Gemini STT"]]
+    STT[["로컬 Whisper STT<br/>(whisper_server.py)"]]
     TTS[["Gemini TTS"]]
-    RAG[["RAG 검색<br/>Chroma"]]
-    LLM[["Gemini 생성"]]
+    RAG[["RAG 검색<br/>Chroma · gemini-embedding-001"]]
+    LLM[["LLM 생성<br/>(llm.py 스위치: 로컬 Qwen → Gemini)"]]
     DB[["학생 DB<br/>JSON"]]
   end
 
@@ -70,9 +70,9 @@ flowchart LR
 | 유스케이스 | 액터 | 포함(include) | 확장(extend) |
 |---|---|---|---|
 | 고쳐주기 받기 | 학생 | 규칙 검색(RAG) · 근거로 생성(LLM) · 오답노트 기록 | 오류 없음 → "잘 썼어요" / 검색 실패 → 폴백(규칙 전부 참고) |
-| 더 물어보기 | 학생 | 설명 조각 검색(RAG) · 생성 | 추천 질문 버튼 / 직접 입력 |
+| 더 물어보기 | 학생 | FAQ 매칭 · 생성 (설명 조각 RAG 검색은 연결 예정) | 추천 질문 버튼 / 직접 입력 |
 | 규칙 연습 | 학생 | 문제 꺼내기(DB) · 채점 · streak | 2회 연속 정답 → 극복 |
-| 골든 데이터 납품 | 데이터팀 | 형식 검증 · 임베딩 · 조립 실험 | |
+| 골든 데이터 납품 | 데이터팀 | 형식 검증 · 임베딩 · 임베딩 모델 비교 | |
 
 ---
 
@@ -84,45 +84,45 @@ sequenceDiagram
   actor S as 학생
   participant UI as tutor.html
   participant SP as speak.py<br/>(STT)
+  participant WH as whisper_server.py<br/>(로컬 Whisper)
   participant TU as tutor.py<br/>(/fix)
   participant RG as rag.py<br/>(Chroma)
-  participant GM as Gemini
+  participant LM as llm.py<br/>(LLM 스위치)
   participant ST as student.py<br/>(학생 DB)
 
   S->>UI: 🎙 말하기 (최대 6초)
   UI->>SP: POST /speak {audio_base64}
-  SP->>GM: 오디오 첨부 + "받아 적어"
-  GM-->>SP: "I go to the zoo yesterday"
+  SP->>WH: 오디오 → 받아쓰기 (강의실 GPU 서버, 없으면 로컬 CPU)
+  WH-->>SP: "I go to the zoo yesterday"
   SP-->>UI: {heard}
   UI-->>S: 들린 문장 표시 · [고쳐줘]
 
   S->>UI: 고쳐줘
-  UI->>TU: POST /fix {student, unit, text, source:"stt"}
-  Note over UI: 화면: ① 문장 받기 ✓
+  UI->>TU: POST /fix {student, level, unit, text, source:"stt"}
+  Note over UI: 화면: ① 문장 받기 ✓ (로딩바 + 경과 초)
+  Note over TU: 철자 사전검사 (pyspellchecker, 교재 단어 우선)
 
-  TU->>RG: search(text, kind=rule, k=3)
-  Note over RG: 문장 임베딩 → 규칙 조각과 거리 비교<br/>프롬프트 없음
-  RG-->>TU: [{R-01 과거시제 0.91}, {R-03 관사 0.42}, ...], threshold 0.60
+  TU->>RG: search_rules(text, k=전체)
+  Note over RG: 문장 임베딩(gemini-embedding-001) → 규칙 조각과 코사인 비교<br/>kind · threshold 없음 · R-01 은 어휘 안전망 보강
+  RG-->>TU: [{R-31 과거시제 0.45}, {R-34 관사 0.38}, ...] 38개 전부 (점수 · 순위)
   Note over UI: 화면: ② RAG 규칙 검색 ✓
 
-  alt 1위 score ≥ threshold (규칙에 걸림)
-    TU->>GM: prompts/fix.txt {sentence, rule_text(R-01)} · JSON 강제
-    GM-->>TU: {ok:false, wrong:"go", fix:"went", fixed:"I went…", why:"…"}
-    TU->>ST: 오답노트 기록 (R-01 count+1, streak 0) + 문장 로그
-  else 1위 score < threshold (걸리는 규칙 없음)
-    TU->>GM: fix.txt {sentence, rule_text: 없음}
-    GM-->>TU: {ok:true, why:"문법에 맞는 문장이에요"}
+  alt 검색 성공 (mode: rag)
+    TU->>LM: prompts/fix_fallback.txt {mission, hint_words, all_rules, sentence} · JSON<br/>all_rules = 검색 상위 5 + 이 Unit 규칙 + 공통(ALL) 규칙 + SPELL · OTHER
+  else 검색 실패 (mode: fallback, fallback_reason: search_error 또는 no_results)
+    TU->>LM: 같은 프롬프트, all_rules = 규칙 38개 전부 + SPELL · OTHER
+  end
+  LM-->>TU: {ok:false, rule_id:"R-31", wrong:"go", fix:"went", fixed:"I went…", full_fixed, why, more_errors, mission}
+  Note over TU: 서버 검증(_pair_problem) → 안 맞으면 1회 재시도 → OTHER 로 살림 또는 502<br/>기능어 한 개 교체(is→are, a→an)는 _second_opinion 으로 한 번 더 확인
+  alt ok=false (규칙에 걸림 · OTHER 포함)
+    TU->>ST: 오답노트 기록 (R-31 count+1, streak 0) + 문장 로그
+  else ok=true (잘 썼어요 · 철자만 틀림)
     TU->>ST: 문장 로그만
   end
   Note over UI: 화면: ③ AI 설명 ✓
 
-  TU-->>UI: {ok, rule, runner_up, wrong, fix, fixed, why, source, suggested_questions, log_id}
-  UI-->>S: 진단 카드 · 근거(R-01 · 0.91) · 🔊 · 더 물어보기 버튼 3개
-
-  opt 검색 실패 · 30초 초과
-    TU->>GM: prompts/fix_fallback.txt {sentence, all_rules(≤30)}
-    Note over TU: mode:"fallback" — RAG 없이도 동작
-  end
+  TU-->>UI: {ok, rule{id,name,score,rank}, runner_up, wrong, fix, fixed, why, source, more_errors, full_fixed,<br/>spelling, suggested_questions, mission, log_id, mode, fallback_reason, candidates(5), llm, timing}
+  UI-->>S: 진단 카드 · 근거(R-31 · 0.45 · 발표용 토글이면 후보 5 · 모델 · timing) · 더 물어보기 칩 최대 3개(FAQ) + 직접 물어보기
 ```
 
 ---
@@ -134,22 +134,26 @@ sequenceDiagram
   autonumber
   actor S as 학생
   participant UI as tutor.html
-  participant TU as tutor.py<br/>(/ask)
-  participant RG as rag.py<br/>(Chroma)
-  participant GM as Gemini
-  participant ST as student.py
+  participant AK as ask.py<br/>(/ask)
+  participant FQ as faq.jsonl · rules.jsonl<br/>(로컬 매칭)
+  participant LG as sentence_log.jsonl
+  participant LM as llm.py<br/>(LLM 스위치)
 
   S->>UI: "왜 went예요?" (추천 버튼 또는 직접 입력)
-  UI->>TU: POST /ask {student, log_id, question}
-  TU->>ST: log_id 로 직전 진단 읽기 (문장 · 규칙 · 고친 문장)
-  ST-->>TU: last_diagnosis
-  TU->>RG: search(question, kind=all, k=3)
-  Note over RG: 규칙 조각 + 설명(FAQ) 조각에서 검색
-  RG-->>TU: [{R-01 0.88}, {R-05 불규칙동사 0.81}, {P-… 0.40}]
-  TU->>GM: prompts/ask.txt {question, chunks(≥threshold), last_diagnosis}
-  GM-->>TU: "go의 과거형은 규칙 없이 went로…"
-  TU-->>UI: {answer, source:[R-01, R-05]}
+  UI->>AK: POST /ask {student, question, context{screen, unit, rule_id, log_id}}
+  AK->>FQ: question + variants 단어 겹침 매칭 (1순위 faq, 2순위 rules)
+  alt 매칭됨 (점수 0.5 이상)
+    FQ-->>AK: F-01 답 + rule_ids
+    Note over AK: LLM 호출 없이 즉시 반환
+  else 매칭 안 됨
+    AK->>LG: log_id 로 직전 진단 읽기 (원문 · 고친 문장)
+    LG-->>AK: last_diagnosis
+    AK->>LM: FAQ 전체 + 질문 + last_diagnosis 를 프롬프트에 · JSON
+    LM-->>AK: "go의 과거형은 규칙 없이 went로…" + 근거 id · offtopic
+  end
+  AK-->>UI: {answer, source:[R-31, F-01], suggested, offtopic, llm}
   UI-->>S: 답 + 📚 근거 id
+  Note over AK: rag.search 는 아직 호출하지 않음 (RAG 연결 예정)
 ```
 
 ---
@@ -203,24 +207,23 @@ sequenceDiagram
   autonumber
   actor D as 데이터팀
   participant G as data/golden/
-  participant V as tests/validate.py<br/>(RAG 담당)
-  participant B as tests/build_index.py
+  participant I as backend/indexing.py<br/>(RAG 담당)
+  participant EM as backend/embedding.py<br/>(gemini-embedding-001)
   participant C as Chroma<br/>(data/chroma/)
   participant E as tests/eval_rag.py
   participant A as admin.html
 
-  D->>G: rules.jsonl · errors · eval · patterns · words 납품 (7일차)
-  V->>G: 형식 검증 (컬럼 · id 중복 · rule_id 참조)
-  V-->>D: 오류 목록 (있으면 수정 요청)
-  loop 조립 방식 3종 (규칙만 / +예시 / +한국어)
-    B->>G: rules.jsonl 읽기
-    B->>C: text 조립 → 임베딩(Gemini Embedding, 조각당 1회) → 컬렉션 rules_X
-  end
-  E->>C: eval.csv 30문장 각각 search(k=3)
-  E-->>E: hit@3 · hit@1 · 정상 문장 오탐률 · threshold 후보
-  E->>A: /rag/eval runs 기록
-  A-->>D: 정확도 그래프 (63 → 77 → 87) · 채택 방식
-  Note over C: 채택된 컬렉션을 rules 로 지정 → /fix 가 사용
+  D->>G: rules · faq · errors · eval · units · patterns · words 납품
+  I->>G: --validate-only 형식 검증 (컬럼 · id 중복 · rule_id 참조)
+  I-->>D: 오류 목록 (있으면 수정 요청)
+  I->>G: --rebuild rules.jsonl 읽기
+  I->>EM: text 원문 임베딩 (조각당 1회, 3072차원)
+  I->>C: 컬렉션 rules_20260910_… 생성 → manifest.json 의 active_collection 갱신
+  E->>C: eval.csv 72문장 중 오류 65문장 각각 search(k=3) (정상 7은 채점 안 함)
+  E-->>E: hit@3 · hit@1 → retrieval_eval_latest.json
+  E->>A: /rag/eval runs 기록 (임베딩 모델별)
+  A-->>D: 정확도 카드 (hit@3 92% · hit@1 77%) · 채택 모델
+  Note over C: manifest.active_collection 이 가리키는 컬렉션을 /fix 가 사용
 ```
 
 ---
