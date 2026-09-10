@@ -1,6 +1,6 @@
 /* 공통 (B안): API · 화면 간 상태 · 상단바 · 샘플 데이터 폴백 · 오답노트(로컬) · 오디오 · 물어보기 챗
- * 서버에 아직 없는 API(/fix /ask /notebook /drill /patterns)는 여기의 폴백이 대신한다.
- * 서버가 생기면 폴백은 자동으로 안 쓰인다 (먼저 서버를 부르고, 404/실패일 때만 폴백). */
+ * /fix /ask /notebook /drill /patterns 는 서버에 다 있다. 여기의 폴백은 서버가 404 를 줄 때(서버 없이 화면만 열었을 때)만 대신 그린다.
+ * 그 밖에 DEV 뷰(발표용 근거 박스·모드 배지) 와 setBusy(상단 진행바 + 버튼 잠금) 도 여기 있다. */
 
 // ---------- API ----------
 async function api(path, opts = {}) {
@@ -23,7 +23,7 @@ function go(page) { location.href = page; }
 function requireState(...keys) { const s = S.get(); for (const k of keys) if (s[k] == null) { go('index.html'); return null; } return s; }
 
 // ---------- 상단바 · 상태줄 ----------
-// ---------- 발표·개발용 뷰 (근거 박스 두 겹: 학생용은 규칙 한 줄, 발표용은 id·검색 점수·순위·2위·원문·모드) ----------
+// ---------- 발표·개발용 뷰 (근거 박스 두 겹: 학생용은 규칙 한 줄, 발표용은 id·점수(순위)·2위·원문·후보 5·모델·시간) + 모드 배지 + 상단 "발표용" 표시 ----------
 // 상단 "학생 A" 칩을 길게(0.6초) 누르거나 더블클릭하면 켜고 끈다. 이 브라우저에만 저장.
 const DEV = {
   on() { try { return localStorage.getItem('devView') === '1'; } catch (_) { return false; } },
@@ -53,7 +53,7 @@ async function showHealth() {
 function showResult(sel, html, kind = '') { const el = $(sel); el.className = 'result on ' + kind; el.innerHTML = html; }
 function hideResult(sel) { const el = $(sel); if (el) el.className = 'result'; }
 
-// ---------- 샘플 데이터 폴백 (frontend/data/sample-B/, 서버 API 생기기 전까지) ----------
+// ---------- 샘플 데이터 폴백 (frontend/data/sample-B/ — 서버가 404 일 때만. 규칙 id 체계가 골든(38개)과 다른 옛 샘플 9개) ----------
 const SB = { loaded: false, rules: [], faq: [], errors: [], patterns: [], units: [] };
 function parseCSV(t) {
   const lines = t.replace(/\r/g, '').split('\n').filter(l => l.trim()); const head = lines.shift().split(',');
@@ -69,7 +69,7 @@ async function loadSampleB() {
 const ruleOf = id => SB.rules.find(r => r.id === id);
 const unitMeta = unit => SB.units.find(u => u.unit === unit);
 
-// ---------- 오답노트 (서버 /notebook 생기기 전까지 로컬 저장) ----------
+// ---------- 오답노트 브라우저 사본 (서버 /notebook 이 정식. 서버가 404 일 때만 화면이 이걸 쓴다) ----------
 const NB = {
   key: st => `notebook_${st}`,
   get(st) { try { return JSON.parse(localStorage.getItem(NB.key(st)) || '{}'); } catch (_) { return {}; } },
@@ -157,7 +157,7 @@ async function waveFromBlob(blob, bars = 26) {     // 실제 파형: 구간별 R
 }
 function drawWave(el, vals) { el.innerHTML = (vals || Array(26).fill(.15)).map(v => `<i style="height:${Math.max(4, Math.round(v * 38))}px"></i>`).join(''); }
 
-// ---------- 튜터 폴백: 규칙 감지 (서버 /fix 생기기 전까지 화면에서 대충) ----------
+// ---------- 튜터 폴백: 규칙 감지 (서버 /fix 가 404 일 때만. 규칙 id 는 sample-B 체계 — 골든에서는 R-01 이 형용사+be동사) ----------
 function detectRule(text) {
   const l = text.toLowerCase().replace(/[.!?]/g, ' ').trim(), W = l.split(/\s+/);
   const past = { go: 'went', see: 'saw', eat: 'ate', have: 'had', play: 'played', visit: 'visited', watch: 'watched', am: 'was', is: 'was', are: 'were' };
@@ -170,7 +170,7 @@ function detectRule(text) {
   const m6 = l.match(/\b(want|have|see|saw) (banana|dog|cat|apple|pizza|sandwich|book|pencil)\b/); if (m6) return { rule_id: 'R-08', wrong: m6[2], fix: 'a ' + m6[2], fixed: text.replace(new RegExp(`\\b${m6[2]}\\b`, 'i'), 'a ' + m6[2]) };
   return null;
 }
-async function fixSentence(text, ctx) {             // 서버 /fix 우선, 없으면 폴백
+async function fixSentence(text, ctx) {             // 서버 /fix. 404/405 일 때만 화면 임시 진단(detectRule), 다른 오류는 그대로 보여준다
   try { const r = await api('/api/fix', { method: 'POST', body: JSON.stringify({ student: S.get().student, level: ctx.level, unit: ctx.unit, text, source: ctx.source }) }); return { ...r, mode: r.mode || 'server' }; }
   catch (e) {
     if (e.status && e.status !== 404 && e.status !== 405) throw e;   // 서버 /fix 는 있는데 실패(할당량 등) → 화면 임시 진단으로 덮지 않고 그대로 보여준다
@@ -211,10 +211,15 @@ function faqMatch(q) {                             // 폴백: 질문 ↔ questio
   return bs >= 0.5 ? best : null;
 }
 async function askChat(q) {
+  if (BUSY) return;                                     // 답이 오는 동안 두 번 보내지 않기 (칩·엔터 연타)
   const m = $('#chatMsgs'); m.insertAdjacentHTML('beforeend', `<div class="msg me">${esc(q)}</div>`); m.scrollTop = m.scrollHeight;
+  setBusy(true);                                        // 상단 진행바 + 버튼 잠금 (하단 말풍선은 채팅 입력칸과 겹쳐서 안 띄움)
+  m.insertAdjacentHTML('beforeend', `<div class="msg bot typing" id="chatTyping"><i></i><i></i><i></i></div>`); m.scrollTop = m.scrollHeight;
+  const t0 = performance.now();
   let r;
   try { r = await api('/api/ask', { method: 'POST', body: JSON.stringify({ student: S.get().student, question: q, context: CHAT.ctx }) }); }
   catch (_) { const f = faqMatch(q); r = f ? { answer: f.answer, source: f.rule_ids.map(id => ({ chunk_id: id })).concat([{ chunk_id: f.id }]), offtopic: false, fallback: true } : { answer: '음, 그건 영어 공부랑은 조금 다른 것 같아. 선생님께 물어볼까? 🙂', offtopic: true, fallback: true }; }
+  finally { $('#chatTyping')?.remove(); setBusy(false); if (DEV.on()) console.log(`[ask] ${Math.round(performance.now() - t0)}ms`); }
   m.insertAdjacentHTML('beforeend', `<div class="msg bot ${r.offtopic ? 'warn' : ''}">${esc(r.answer)}${r.source && r.source.length ? `<div class="src">📚 근거 · ${r.source.map(s => esc(s.chunk_id)).join(' · ')}</div>` : (r.offtopic ? `<div class="src">검색 점수 낮음 → 조각 밖 답변 안 함</div>` : '')}${r.fallback ? `<div class="src" style="opacity:.7">서버 /ask 구현 전 · FAQ 샘플로 임시 답변</div>` : ''}</div>`);
   m.scrollTop = m.scrollHeight; CHAT.turns++;
   if (r.suggested && r.suggested.length) renderSugg(r.suggested); if (CHAT.turns >= 3) $('#chatSugg').innerHTML = `<button onclick="closeChat()">이제 돌아갈게요 ↩</button>`;
