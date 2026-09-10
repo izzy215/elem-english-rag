@@ -4,16 +4,17 @@ plan-B(내 문장 고쳐주기 튜터)용. 데이터팀은 **이 형식 그대�
 파일 7개. 우선순위: ① rules.jsonl + eval.csv (RAG 실험) → ② units · patterns · words (화면) → ③ errors.jsonl (규칙 연습) → ④ faq.jsonl (물어보기 챗)
 
 **임베딩(Chroma 색인) 대상은 rules.jsonl 하나 (나중에 faq.jsonl 은 별도 컬렉션).** eval.csv 는 시험지라 색인에 넣지 않고, 검색이 맞는지 채점할 때만 쓴다. errors · patterns · words · units 도 색인 대상이 아니다.
+임베딩 제공자는 `backend/embedding.py` 의 **gemini-embedding-001 (3072차원)**. 색인은 `python -m backend.indexing --rebuild`, 현재 컬렉션은 `data/chroma/manifest.json` 의 `active_collection`.
 
-| 파일 | 한 줄 = | 임베딩 | 컬럼 | 목표량 |
-|---|---|---|---|---|
-| `rules.jsonl` ★ | 규칙 설명 조각 (RAG 검색 대상) | **O** (컬렉션 rules) | id · type · unit · text · short · examples · wrong_example | 25 |
-| `eval.csv` | 평가: 학생 문장 → 정답 규칙 | **X** 시험지. 검색 채점(hit@3)에만 | text · expected_rule_id · note | 30 (정상 문장 5 = NONE) |
-| `units.csv` | Unit = 말하기 미션 | X | level · unit · title · mission · hint_words · rule_ids | 3 |
-| `words.csv` | 단어 | X | id · level · unit · word · meaning · example | 40 |
-| `patterns.csv` | 문장 패턴 | X | id · level · unit · text · meaning · tip · rule_id | 20 |
-| `errors.jsonl` | 오류 예시 (연습·데모) | X 규칙 연습 문제 | id · unit · rule_id · error · correct · target · fix · distractors | 40 |
-| `faq.jsonl` | 물어보기 챗 질문·답 조각 (RAG 검색 대상) | O 나중에 (컬렉션 explain, /ask 용) | id · unit · question · variants · answer · rule_ids · example | 30 |
+| 파일 | 한 줄 = | 임베딩 | 컬럼 | 목표량 | 실제 납품 |
+|---|---|---|---|---|---|
+| `rules.jsonl` ★ | 규칙 설명 조각 (RAG 검색 대상) | **O** (컬렉션 rules_<stamp>) | id · type · unit · text · short · examples · wrong_example | 25 | 38 (R-01~R-38) |
+| `eval.csv` | 평가: 학생 문장 → 정답 규칙 | **X** 시험지. 검색 채점(hit@3)에만 | text · expected_rule_id · note | 30 (정상 문장 7 = NONE) | 72 (오류 65 + 정상 7) |
+| `units.csv` | Unit = 말하기 미션 | X | level · unit · title · mission · hint_words · rule_ids | 3 | 20 (level 3, Unit01~Unit20) |
+| `words.csv` | 단어 | X | id · level · unit · word · meaning · example | 40 | 400 |
+| `patterns.csv` | 문장 패턴 | X | id · level · unit · text · meaning · tip · rule_id | 20 | 400 |
+| `errors.jsonl` | 오류 예시 (연습·데모) | X 규칙 연습 문제 | id · unit · rule_id · error · correct · target · fix · distractors | 40 | 400 (distractors 3개 모두 채움) |
+| `faq.jsonl` | 물어보기 챗 질문·답 조각 (RAG 검색 대상) | O 나중에 (별도 컬렉션, /ask 용 · 아직 미색인) | id · unit · question · variants · answer · rule_ids · example | 30 | 74 (F-01~F-75, 결번 1) |
 
 ## faq.jsonl 한 줄 해설 — 물어보기 챗의 "교재"
 
@@ -21,7 +22,7 @@ plan-B(내 문장 고쳐주기 튜터)용. 데이터팀은 **이 형식 그대�
 
 ```
 {"id":"F-01",                        F-번호
- "unit":"U3",                        주로 나오는 Unit. 어디서나 물을 법하면 "ALL"
+ "unit":"U3",                        주로 나오는 Unit. 어디서나 물을 법하면 "ALL" (샘플은 U 코드 · 납품본은 Unit01~Unit20 또는 ALL)
  "question":"왜 went예요?",           대표 질문 (챗의 '추천 질문' 버튼에 그대로 씀)
  "variants":["go 과거가 뭐예요",      같은 뜻의 다른 표현들. 검색 본문에 함께 넣어 "삐뚤빼뚤한 질문"도 잡히게 (깔때기)
              "갔다를 영어로 뭐라고 해요"],
@@ -34,7 +35,7 @@ plan-B(내 문장 고쳐주기 튜터)용. 데이터팀은 **이 형식 그대�
 - **question 은 아이 말투로.** "과거형 불규칙 동사의 활용은?" ✕ → "왜 went예요?" ○
 - **variants 3개 이상.** 같은 질문을 다르게 묻는 방식. 이게 많을수록 검색이 잘 됨
 - 답은 rules 의 내용과 어긋나면 안 됨 (rule_ids 로 연결해 검수)
-- 30개 구성 안: 규칙 질문 15 · 단어 뜻 질문 10 · "다른 예문 보여줘" 같은 요청 5
+- 30개 구성 안: 규칙 질문 15 · 단어 뜻 질문 10 · "다른 예문 보여줘" 같은 요청 5 → 납품본은 74개 (F-01~F-75, 결번 1)
 - 데이터팀 샘플의 `feedback` 이 출발점 — 규칙별로 자주 나오는 질문을 뽑아 정리
 
 ## 규칙
@@ -47,10 +48,12 @@ plan-B(내 문장 고쳐주기 튜터)용. 데이터팀은 **이 형식 그대�
 
 ## rules.jsonl 한 줄 해설
 
+아래는 **샘플(_sample-B) 기준** 예시다. 납품본에서는 R-01 이 "형용사+be동사 · Unit01"이고 과거시제는 R-31(unit ALL), 관사는 R-34(an) · R-38(a) 이다.
+
 ```
-{"id":"R-01",                         규칙 id
- "type":"과거시제",                    오류 유형 이름 (6개 중 하나)
- "unit":"U3",                         주로 쓰이는 Unit (여러 Unit이면 "ALL")
+{"id":"R-01",                         규칙 id (납품본 R-01~R-38)
+ "type":"과거시제",                    오류 유형 이름 (납품본은 30여 종)
+ "unit":"U3",                         주로 쓰이는 Unit (여러 Unit이면 "ALL"). 샘플은 U 코드, 납품본은 Unit01~Unit20 또는 ALL
  "text":"어제(yesterday)… 틀린 예: …", RAG 검색용 본문 80~200자. 학생이 쓸 법한 영어 단어 + 맞는 예 2 + 틀린 예 1 + 한국어 설명
  "short":"과거를 말할 땐 동사를 과거형으로",  패턴 카드 힌트 한 줄
  "examples":["I went …","I saw …"],   맞는 예문 (연습 해설·듣기)

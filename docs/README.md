@@ -7,6 +7,10 @@
 | [plan-B/](plan-B/) ✓ | **내 문장 고쳐주기 튜터** (확정) | 말하거나 쓴 문장 → RAG 규칙 검색 → 고쳐주기 → 오답노트(문법) + 물어보기 챗 |
 | [archive/plan-A/](archive/plan-A/) | 단어 4지선다 (보관) | 단어 틀림 → 그 단어 설명 (id 조회 위주) |
 | [common/](common/) | 공통 | 아키텍처 흐름도(콘텐츠/형식/서버/화면 분리), 데이터 파이프라인 원본 그림 |
+| [RAG_0909/](RAG_0909/) | RAG 인계 | RAG 담당 인계 문서 · 작업지시서 v0.2 · 코드 목록/파이프라인 · 임베딩(Gemini 전환) 가이드 |
+| [RAG_0910/](RAG_0910/) | RAG 개선 | 2026-09-10 RAG 개선 실험(Claude/) · 작업 요약 · 작업 방향 회의 정리 |
+| [0908/](0908/) | 데이터팀 회의 | 0908 데이터팀 회의자료 — 룰스 초안 · 교육과정 성취기준/단어/언어 형식 PDF |
+| [샘플데이터/](샘플데이터/) | 골든 데이터 | 데이터팀 납품본 xlsx(0908 · 0910) · 규칙 추가·수정 요청서 · 학년별 필수단어 |
 
 ## 공통 전제 — 닫힌 도메인에서 RAG의 역할
 
@@ -35,7 +39,7 @@
 | 설계서 | design-screens · design-quiz · design-backlog | (작성 예정: design-tutor · design-chat · design-rag) |
 | 다이어그램 | overview.svg | diagrams.md (유스케이스 · 시퀀스 4 · Mermaid) |
 | 로컬 LLM 연동 (선생님 GPU 서버) | — | local-llm-plan.md (llm.py 스위치 · Ollama · 비교 실험 · TTS 팀원) |
-| RAG 작업지시서 | — | ../rag-implementation-work-order.md (RAG 팀원) |
+| RAG 작업지시서 | — | [RAG_0909/rag-implementation-work-order_v0.2.md](RAG_0909/rag-implementation-work-order_v0.2.md) (RAG 팀원) |
 | 골든 데이터 샘플 | data/golden/_sample | data/golden/_sample-B |
 
 ## 보는 순서

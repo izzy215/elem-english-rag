@@ -9,29 +9,40 @@ project/
 ├─ backend/
 │   ├─ main.py        FastAPI 앱. 라우터를 모아 frontend/ 를 서빙
 │   ├─ config.py      .env → settings  (키·모델은 항상 여기서 읽는다)
-│   ├─ rag.py         (예정) 규칙·FAQ 조각 임베딩 → Chroma → /rag/search · /rag/eval — RAG 담당
-│   ├─ tutor.py       ✓ /fix 내 문장 고쳐주기 (검색 + 프롬프트 + Gemini, 지금은 폴백 모드) — 팀장
-│   ├─ chat.py        (예정) /ask 물어보기 챗 (문맥 + 검색 + Gemini) — TTS 팀원
-│   ├─ student.py     (예정) 오답노트 읽기 /notebook (쓰기는 tutor.py · drill.py 가 함) — 팀장
+│   ├─ rag.py         ✓ Chroma 검색 → /rag/search · /rag/eval (search_rules, R-01 어휘 안전망) — RAG 담당
+│   ├─ indexing.py    ✓ 색인 생성·검증 (`python -m backend.indexing --rebuild` / `--validate-only`) — RAG 담당
+│   ├─ embedding.py   ✓ gemini-embedding-001 (3072차원) 임베딩 — RAG 담당
+│   ├─ tutor.py       ✓ /fix 내 문장 고쳐주기 (RAG 검색 + 후보 규칙 + LLM + 서버 검증 · 철자 · 규칙 밖) — 팀장
+│   ├─ llm.py         ✓ LLM 스위치 (LLM_BACKEND=gemini | claude | 엔드포인트 이름, 실패 시 gemini 폴백) — 팀장
+│   ├─ ask.py         ✓ /ask 물어보기 챗 (FAQ 로컬 매칭 + LLM, RAG 연결 예정) — TTS 팀원
+│   ├─ student.py     ✓ 오답노트 읽기 /notebook (쓰기는 tutor.py · drill.py 가 함) — 팀장
 │   ├─ drill.py       ✓ 규칙 연습 4지선다 · /drill · /drill/answer — 팀장
-│   ├─ report.py      (예정) BigQuery 집계 → Gemini 주간 리포트 — 팀장
-│   ├─ tts.py         ✓ TTS 캐시 · speak.py ✓ STT + 유사도 (+ 발음 파형 실험) — TTS 팀원
-│   ├─ golden.py      ✓ data/golden/ 읽기 (levels · units · words · patterns) — TTS 팀원
+│   ├─ admin.py       ✓ 관리자 /admin/golden · /admin/log (BigQuery 리포트는 미착수) — 팀장
+│   ├─ tts.py         ✓ TTS 캐시 · speak.py ✓ STT(로컬 Whisper) + 유사도 (+ 발음 파형 실험) — TTS 팀원
+│   ├─ whisper_server.py  ✓ 강의실 GPU 서버용 Whisper 서버 (없으면 로컬 CPU 폴백) — TTS 팀원
+│   ├─ golden.py      ✓ data/golden/ 읽기 (levels · units · words · patterns · rules · faq · errors) — TTS 팀원
 │   ├─ pronounce.py   발음 파형 비교 실험 (참고용) — TTS 팀원
-│   └─ prompts/       (예정) fix.txt · fix_fallback.txt · ask.txt · judge.txt — 코드 밖에서 수정
+│   ├─ quiz.py · explain.py   A안 잔재 (라우터만 남음)
+│   └─ prompts/       fix_fallback.txt 하나 ({{mission}} {{hint_words}} {{all_rules}} {{sentence}}) — 코드 밖에서 수정
 ├─ frontend/          화면 하나 = HTML 하나 + js 하나 (팀장)
-│   ├─ index.html     4.1 시작        js/start.js
-│   ├─ units.html     4.2 Unit 목록   js/units.js
-│   ├─ learn.html     4.3 학습        js/learn.js   (듣기 · 따라 말하기 포함)
-│   ├─ quiz.html      4.4 문제 + 결과  js/quiz.js
-│   ├─ explain.html   4.5 오답 설명   js/explain.js
+│   ├─ index.html     시작          js/start.js
+│   ├─ units.html     Unit 목록     js/units.js
+│   ├─ learn.html     표현 익히기   js/learn.js
+│   ├─ tutor.html     내 문장 고치기 js/tutor.js  (핵심 · 근거 박스 두 겹 · 다시 고쳐줘)
+│   ├─ shadow.html    따라 말하기   js/shadow.js  (TTS 팀원)
+│   ├─ notebook.html  오답노트      js/notebook.js
+│   ├─ drill.html     규칙 연습     js/drill.js
+│   ├─ admin.html     관리자        js/admin.js
+│   ├─ archive-A/     A안 화면 보관 (quiz · explain · fix)
 │   ├─ css/app.css    공통 스타일
-│   └─ js/common.js   API 호출(api) · 화면 간 상태(S.get/S.set, sessionStorage) · 상단바
+│   └─ js/common.js   API 호출(api) · 화면 간 상태(S.get/S.set, sessionStorage) · 상단바 · 🙋 챗 시트
 ├─ data/
 │   ├─ golden/        데이터팀에서 받는 파일 (rules.jsonl · faq.jsonl · errors.jsonl · eval.csv · units · patterns · words)
 │   │   ├─ _sample-B/ B안 컬럼 정의 + 예시 (README 에 해설) ← 데이터팀 기준
 │   │   └─ _sample/   A안 임시 단어 20개 (구)
-│   └─ student/       서버가 만드는 학생 로그 (quiz_log · wrong_words). git 제외
+│   ├─ chroma/        규칙 색인 (manifest.json 의 active_collection). git 제외
+│   ├─ rag_eval/      retrieval_eval_latest.json · fix_compare_*.json/.md. git 제외
+│   └─ student/       서버가 만드는 학생 로그 (sentence_log.jsonl · notebook.json · drill_log.jsonl). git 제외
 ├─ docs/              기획 문서 — README.md 에 안내
 │   ├─ plan-B/        ✓ 확정 — 내 문장 고쳐주기 튜터 (기획서 · PRD · 목업 · 데이터 계획 · 다이어그램)
 │   ├─ archive/plan-A/  보관 — 단어 4지선다 안
@@ -100,19 +111,20 @@ uvicorn backend.main:app --reload --port 8000
 
 | 기능 | 경로 | 담당 | 상태 |
 |---|---|---|---|
-| RAG 검색 · 평가 | `GET /api/rag/search?q=&kind=` · `GET /api/rag/eval` | RAG | 스텁 |
-| 내 문장 고쳐주기 | `POST /api/fix` | 팀장 | 예정 |
-| 물어보기 챗 | `POST /api/ask` | TTS 팀원 | 예정 |
-| 오답노트 | `GET /api/notebook` | TTS 팀원 | 예정 |
-| 규칙 연습 | `GET /api/drill` · `POST /api/drill/answer` | 팀장 | 예정 |
+| RAG 검색 · 평가 | `GET /api/rag/search?q=&level=&k=` · `GET /api/rag/eval` | RAG | **완성** |
+| 내 문장 고쳐주기 | `POST /api/fix` | 팀장 | **완성** |
+| 물어보기 챗 | `POST /api/ask` | TTS 팀원 | **완성** (FAQ 매칭 + LLM, RAG 연결 예정) |
+| 오답노트 | `GET /api/notebook` | 팀장 | **완성** |
+| 규칙 연습 | `GET /api/drill` · `POST /api/drill/answer` | 팀장 | **완성** |
+| 관리자 | `GET /api/admin/golden` · `GET /api/admin/log?days=` | 팀장 | **완성** |
 | TTS · STT | `GET /api/tts/{id}` · `POST /api/speak` | TTS 팀원 | **완성** |
-| 학습 데이터 | `GET /api/levels` `/units` `/words` `/patterns` | TTS 팀원 | 샘플 동작 (patterns 예정) |
+| 학습 데이터 | `GET /api/levels` `/units` `/words` `/patterns` | TTS 팀원 | **완성** (납품본 Level 3 · Unit01~20) |
 
-현재 backend 에 남아 있는 quiz.py · explain.py 는 A안 스텁이며 B 착수 시 tutor.py · chat.py · drill.py 로 대체한다.
+backend 의 quiz.py · explain.py 는 A안 잔재로 라우터만 남아 있다 (화면은 frontend/archive-A/). B 기능은 tutor.py · ask.py · drill.py 가 맡는다.
 
 스텁 = 형식만 정해진 빈 응답. 각 담당이 채운다. **요청·응답 형식을 먼저 합의하고** 화면과 서버를 따로 만든다.
 
-화면은 서버가 스텁이어도 돌아간다: `/quiz` 가 빈 응답이면 Unit 단어로 임시 문제를 만들고("임시 문제예요" 표시), `/tts` `/speak` `/explain` 이 비어 있으면 "준비 중"을 보여준다. 서버가 채워지면 화면 수정 없이 바뀐다.
+화면은 서버가 일부 비어 있어도 돌아간다: `/fix` 는 검색이 실패하면 규칙 전부를 넣는 폴백 모드(`mode:"fallback"`)로 진단하고, `/tts` `/speak` 가 비어 있으면 "준비 중"을 보여준다.
 
 ## 화면 흐름 (B안 · 목업 docs/plan-B/mockup.html)
 
@@ -120,8 +132,9 @@ uvicorn backend.main:app --reload --port 8000
 index.html ─▶ units.html ─▶ learn.html ─▶ tutor.html ─▶ notebook.html ─▶ drill.html
  학생·Level     미션 선택    표현 익히기    내 문장 고치기   오답노트(문법)    규칙 연습
                               └▶ shadow.html 따라 말하기          Unit 안 5화면: 🙋 물어보기 챗 시트
+admin.html  관리자 (골든 데이터 · RAG 정확도 · STT 정확도 자리 · 학생 문장 로그 · 못 짚은 문장)
 ```
-현재 frontend 는 A안 화면(quiz · explain)이며 B 화면으로 교체 예정.
+frontend 는 B안 화면으로 교체 완료 (A안 quiz · explain 은 frontend/archive-A/ 보관).
 화면 사이 값(학생 · Level · Unit · 단어 목록 · 문제 결과)은 `js/common.js` 의 `S.set()` 으로 저장하고 다음 화면에서 `S.get()` 으로 읽는다.
 새 화면을 만들 때: HTML 복사 → `<main>` 만 바꾸기 → `js/이름.js` 만들고 맨 아래 `<script>` 두 줄 유지.
 
@@ -137,8 +150,8 @@ index.html ─▶ units.html ─▶ learn.html ─▶ tutor.html ─▶ notebook
 
 | 역할 | 담당 | 파일 |
 |---|---|---|
-| 리딩 + 화면 + `/fix` 파이프라인(프롬프트 · LLM-as-judge) + 규칙 연습 + 오답노트 데이터 + BigQuery 주간 리포트 | 팀장 | frontend/, backend/tutor.py, drill.py, student.py, report.py, prompts/ |
-| 따라 말하기 · 물어보기 챗 · TTS/STT | 팀원 2 (TTS) | frontend(따라 말하기 · 챗 시트), backend/chat.py, tts.py, speak.py, golden.py |
-| RAG 검색 · 평가 · 조립 실험 · 데이터팀 창구 | 팀원 3 (RAG) | backend/rag.py, tests/, data/golden/ |
+| 리딩 + 화면 + `/fix` 파이프라인(프롬프트 · 서버 검증 · 재확인) + LLM 스위치 + 규칙 연습 + 오답노트 데이터 + 관리자 (BigQuery 주간 리포트는 미착수) | 팀장 | frontend/, backend/tutor.py, llm.py, drill.py, student.py, admin.py, prompts/ |
+| 따라 말하기 · 물어보기 챗 · TTS/STT(로컬 Whisper) | 팀원 2 (TTS) | frontend(따라 말하기 · 챗 시트), backend/ask.py, tts.py, speak.py, whisper_server.py, golden.py |
+| RAG 검색 · 색인 · 임베딩 모델 비교 · 평가 · 데이터팀 창구 | 팀원 3 (RAG) | backend/rag.py, indexing.py, embedding.py, tests/eval_rag.py, data/golden/ |
 
 골든 데이터셋 제작은 별도 데이터팀. 개발 3인은 받은 파일을 읽어 쓰는 쪽만.
