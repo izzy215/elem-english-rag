@@ -185,13 +185,19 @@ def _log_entry(log_id: str) -> dict | None:
     return None
 
 
-def _log_chat_turn(student: str, question: str, answer: str) -> None:
-    """방금 질문·답변을 기록 — 다음 질문의 "그거/이거"가 뭘 가리키는지 판단하는 재료(2026-09-10)."""
+def _log_chat_turn(student: str, question: str, answer: str, source: list[dict] | None = None) -> None:
+    """방금 질문·답변(+근거 규칙/FAQ id)을 기록 — 다음 질문의 "그거/이거"·"비슷한 거"가
+    뭘 가리키는지 판단하는 재료(2026-09-10)."""
     if not question or not answer:
         return
     try:
         CHAT_LOG.parent.mkdir(parents=True, exist_ok=True)
-        row = {"student": student, "question": question, "answer": answer, "ts": time.time()}
+        chunk_ids = [s.get("chunk_id", "") for s in (source or [])]
+        row = {
+            "student": student, "question": question, "answer": answer, "ts": time.time(),
+            "rule_ids": [c for c in chunk_ids if c.startswith("R-")],
+            "faq_id": next((c for c in chunk_ids if c.startswith("F-")), None),
+        }
         with CHAT_LOG.open("a", encoding="utf-8") as f:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
     except Exception:
@@ -231,6 +237,37 @@ def _history_block(student: str) -> str:
         return ""
     lines = "\n".join(f'Q: {t["question"]}\nA: {t["answer"]}' for t in turns)
     return f"\n## 방금 나눈 대화\n{lines}\n"
+
+
+_SIMILAR_PATTERN = re.compile(r"비슷한|다른\s*(거|것|게).{0,4}(있|알려|보여)")
+
+
+def _related_faq(rule_ids: list[str], faq_list: list[dict], exclude_ids: set[str]) -> dict | None:
+    for f in faq_list:
+        if f.get("id") in exclude_ids or not any(rid in rule_ids for rid in (f.get("rule_ids") or [])):
+            continue
+        return f
+    return None
+
+
+def _similar_match(question: str, student: str, faq_list: list[dict]) -> dict | None:
+    """"비슷한 게 있을까요?" 류 요청 — LLM한테 74개 FAQ 중 알아서 찾게 하면 신뢰도가 낮아서
+    (2026-09-10 실측, offtopic/헛답 다수) 방금 답의 근거 규칙(rule_ids)과 연결된 다른 FAQ를
+    결정적으로 찾아 답한다. 방금 답에 근거 규칙이 없으면(순수 LLM 지식 답변 등) None → 폴백."""
+    if not _SIMILAR_PATTERN.search(question):
+        return None
+    turns = _recent_chat_turns(student)
+    if not turns:
+        return None
+    last = turns[-1]
+    rule_ids = last.get("rule_ids") or []
+    if not rule_ids:
+        return None
+    faq = _related_faq(rule_ids, faq_list, {last.get("faq_id") or ""})
+    if not faq:
+        return None
+    return {"answer": faq["answer"], "source": [{"chunk_id": faq["id"]}], "offtopic": False,
+            "suggested": _followup_questions(rule_ids, faq_list, exclude_id=faq["id"])}
 
 
 def _faq_block(faq_list: list[dict]) -> str:
@@ -332,7 +369,7 @@ def _check_correctness(question: str) -> dict:
 @router.post("/ask")
 def ask(body: AskIn):
     result = _answer(body)
-    _log_chat_turn(body.student, body.question.strip(), result.get("answer", ""))
+    _log_chat_turn(body.student, body.question.strip(), result.get("answer", ""), result.get("source"))
     return result
 
 
@@ -353,6 +390,12 @@ def _answer(body: AskIn) -> dict:
     all_rules = golden.rules()
     if not all_faqs and not all_rules:
         return {"answer": "", "source": [], "offtopic": True, "error": "faq.jsonl/rules.jsonl 이 없음"}
+
+    # "비슷한 거 있어?" 류는 LLM 자체 탐색이 신뢰도 낮아서(2026-09-10), 방금 답의 근거 규칙으로
+    # 결정적으로 찾아본다 — 찾으면 즉시 반환, 못 찾으면(근거 규칙 없음 등) 아래 로컬 매칭으로 폴백
+    similar = _similar_match(question, body.student, all_faqs)
+    if similar is not None:
+        return similar
 
     words_pool = {w["word"].lower(): w for w in golden.all_words()}
     patterns_pool = golden.all_patterns()
