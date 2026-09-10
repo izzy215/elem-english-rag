@@ -185,13 +185,14 @@ def _notebook_units(student: str) -> list[str]:
 
 
 def _rag_rule_hint(text: str) -> dict | None:
-    """rag.py 완성 전 자리 표시(tutor.py 의 _search_rule() 과 같은 패턴) — 항상 None.
-    완성되면:
+    """텍스트와 가장 가까운 규칙 1개(RAG 검색, rag.py). 색인 없음·검색 실패면 None(다음 우선순위로 대체)."""
+    try:
         from backend.rag import search_rules
         hits = search_rules(text, k=1)
         return hits[0] if hits else None
-    """
-    return None
+    except Exception as e:                                    # 색인 없음(IndexUnavailableError) 포함, 힌트 실패로 요청 자체를 막지 않음
+        print(f"[hybrid_stt] rag 힌트 검색 실패 → 생략: {type(e).__name__}: {e}", flush=True)
+        return None
 
 
 def _avg_logprob(result: dict) -> float:
