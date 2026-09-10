@@ -201,6 +201,7 @@ _ENGLISH_STOPWORDS = {
     "on", "at", "for", "with", "from", "as", "and", "but", "or", "if", "this", "that", "these",
     "those", "will", "would", "can", "could", "my", "your", "his", "her", "our", "their",
     "write", "go", "goes", "want", "know", "let", "me", "not", "no", "so", "one",
+    "what", "why", "how", "who", "when", "where", "mean", "means", "please", "right",
 }
 
 
