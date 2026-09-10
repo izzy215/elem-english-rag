@@ -239,7 +239,7 @@ def _history_block(student: str) -> str:
     return f"\n## 방금 나눈 대화\n{lines}\n"
 
 
-_SIMILAR_PATTERN = re.compile(r"비슷한|다른\s*(거|것|게).{0,4}(있|알려|보여)")
+_SIMILAR_PATTERN = re.compile(r"비슷한|다른\s*(거|것|게).{0,4}(있|알려|보여)|또\s*(없|있)|말고\s*또")
 
 
 def _related_faq(rule_ids: list[str], faq_list: list[dict], exclude_ids: set[str]) -> dict | None:
@@ -250,12 +250,10 @@ def _related_faq(rule_ids: list[str], faq_list: list[dict], exclude_ids: set[str
     return None
 
 
-def _similar_match(question: str, student: str, faq_list: list[dict]) -> dict | None:
-    """"비슷한 게 있을까요?" 류 요청 — LLM한테 74개 FAQ 중 알아서 찾게 하면 신뢰도가 낮아서
-    (2026-09-10 실측, offtopic/헛답 다수) 방금 답의 근거 규칙(rule_ids)과 연결된 다른 FAQ를
-    결정적으로 찾아 답한다. 방금 답에 근거 규칙이 없으면(순수 LLM 지식 답변 등) None → 폴백."""
-    if not _SIMILAR_PATTERN.search(question):
-        return None
+def _alternative_response(student: str, faq_list: list[dict]) -> dict | None:
+    """방금 답의 근거 규칙(rule_ids)과 연결된 "다른" FAQ를 결정적으로 찾아 답한다. 근거 규칙이
+    아예 없으면(순수 LLM 지식 답변 등) None. 대안 FAQ가 데이터에 없으면(38개 규칙 중 30개가
+    이 상태, 2026-09-10 실측) LLM한테 넘기지 않고 정직하게 없다고 답한다."""
     # 직전 턴이 자유 설명(근거 규칙 없음)일 수 있어 조금 더 거슬러 올라가며 규칙이 있는 턴을 찾는다
     turns = _recent_chat_turns(student, max_turns=5)
     grounded = next((t for t in reversed(turns) if t.get("rule_ids")), None)
@@ -266,12 +264,18 @@ def _similar_match(question: str, student: str, faq_list: list[dict]) -> dict | 
     if faq:
         return {"answer": faq["answer"], "source": [{"chunk_id": faq["id"]}], "offtopic": False,
                 "suggested": _followup_questions(rule_ids, faq_list, exclude_id=faq["id"])}
-    # 같은 규칙에 연결된 다른 FAQ가 데이터에 아예 없는 경우(38개 규칙 중 30개가 이 상태, 2026-09-10
-    # 실측) — LLM한테 넘기면 답이 들쭉날쭉해서, 정직하게 없다고 답한다
     rule = golden.find_rule(rule_ids[0])
     return {"answer": f'"{rule["type"]}"에 대해서는 방금 설명한 게 전부예요. 다른 게 궁금하면 물어봐!' if rule
             else "음, 지금은 비슷한 게 따로 없어. 다른 게 궁금하면 물어봐!",
             "source": [{"chunk_id": rule_ids[0]}], "offtopic": False, "suggested": []}
+
+
+def _similar_match(question: str, student: str, faq_list: list[dict]) -> dict | None:
+    """"비슷한 게 있을까요?" 류 요청을 정규식으로 미리 잡아 LLM 호출 없이 처리(빠른 경로).
+    정규식이 못 잡는 표현은 LLM 폴백의 wants_more 필드가 대신 잡는다(_answer 참고)."""
+    if not _SIMILAR_PATTERN.search(question):
+        return None
+    return _alternative_response(student, faq_list)
 
 
 def _faq_block(faq_list: list[dict]) -> str:
@@ -298,7 +302,10 @@ PROMPT = """너는 초등학교 3~4학년에게 영어를 가르치는 다정한
    나눈 대화"에서 마지막으로 다룬 내용을 이어서 답하라 — 그 대화 자체가 근거이니 FAQ에 안 나와도
    offtopic 처리하지 않는다(1번 규칙의 예외). 예: 방금 대화가 farewell 뜻이었고 학생이 "그거 예문
    보여줘"라 하면 farewell 예문으로, "왜 그래?"라 하면 그 설명을 더 풀어서 답한다.
-7. 출력은 아래 JSON 하나만. 다른 말은 쓰지 않는다.
+7. 학생이 "그거 말고 다른 건?/비슷한 거 있어?/또 없어?"처럼 방금 다룬 것과 다른 걸 더 달라고
+   하면 wants_more=true (표현이 뭐든 의도만 판단하면 됨 — answer는 평소처럼 채워도 되고, 실제
+   답은 다른 로직이 대신 정할 수 있다).
+8. 출력은 아래 JSON 하나만. 다른 말은 쓰지 않는다.
 
 ## 지금 상황
 화면: {screen} · 유닛: {unit} · 방금 나온 규칙: {rule_id}
@@ -317,6 +324,7 @@ PROMPT = """너는 초등학교 3~4학년에게 영어를 가르치는 다정한
   "answer": "답변 2~3문장",
   "faq_id": "가장 근거가 된 FAQ id (예: F-01). 없으면 null",
   "offtopic": true 또는 false,
+  "wants_more": true 또는 false,
   "suggested": ["이어서 물어볼 만한 짧은 질문 2개"]
 }}"""
 
@@ -445,6 +453,14 @@ def _answer(body: AskIn) -> dict:
         return {"answer": "", "source": [], "offtopic": True, "error": str(e)}
     llm_info = out.pop("_llm", {})
 
+    if bool(out.get("wants_more")):
+        # 정규식(_similar_match)이 못 잡은 "비슷한/다른 거" 표현을 LLM이 의도로 잡아준 경우 —
+        # 실제 답은 LLM이 아니라 결정적 로직(_alternative_response)에 맡긴다(2026-09-10)
+        alt = _alternative_response(body.student, all_faqs)
+        if alt is not None:
+            alt["llm"] = llm_info
+            return alt
+
     faq = next((f for f in all_faqs if f["id"] == out.get("faq_id")), None)
     source = [{"chunk_id": rid} for rid in (faq.get("rule_ids") or [])] if faq else []
     if faq:
@@ -454,9 +470,10 @@ def _answer(body: AskIn) -> dict:
 
     answer = out.get("answer") or ""
     offtopic = bool(out.get("offtopic"))
-    if offtopic and len(answer.strip()) >= 15:
-        # 모델이 offtopic=true 라면서도 answer 는 유용하게 주는 경우가 잦음 — 진짜 못 답한 응답은 짧다
-        print(f"[ask] offtopic=true인데 answer가 길어서(len={len(answer)}) offtopic 취소", flush=True)
+    if offtopic and answer.strip() and "선생님" not in answer:
+        # 모델이 offtopic=true 라면서도 answer 는 유용하게 주는 경우가 잦음 — 프롬프트가 정한
+        # 진짜 못 답한 응답("선생님한테 물어볼까?")만 그 문구를 쓰므로 길이 대신 이걸로 판단
+        print(f"[ask] offtopic=true인데 '선생님' 문구가 없어서 offtopic 취소: {answer!r}", flush=True)
         offtopic = False
 
     return {
