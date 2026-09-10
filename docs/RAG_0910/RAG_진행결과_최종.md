@@ -88,7 +88,20 @@ Gemini 임베딩은 기존 골든 평가셋 기준 목표를 달성했지만, �
 
 최종 판단은 **검색 임베딩은 Gemini로 적용하고, 생성 모델은 로컬 Ollama로 분리 운영**하는 것이다. 이후 개선은 모델 교체보다 규칙 데이터 보강, 규칙 간 경계 정리, API 호출 캐시·rate limit 대응을 우선한다.
 
-## 6. 보존 및 정리 대상
+## 6. RAG 안전망 제외 테스트
+
+테스트 결과를 임베딩 모델과 규칙 데이터의 영향만으로 확인하기 위해 `backend/rag.py`의 lexical safety net을 제외했다.
+
+- `_LEXICAL_SAFETY_NET` 및 `_apply_lexical_safety_net()` 제거
+- Chroma 질의 결과의 순수 임베딩 top-k만 반환
+- `k=3` 요청 시 항상 최대 3개 후보 반환
+- `He tired after school.` → `R-37`, `R-32`, `R-28`
+- `He hungry now.` → `R-32`, `R-10`, `R-09`
+- `I play with my dog yesterday.` → `R-31`, `R-37`, `R-35`
+
+세 문장 모두 결과가 3개로 제한되어 안전망 규칙이 추가되지 않는 것을 확인했다. 전체 `tests.eval_rag --retrieval-only` 실행은 이번 확인에서 새 결과를 출력하거나 `retrieval_eval_latest.json`을 갱신하지 않아, 안전망 제외 후 전체 hit율은 별도 재측정이 필요하다.
+
+## 7. 보존 및 정리 대상
 
 정리 후 보존할 문서는 다음 두 개다.
 

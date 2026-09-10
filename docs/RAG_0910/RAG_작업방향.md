@@ -2,7 +2,7 @@
 
 작성일: 2026-09-10
 근거 자료(원본, `D:\Documents\7.2026_PBL3기\20260910\`):
-- `PBL_20260909_rag_회의록.txt` — 회의 녹취록(clovanote.naver.com), 2026.09.09 수 오후 4:50, 9분 20초, 이보만 님 녹음, 참석자 2인
+- `PBL_20260909_rag_회의록.txt` — 회의 녹취록(clovanote.naver.com), 2026.09.09 수 오후 4:50, 9분 20초, 팀장, RAG담당
 - `실행로그_20260909.txt` — `/fix` 실제 호출 1건 로그
 - `retrieval_eval_20260909-151405.json` — 검색 평가 결과(실데이터 38규칙, `python -m tests.eval_rag --retrieval-only`)
 

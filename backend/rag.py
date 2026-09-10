@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import json
 import hashlib
-import re
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -28,59 +27,6 @@ router = APIRouter(prefix="/rag", tags=["rag"])
 
 K_MIN, K_MAX = 1, 10   # 현재 규칙 8개 기준 여유 있게 잡은 상한. 데이터가 늘면 재검토
 
-# 2026-09-10 실험(docs/RAG_0910/Claude/Phase2-개선실험결과.md)으로 확인: R-01은 예문을 26개 다
-# 넣어도, 모델을 로컬→Gemini로 바꿔도 임베딩 순위에서 계속 빠진다 — "형용사 앞 be동사 누락"은
-# 의미가 아니라 단어 하나가 빠졌는지의 구조 문제라 문장 임베딩이 원래 못 잡는 유형으로 판단된다.
-# 순수 임베딩 검색에 못 걸리는 걸 알고 있는 규칙만, 얕은 키워드 조건으로 안전망을 둔다 — 모든
-# 검색에 끼워넣는 게 아니라 "이 규칙이 실제로 관련 있을 가능성이 있는 문장"일 때만 작동한다.
-_LEXICAL_SAFETY_NET: dict[str, dict[str, set[str]]] = {
-    "R-01": {
-        # errors.jsonl 의 R-01 오답 예문(26개)에서 실제로 쓰인 형용사 + 2026-09-10 홀드아웃
-        # 검증(docs/RAG_0910/RAG_0910_작업요약.md §4)에서 놓친 "sleepy"류 유의어를 초등 수준
-        # 흔한 형용사로 확장. R-01 규칙 자체가 "형용사 전부"를 대상으로 하므로 목록이 넓을수록
-        # 규칙 취지에 맞다 — exclude(아래)가 오탐 방지를 맡는다.
-        "trigger": {
-            "sorry", "polite", "formal", "endangered", "colorful", "bright", "pale", "vivid",
-            "humid", "foggy", "seasonal", "annual", "temperate", "punctual", "urban", "happy",
-            "sad", "angry", "tired", "hungry", "excited", "scared", "surprised", "bored",
-            "nervous", "spacious",
-            # 유의어·추가 흔한 형용사 (2026-09-10 확장)
-            "sleepy", "thirsty", "sick", "hurt", "upset", "worried", "curious", "proud",
-            "shy", "brave", "jealous", "confused", "embarrassed", "lonely", "cold", "hot",
-            "warm", "cool", "busy", "ready", "late", "early", "kind", "rude", "smart",
-            "clever", "silly", "funny", "strange", "weird", "easy", "difficult", "heavy",
-            "light", "strong", "weak", "clean", "dirty", "wet", "dry", "full", "empty",
-            "rich", "poor", "beautiful", "pretty", "ugly", "cute", "delicious", "sweet",
-            "loud", "quiet", "safe", "dangerous", "famous", "popular",
-        },
-        # be동사가 이미 있으면 "빠진" 문장이 아니므로 안전망을 걸지 않는다 — 축약형(she's,
-        # they're, I'm)도 잡아야 하므로 토큰 자체와 접미사(끝나는 형태) 둘 다 확인한다
-        "exclude": {"am", "is", "are", "was", "were", "be", "being", "been"},
-        "exclude_suffix": ("'m", "'re", "'s"),
-    },
-}
-
-
-def _apply_lexical_safety_net(text: str, ranked: list[dict], out: list[dict]) -> list[dict]:
-    """임베딩 top-k에서 빠졌지만 얕은 키워드 조건에 맞는 안전망 규칙을, 전체 순위(ranked)에
-    실제로 있으면(즉 색인엔 있고 실제 cosine 점수도 있으면) 실제 점수 그대로 out 뒤에 추가한다.
-    가짜 점수를 만들지 않는다 — ranked 에 없는 규칙은 추가하지 않는다."""
-    present = {c["id"] for c in out}
-    tokens = set(re.findall(r"[a-zA-Z']+", text.lower()))
-    for rule_id, cond in _LEXICAL_SAFETY_NET.items():
-        if rule_id in present:
-            continue
-        if not (tokens & cond["trigger"]):
-            continue
-        if tokens & cond.get("exclude", set()):
-            continue
-        if any(t.endswith(cond.get("exclude_suffix", ())) for t in tokens):
-            continue
-        boosted = next((c for c in ranked if c["id"] == rule_id), None)
-        if boosted:
-            out = out + [boosted]
-    return out
-
 
 def search_rules(text: str, k: int = 3) -> list[dict]:
     """id, type, text, unit, score(=1-cosine_distance) 후보를 score 내림차순으로 반환.
@@ -88,17 +34,14 @@ def search_rules(text: str, k: int = 3) -> list[dict]:
     로 정규화해서 올린다 — 호출부(HTTP 계층의 503 매핑, tutor.py의 폴백 전환)가 이 예외 하나만
     잡으면 되도록 하기 위함. 원인 예외는 `raise ... from e`로 보존된다.
 
-    반환 길이는 보통 k 이지만, _LEXICAL_SAFETY_NET 에 걸리는 문장이면 k+1 이 될 수 있다(임베딩
-    순위 밖의 안전망 규칙 1개를 실제 점수와 함께 추가) — 호출부는 상위 몇 개만 쓰면 되므로 길이를
-    정확히 k 로 가정하지 않아야 한다."""
+    반환 길이는 요청한 k 이내다."""
     manifest = indexing.load_manifest()
     client = indexing._chroma_client()  # noqa: SLF001 — indexing 모듈이 Chroma 연결의 유일한 소유자라 그대로 재사용
     try:
         col = client.get_collection(manifest["active_collection"])
         n = max(1, min(k, manifest["count"]))   # 저장 건수를 넘는 후보 수를 요청해도 초과 반환하지 않음
         qvec = embedding.embed_query(text)
-        # 안전망 규칙이 전체 순위 어디에 있는지도 봐야 하므로, 표시할 개수(n)와 별개로 전체를 받아둔다
-        res = col.query(query_embeddings=[qvec], n_results=manifest["count"])
+        res = col.query(query_embeddings=[qvec], n_results=n)
     except indexing.IndexUnavailableError:
         raise
     except Exception as e:
@@ -108,8 +51,7 @@ def search_rules(text: str, k: int = 3) -> list[dict]:
     ranked = []
     for id_, dist, doc, meta in zip(res["ids"][0], res["distances"][0], res["documents"][0], res["metadatas"][0]):
         ranked.append({"id": id_, "type": meta.get("type"), "text": doc, "unit": meta.get("unit"), "score": round(1 - dist, 4)})
-    out = ranked[:n]   # col.query 가 이미 거리 오름차순(=score 내림차순)으로 반환
-    return _apply_lexical_safety_net(text, ranked, out)
+    return ranked
 
 
 @router.get("/search")
