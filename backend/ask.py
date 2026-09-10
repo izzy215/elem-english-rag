@@ -13,9 +13,14 @@ body: {"student", "question", "context": {"screen","unit","rule_id","log_id"}}
 context.log_id 가 있으면 sentence_log.jsonl 에서 그 순간의 원문·고친 문장을 찾아 프롬프트에
 넣는다("아까 말한 거 고쳐줘"에 다시 추론 안 하고 /fix 결과를 그대로 씀). student.py 의
 notebook_text() 도 개인화 참고 자료로 넣는다(답 근거는 여전히 FAQ).
+
+매 질문·답변을 chat_log.jsonl 에 기록해뒀다가, 같은 학생이 CHAT_HISTORY_WINDOW_SEC 이내에
+또 물어보면 최근 대화를 프롬프트에 같이 줘서 "그거/이거" 같은 지시어를 이해하게 한다
+(프론트가 대화 기록을 안 보내도 서버가 student+시간 윈도우로 알아서 판단, 2026-09-10).
 """
 import json
 import re
+import time
 from pathlib import Path
 
 from fastapi import APIRouter
@@ -26,6 +31,9 @@ from backend.config import settings
 
 router = APIRouter(tags=["ask"])
 SENTENCE_LOG = Path(__file__).resolve().parent.parent / "data" / "student" / "sentence_log.jsonl"
+CHAT_LOG = Path(__file__).resolve().parent.parent / "data" / "student" / "chat_log.jsonl"
+CHAT_HISTORY_WINDOW_SEC = 180   # 이 안이면 "같은 대화"로 보고 그거/이거 지시어 힌트로 씀
+CHAT_HISTORY_MAX_TURNS = 2
 
 
 class AskContext(BaseModel):
@@ -177,6 +185,54 @@ def _log_entry(log_id: str) -> dict | None:
     return None
 
 
+def _log_chat_turn(student: str, question: str, answer: str) -> None:
+    """방금 질문·답변을 기록 — 다음 질문의 "그거/이거"가 뭘 가리키는지 판단하는 재료(2026-09-10)."""
+    if not question or not answer:
+        return
+    try:
+        CHAT_LOG.parent.mkdir(parents=True, exist_ok=True)
+        row = {"student": student, "question": question, "answer": answer, "ts": time.time()}
+        with CHAT_LOG.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+
+
+def _recent_chat_turns(student: str) -> list[dict]:
+    """이 학생이 CHAT_HISTORY_WINDOW_SEC 이내에 나눈 최근 대화 최대 CHAT_HISTORY_MAX_TURNS개."""
+    if not CHAT_LOG.exists():
+        return []
+    now = time.time()
+    turns = []
+    try:
+        lines = CHAT_LOG.read_text(encoding="utf-8").splitlines()
+    except Exception:
+        return []
+    for line in reversed(lines):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except Exception:
+            continue
+        if row.get("student") != student:
+            continue
+        if now - row.get("ts", 0) > CHAT_HISTORY_WINDOW_SEC:
+            break
+        turns.append(row)
+        if len(turns) >= CHAT_HISTORY_MAX_TURNS:
+            break
+    return list(reversed(turns))
+
+
+def _history_block(student: str) -> str:
+    turns = _recent_chat_turns(student)
+    if not turns:
+        return ""
+    lines = "\n".join(f'Q: {t["question"]}\nA: {t["answer"]}' for t in turns)
+    return f"\n## 방금 나눈 대화\n{lines}\n"
+
+
 def _faq_block(faq_list: list[dict]) -> str:
     lines = []
     for f in faq_list:
@@ -197,11 +253,14 @@ PROMPT = """너는 초등학교 3~4학년에게 영어를 가르치는 다정한
    가리키는 요청을 하면, 새로 추론하지 말고 거기 적힌 "고친 문장"을 그대로 답에 써라.
 5. "이 학생의 오답노트"는 답의 근거로 쓰지 않는다 — 어떤 걸 자주 틀리는지 알아서 설명 톤을 그
    학생에 맞게 조절하는 참고 자료일 뿐이다(예: 그 학생이 잘 틀리는 부분이면 조금 더 친절하게).
-6. 출력은 아래 JSON 하나만. 다른 말은 쓰지 않는다.
+6. 학생 질문에 "그거/이거/그것" 같은 지시어가 있으면, 엉뚱한 새 FAQ를 찾지 말고 "방금 나눈 대화"에서
+   마지막으로 다룬 단어·규칙에 대한 FAQ를 찾아 이어서 답하라. 예: 방금 대화가 farewell 뜻이었고 학생이
+   "그거 예문 보여줘"라 하면, farewell 관련 FAQ의 예문으로 답한다(다른 단어의 예문을 주면 안 된다).
+7. 출력은 아래 JSON 하나만. 다른 말은 쓰지 않는다.
 
 ## 지금 상황
 화면: {screen} · 유닛: {unit} · 방금 나온 규칙: {rule_id}
-{log_block}
+{log_block}{history_block}
 ## 이 학생의 오답노트 (참고용, 답 근거 아님)
 {notebook_block}
 
@@ -268,6 +327,12 @@ def _check_correctness(question: str) -> dict:
 
 @router.post("/ask")
 def ask(body: AskIn):
+    result = _answer(body)
+    _log_chat_turn(body.student, body.question.strip(), result.get("answer", ""))
+    return result
+
+
+def _answer(body: AskIn) -> dict:
     question = body.question.strip()
     if not question:
         return {"answer": "", "source": [], "offtopic": True}
@@ -320,7 +385,8 @@ def ask(body: AskIn):
 
     prompt = PROMPT.format(
         screen=ctx.screen or "(모름)", unit=ctx.unit or "(모름)", rule_id=ctx.rule_id or "(없음)",
-        log_block=log_block, notebook_block=notebook_block, faq_block=_faq_block(all_faqs), question=question,
+        log_block=log_block, history_block=_history_block(body.student), notebook_block=notebook_block,
+        faq_block=_faq_block(all_faqs), question=question,
     )
     try:
         out = llm.generate_json(prompt)
