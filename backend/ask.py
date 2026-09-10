@@ -45,19 +45,29 @@ def _norm_words(text: str) -> list[str]:
     return [w for w in re.sub(r"[?？.!,]", "", text.lower()).split() if w]
 
 
+_GENERIC_WORDS = {"뭐예요", "뭐야", "무슨", "뜻이", "뜻이에요", "뜻인가요", "뜻이야"}
+
+
+def _content_words(text: str) -> list[str]:
+    """"무슨 뜻이에요"류 범용 의문 표현만 뺀 단어 목록 — 이것만 겹쳐서 서로 다른 단어를
+    묻는 질문끼리 오매칭되는 걸 막는다(2026-09-10, "elephant 뜻이 뭐예요?"가 F-06(zoo)에
+    잘못 매칭된 사례)."""
+    return [w for w in _norm_words(text) if w not in _GENERIC_WORDS]
+
+
 def _best_match(question: str, items: list[dict], candidates_of) -> tuple[dict | None, float]:
     """단어 겹침 기반 매칭. frontend/js/common.js 의 faqMatch()와 같은 알고리즘 —
     서버가 먼저 이걸로 찾아보고, 못 찾을 때만 Gemini 로 넘어간다(할당량 절약, 응답도 빠름)."""
-    qs = _norm_words(question)
+    qs = _content_words(question)
     best, best_score = None, 0.0
     for item in items:
         for cand in candidates_of(item):
-            cs = _norm_words(cand)
+            cs = _content_words(cand)
             if not cs:
                 continue
-            # 부분 문자열 겹침은 두 단어 다 2글자 이상일 때만 인정 — "뭐"/"뭐예요"처럼
-            # 한 글자만 겹쳐서 상관없는 문장이 오탐되는 걸 막는다. 완전히 같은 단어는 길이 상관없이 인정.
-            hit = sum(1 for w in cs if any(w == x or (len(w) >= 2 and len(x) >= 2 and (w in x or x in w)) for x in qs))
+            # 부분 문자열 겹침은 두 단어 다 3글자 이상일 때만 인정 — 2글자는 "an"이 "elephant"의
+            # 부분 문자열이라 무관한 단어끼리 겹치는 경우가 있음(2026-09-10). 완전히 같은 단어는 길이 상관없이 인정.
+            hit = sum(1 for w in cs if any(w == x or (len(w) >= 3 and len(x) >= 3 and (w in x or x in w)) for x in qs))
             score = hit / len(cs)
             if score > best_score:
                 best_score, best = score, item
