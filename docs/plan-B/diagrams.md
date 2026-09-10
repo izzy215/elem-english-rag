@@ -103,7 +103,7 @@ sequenceDiagram
   Note over TU: 철자 사전검사 (pyspellchecker, 교재 단어 우선)
 
   TU->>RG: search_rules(text, k=전체)
-  Note over RG: 문장 임베딩(gemini-embedding-001) → 규칙 조각과 코사인 비교<br/>kind · threshold 없음 · R-01 은 어휘 안전망 보강
+  Note over RG: 문장 임베딩(gemini-embedding-001) → 규칙 조각과 코사인 비교<br/>kind · threshold · 어휘 안전망 없음 (순수 임베딩 순위)
   RG-->>TU: [{R-31 과거시제 0.45}, {R-34 관사 0.38}, ...] 38개 전부 (점수 · 순위)
   Note over UI: 화면: ② RAG 규칙 검색 ✓
 

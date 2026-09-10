@@ -7,7 +7,7 @@ POST /api/fix  {student, level, unit, text, source}
 
 동작:
   0. 철자 사전검사(_spell_precheck, pyspellchecker + 교재 단어) → 철자만 고친 문장으로 아래를 진행 (원문은 화면·로그용 orig)
-  1. RAG 검색(rag.search_rules) 으로 규칙 전부를 점수순으로 받는다 (점수·순위 표시용).
+  1. RAG 검색(rag.search_rules) 으로 규칙 전부를 점수순으로 받는다 (점수·순위 표시용). 검색 결과는 순수 임베딩 순위 (어휘 안전망 없음 — 2026-09-10 제거, 데이터로 보강).
      프롬프트에는 상위 RAG_TOP_K + 이 Unit 의 규칙(units.csv rule_ids) + 공통(unit=ALL) 규칙 + 가짜 규칙 SPELL·OTHER (mode="rag")
      검색 실패(색인 없음·임베딩 오류·결과 0)면 규칙 전부 (mode="fallback", fallback_reason="search_error" | "no_results")
   2. 오늘의 미션(units.csv)과 함께 프롬프트(prompts/fix_fallback.txt)에 넣어 LLM(backend/llm.py) 에 JSON 으로만 답하게 한다
@@ -53,7 +53,6 @@ SPELLING_RULE = {"id": "SPELL", "type": "철자", "unit": "ALL",
 # 규칙·오답노트 없이 "✎ 우리 규칙 밖이에요" 카드로 보여준다.
 OTHER_RULE = {"id": "OTHER", "type": "규칙 밖", "unit": "ALL",
               "text": "참고 규칙 어디에도 맞지 않는 문제(단어가 남거나 빠짐 등). 이 규칙을 고르면 wrong·fix 는 null 로 두고, fixed 와 full_fixed 에 학생이 쓴 단어만으로 자연스럽게 고친 문장을 쓴다. 새 단어를 넣지 않는다."}
-RAG_ALL_IF_LE = 12     # 규칙이 이 수 이하(샘플 9개)면 검색으로 후보를 좁히지 않고 전부 넣는다. 화면·로그엔 상위 RAG_TOP_K 만 표시
 # 규칙이 많을 때(실제 38개) 프롬프트 = 검색 상위 RAG_TOP_K + 이 Unit 의 규칙(units.csv rule_ids) + 공통(unit=ALL) 규칙.
 # 검색만으로는 관사(R-38) 같은 공통 규칙이 후보 밖으로 밀린다 ('I drew zoo yesterday' 에서 R-38 이 22위) → 관사를 붙였다 안 붙였다 하는 원인
 
@@ -330,7 +329,7 @@ def _full_fixed_ok(text: str, full_fixed: str, fix: str | None) -> bool:
 
 def _search_candidates(text: str, k: int) -> tuple[list[dict], str, str | None]:
     """RAG 검색 (rag.py 의 search_rules, RAG 담당). 반환: (후보 목록, mode, fallback_reason). 호출부는 k=규칙 전부.
-    후보는 score 내림차순이되, rag.py 의 어휘 안전망(R-01)이 걸리면 그 규칙이 순서와 무관하게 뒤에 붙을 수 있다 (k=전체면 해당 없음).
+    후보는 score 내림차순 (순수 임베딩 순위. 예전 R-01 어휘 안전망은 2026-09-10 rag.py 에서 제거 — 규칙 데이터 보강으로 대체).
     - 검색 성공 → ([{id,type,text,unit,score}, …], "rag", None)
     - 색인 없음·임베딩/질의 실패(indexing.IndexUnavailableError) 나 그 외 예외 → ([], "fallback", "search_error")
     - 결과 0건 → ([], "fallback", "no_results")
@@ -444,7 +443,7 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         raise HTTPException(503, "rules.jsonl 이 없음 (data/golden/ 또는 _sample-B/)")
     unit_row = golden.find_unit(level, unit) or {}
 
-    # 1) 검색은 규칙 전부를 받아 둔다 (점수·순위 표시용, 38개라 비용 없음). 프롬프트엔 상위 RAG_TOP_K + Unit 규칙 + 공통 규칙 (규칙이 RAG_ALL_IF_LE 이하면 전부)
+    # 1) 검색은 규칙 전부를 받아 둔다 (점수·순위 표시용, 38개라 비용 없음). 프롬프트엔 상위 RAG_TOP_K + Unit 규칙 + 공통 규칙
     #    + 가짜 규칙 SPELL·OTHER. 검색 실패면 규칙 전부 (폴백)
     t_start = time.perf_counter()
     cands, mode, fallback_reason = _search_candidates(text, k=len(all_rules))
@@ -453,10 +452,7 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         if len(cands) != len(all_rules):                    # 색인이 rules.jsonl 과 다름 (데이터 갱신 뒤 --rebuild 안 함)
             print(f"[fix] 경고: 색인 {len(cands)}개 ≠ rules.jsonl {len(all_rules)}개 → python -m backend.indexing --rebuild 필요", flush=True)
         extra_ids = set(unit_row.get("rule_ids") or []) | {r["id"] for r in all_rules if r.get("unit") == "ALL"}
-        if len(all_rules) <= RAG_ALL_IF_LE:
-            prompt_rules = list(cands)
-        else:
-            prompt_rules = cands[:RAG_TOP_K] + [c for c in cands[RAG_TOP_K:] if c["id"] in extra_ids]
+        prompt_rules = cands[:RAG_TOP_K] + [c for c in cands[RAG_TOP_K:] if c["id"] in extra_ids]
         seen = {r["id"] for r in prompt_rules}              # 색인에 없는 Unit·공통 규칙은 rules.jsonl 에서 보충
         prompt_rules += [r for r in all_rules if r["id"] in extra_ids and r["id"] not in seen]
     else:

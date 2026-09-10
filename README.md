@@ -9,7 +9,7 @@ project/
 ├─ backend/
 │   ├─ main.py        FastAPI 앱. 라우터를 모아 frontend/ 를 서빙
 │   ├─ config.py      .env → settings  (키·모델은 항상 여기서 읽는다)
-│   ├─ rag.py         ✓ Chroma 검색 → /rag/search · /rag/eval (search_rules, R-01 어휘 안전망) — RAG 담당
+│   ├─ rag.py         ✓ Chroma 검색 → /rag/search · /rag/eval (search_rules, 순수 임베딩 순위 — 어휘 안전망은 0910 제거) — RAG 담당
 │   ├─ indexing.py    ✓ 색인 생성·검증 (`python -m backend.indexing --rebuild` / `--validate-only`) — RAG 담당
 │   ├─ embedding.py   ✓ gemini-embedding-001 (3072차원) 임베딩 — RAG 담당
 │   ├─ tutor.py       ✓ /fix 내 문장 고쳐주기 (RAG 검색 + 후보 규칙 + LLM + 서버 검증 · 철자 · 규칙 밖) — 팀장
