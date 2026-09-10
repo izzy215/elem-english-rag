@@ -204,8 +204,8 @@ def _log_chat_turn(student: str, question: str, answer: str, source: list[dict] 
         pass
 
 
-def _recent_chat_turns(student: str) -> list[dict]:
-    """이 학생이 CHAT_HISTORY_WINDOW_SEC 이내에 나눈 최근 대화 최대 CHAT_HISTORY_MAX_TURNS개."""
+def _recent_chat_turns(student: str, max_turns: int = CHAT_HISTORY_MAX_TURNS) -> list[dict]:
+    """이 학생이 CHAT_HISTORY_WINDOW_SEC 이내에 나눈 최근 대화 최대 max_turns개."""
     if not CHAT_LOG.exists():
         return []
     now = time.time()
@@ -226,7 +226,7 @@ def _recent_chat_turns(student: str) -> list[dict]:
         if now - row.get("ts", 0) > CHAT_HISTORY_WINDOW_SEC:
             break
         turns.append(row)
-        if len(turns) >= CHAT_HISTORY_MAX_TURNS:
+        if len(turns) >= max_turns:
             break
     return list(reversed(turns))
 
@@ -256,18 +256,22 @@ def _similar_match(question: str, student: str, faq_list: list[dict]) -> dict | 
     결정적으로 찾아 답한다. 방금 답에 근거 규칙이 없으면(순수 LLM 지식 답변 등) None → 폴백."""
     if not _SIMILAR_PATTERN.search(question):
         return None
-    turns = _recent_chat_turns(student)
-    if not turns:
+    # 직전 턴이 자유 설명(근거 규칙 없음)일 수 있어 조금 더 거슬러 올라가며 규칙이 있는 턴을 찾는다
+    turns = _recent_chat_turns(student, max_turns=5)
+    grounded = next((t for t in reversed(turns) if t.get("rule_ids")), None)
+    if not grounded:
         return None
-    last = turns[-1]
-    rule_ids = last.get("rule_ids") or []
-    if not rule_ids:
-        return None
-    faq = _related_faq(rule_ids, faq_list, {last.get("faq_id") or ""})
-    if not faq:
-        return None
-    return {"answer": faq["answer"], "source": [{"chunk_id": faq["id"]}], "offtopic": False,
-            "suggested": _followup_questions(rule_ids, faq_list, exclude_id=faq["id"])}
+    rule_ids = grounded["rule_ids"]
+    faq = _related_faq(rule_ids, faq_list, {grounded.get("faq_id") or ""})
+    if faq:
+        return {"answer": faq["answer"], "source": [{"chunk_id": faq["id"]}], "offtopic": False,
+                "suggested": _followup_questions(rule_ids, faq_list, exclude_id=faq["id"])}
+    # 같은 규칙에 연결된 다른 FAQ가 데이터에 아예 없는 경우(38개 규칙 중 30개가 이 상태, 2026-09-10
+    # 실측) — LLM한테 넘기면 답이 들쭉날쭉해서, 정직하게 없다고 답한다
+    rule = golden.find_rule(rule_ids[0])
+    return {"answer": f'"{rule["type"]}"에 대해서는 방금 설명한 게 전부예요. 다른 게 궁금하면 물어봐!' if rule
+            else "음, 지금은 비슷한 게 따로 없어. 다른 게 궁금하면 물어봐!",
+            "source": [{"chunk_id": rule_ids[0]}], "offtopic": False, "suggested": []}
 
 
 def _faq_block(faq_list: list[dict]) -> str:
