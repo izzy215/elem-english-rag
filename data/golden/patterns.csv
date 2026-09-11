@@ -1,4 +1,4 @@
-﻿id,level,unit,text,meaning,tip,rule_id
+id,level,unit,text,meaning,tip,rule_id
 p-0001,3,Unit01,"Hello, Tom!","톰, 안녕!",인사말 뒤 쉼표·느낌표,R-02
 p-0002,3,Unit01,"Hi, Amy!","에이미, 안녕!",인사말 뒤 쉼표·느낌표,R-02
 p-0003,3,Unit01,"Bye, Mike!","마이크, 잘 가!",인사말 뒤 쉼표·느낌표,R-02
@@ -399,3 +399,65 @@ p-0397,6,Unit20,She studies much architecture.,그녀는 건축을 많이 공부
 p-0398,6,Unit20,I have a structure.,저는 구조가 하나 있어요.,하나면 앞에 a,R-38
 p-0399,6,Unit20,I have an interior.,저는 실내가 하나 있어요.,모음 소리 앞엔 an,R-34
 p-0400,6,Unit20,Their new apartment is spacious.,그들의 새 아파트는 넓어요.,형용사 앞엔 be동사,R-01
+p-0401,3,Unit01,"I'm fine, thank you.","저는 잘 지내요, 고마워요.",안부 묻기=How are you?,R-39
+p-0402,3,Unit01,Nice to meet you.,만나서 반가워요.,초면 인사+too로 답하기,R-40
+p-0403,3,Unit01,Thank you.,고마워요.,고마움엔 You're welcome,R-41
+p-0404,3,Unit02,I have a brother and a sister.,나는 형(오빠)이랑 여동생(언니)이 있어요.,가족 나열엔 and,R-42
+p-0405,3,Unit02,My parents are kind.,우리 부모님은 친절해요.,parents는 항상 복수,R-43
+p-0406,3,Unit02,My brother is eight years old.,내 남동생(오빠)은 여덜 살이에요.,나이=숫자+years old,R-44
+p-0407,3,Unit03,Close the door.,문을 닫으세요.,지시문=동사원형으로 시작,R-45
+p-0408,3,Unit03,It's mine.,그건 내 거예요.,누구 것?=Whose+명사,R-46
+p-0409,3,Unit03,My desk is next to the window.,내 책상은 창문 옆에 있어요.,"옆=next to, 사이=between",R-47
+p-0410,3,Unit04,A fish can't walk.,물고기는 걸을 수 없어요.,동물의 불가능=can't,R-48
+p-0411,3,Unit04,There aren't many tigers.,호랑이가 많지 않아요.,없음=There isn't/aren't,R-49
+p-0412,3,Unit04,A tiger is stronger than a cat.,호랑이는 고양이보다 힘이 세요.,비교=형용사+er+than,R-50
+p-0413,3,Unit05,I would like some pizza.,저는 피자를 좀 먹고 싶어요.,정중한 want=would like,R-51
+p-0414,3,Unit05,Do you have any milk?,우유 좀 있어요?,"긍정=some, 의문·부정=any",R-52
+p-0415,3,Unit05,She drank a glass of milk.,그녀는 우유 한 잔을 마셨어요.,셀수없는명사 단위=a piece/glass of,R-53
+p-0416,3,Unit06,She has blue shoes.,그녀는 파란 신발이 있어요.,색깔형용사는 복수에도 그대로,R-54
+p-0417,3,Unit06,I like blue.,저는 파란색을 좋아해요.,선택 의문문=Which,R-55
+p-0418,3,Unit06,That hat looks red.,그 모자는 빨갛게 보여요.,look+형용사,R-56
+p-0419,4,Unit07,How many books are there?,책이 몇 권 있어요?,개수 묻기=How many~are there,R-57
+p-0420,5,Unit07,She has triple the amount.,그녀는 세 배의 양을 가지고 있어요.,"두 배=double, 세 배=triple",R-58
+p-0421,5,Unit07,There are thousands of stars.,별이 수천 개 있어요.,아주 많음=hundreds/thousands of,R-59
+p-0422,3,Unit08,It's sunny.,날씨가 맑아요.,날씨 묻기=What's the weather like?,R-60
+p-0423,3,Unit08,It is getting warm.,날씨가 따뜻해지고 있어요.,날씨 변화=get+형용사,R-61
+p-0424,4,Unit08,She stays home because it is rainy.,비가 와서 그녀는 집에 있어요.,이유=because+문장,R-62
+p-0425,3,Unit09,They go swimming in summer.,그들은 여름에 수영을 하러 가요.,계절 활동=go+동명사,R-63
+p-0426,3,Unit09,Summer is the hottest season.,여름은 가장 더운 계절이에요.,최상급=the+형용사est,R-64
+p-0427,4,Unit09,I read books during vacation.,나는 방학 동안 책을 읽어요.,기간 동안=during+명사,R-65
+p-0428,3,Unit10,I put on my coat.,나는 코트를 입어요.,put on/wear/take off 구별,R-66
+p-0429,3,Unit10,Her shoes are red.,그녀의 신발은 빨간색이에요.,pants/shoes는 항상 복수,R-67
+p-0430,3,Unit10,She looks pretty in that dress.,그녀는 그 원피스를 입으니 예뻐요.,look+형용사(옷),R-68
+p-0431,3,Unit11,She has a headache.,그녀는 머리가 아파요.,아픔 표현=have a+통증명사,R-69
+p-0432,3,Unit11,I brush my teeth.,나는 이를 닦아요.,wash/brush+소유격+신체부위,R-70
+p-0433,3,Unit11,She has white teeth.,그녀는 하얀 이를 가지고 있어요.,"foot→feet, tooth→teeth",R-71
+p-0434,3,Unit12,She plays the piano.,그녀는 피아노를 쳐요.,"구기=play+무관사, 악기=play the",R-72
+p-0435,3,Unit12,Let's run together.,같이 달려요.,제안=Let's+동사원형,R-73
+p-0436,3,Unit12,He is good at running.,그는 달리기를 잘해요.,잘함=be good at+동명사,R-74
+p-0437,3,Unit13,She spends time reading.,그녀는 책을 읽으며 시간을 보내요.,시간 보내기=spend time+동명사,R-75
+p-0438,4,Unit13,I draw every day.,나는 매일 그림을 그려요.,빈도 묻기=How often,R-76
+p-0439,4,Unit13,She is interested in painting.,그녀는 그림 그리기에 관심이 있어요.,관심=be interested in,R-77
+p-0440,3,Unit14,It's three o'clock.,3시예요.,시간 묻기=What time is it?,R-78
+p-0441,4,Unit14,My birthday is in July.,내 생일은 7월이에요.,on(요일)/at(시각·밤)/in(월·계절),R-79
+p-0442,4,Unit14,"Then, I eat breakfast.","그다음에, 나는 아침을 먹어요.",순서=First/Then/After that,R-80
+p-0443,4,Unit15,It takes ten minutes.,10분 걸려요.,소요시간 묻기=How long does it take?,R-81
+p-0444,3,Unit15,I go by bus.,저는 버스로 가요.,교통수단 묻기=How do you go to~?,R-82
+p-0445,4,Unit15,I get off the train.,나는 기차에서 내려요.,"타다=get on, 내리다=get off",R-83
+p-0446,4,Unit16,The park is behind the school.,공원은 학교 뒤에 있어요.,장소 위치=next to/between/in front of/behind,R-84
+p-0447,3,Unit16,It's next to the school.,그것은 학교 옆에 있어요.,장소 묻기=Where is the~?,R-85
+p-0448,4,Unit16,There are a lot of stores downtown.,시내에는 가게가 많아요.,많음=a lot of,R-86
+p-0449,4,Unit17,She works in an office.,그녀는 사무실에서 일해요.,근무=work at/in+장소,R-87
+p-0450,4,Unit17,She is a nurse.,그녀는 간호사예요.,직업 묻기=What does~do?,R-88
+p-0451,5,Unit17,She would like to be a vet.,그녀는 언젠가 수의사가 되고 싶어해요.,정중한 장래희망=would like to be,R-89
+p-0452,4,Unit18,The news makes her sad.,그 소식은 그녀를 슬프게 해요.,감정 유발=make+목적어+형용사,R-90
+p-0453,3,Unit18,She is so happy!,그녀는 정말 행복해요!,강조=so+형용사,R-91
+p-0454,3,Unit18,Because I am tired.,왜냐면 저는 피곤해서요.,이유 묻기=Why~? / Because~.,R-92
+p-0455,4,Unit19,It's five dollars.,5달러예요.,가격 답변=It's+숫자+dollars,R-93
+p-0456,4,Unit19,"Can I have a bag, please?",가방 하나 주실 수 있나요?,"정중한 요청=Can I have~, please?",R-94
+p-0457,4,Unit19,She bought a toy for her brother.,그녀는 남동생(오빠)을 위해 장난감을 샀어요.,buy A for B(과거 bought),R-95
+p-0458,3,Unit20,I cook in the kitchen.,나는 부엌에서 요리해요.,방의 용도=동사+in+장소,R-96
+p-0459,4,Unit20,Our apartment has two bathrooms.,우리 아파트는 화장실이 두 개예요.,집 구조=house has+숫자+명사,R-97
+p-0460,3,Unit20,That table is there.,저 탁자는 저기 있어요.,"가까움=this, 멈=that",R-98
+p-0461,3,ALL,I don't like snakes.,나는 뱀을 안 좋아해요.,부정문=don't/doesn't+동사원형,R-99
+p-0462,3,ALL,Do you like pizza?,피자 좋아해요?,의문문=Do/Does+주어+동사원형,R-100
