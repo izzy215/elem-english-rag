@@ -261,6 +261,14 @@ def _history_block(student: str) -> str:
 
 _SIMILAR_PATTERN = re.compile(r"비슷한|다른\s*(거|것|게).{0,4}(있|알려|보여)|또\s*(없|있)|말고\s*또")
 
+# "그거 예문 더 보여줘"처럼 방금 대화를 가리키는 지시어 — PROMPT 6번 규칙이 원래 이런 질문을
+# 대화 맥락으로 이어서 답하라고 정의해뒀는데, _local_match의 FAQ/규칙 단어겹침이 먼저 걸려서
+# "예문"/"보여줘" 같은 흔한 단어로 무관한 항목을 확정 답변해버리는 문제가 있었음(2026-09-11).
+_REFERENTIAL_PATTERN = re.compile(
+    r"그거|그것|이거|이것|왜\s*그래|그렇게|"
+    r"예문.{0,6}(더|다른|또)|(더|다른|또).{0,6}예문"   # "다른 예문 있어?"도 방금 대화 이어가기(2026-09-11)
+)
+
 
 def _related_faq(rule_ids: list[str], faq_list: list[dict], exclude_ids: set[str]) -> dict | None:
     for f in faq_list:
@@ -323,7 +331,9 @@ PROMPT = """너는 초등학교 3~4학년에게 영어를 가르치는 다정한
 6. 학생 질문에 "그거/이거/왜 그래/그렇게" 같은 지시어가 있으면, 엉뚱한 새 FAQ를 찾지 말고 "방금
    나눈 대화"에서 마지막으로 다룬 내용을 이어서 답하라 — 그 대화 자체가 근거이니 FAQ에 안 나와도
    offtopic 처리하지 않는다(1번 규칙의 예외). 예: 방금 대화가 farewell 뜻이었고 학생이 "그거 예문
-   보여줘"라 하면 farewell 예문으로, "왜 그래?"라 하면 그 설명을 더 풀어서 답한다.
+   보여줘"라 하면 farewell 예문으로 답한다. 특히 "왜 그래?/왜 그렇게 해?"처럼 이유를 물으면,
+   방금 한 말을 그대로 반복하지 말고 "왜 그런지"(이유·원리)를 새로 풀어서 설명하라 — 같은 문장을
+   되풀이하는 답은 이유를 물은 학생에게 의미가 없다.
 7. 학생이 "그거 말고 다른 건?/비슷한 거 있어?/또 없어?"처럼 방금 다룬 것과 다른 걸 더 달라고
    하면 wants_more=true (표현이 뭐든 의도만 판단하면 됨 — answer는 평소처럼 채워도 되고, 실제
    답은 다른 로직이 대신 정할 수 있다).
@@ -437,10 +447,13 @@ def _answer(body: AskIn) -> dict:
     words_pool = {w["word"].lower(): w for w in golden.all_words()}
     patterns_pool = golden.all_patterns()
 
-    # 1) 로컬 매칭 먼저 — faq/rules/words/patterns 안에서 바로 찾아지면 Gemini 호출 없이 즉시 반환
-    local = _local_match(question, all_faqs, all_rules, words_pool, patterns_pool)
-    if local is not None:
-        return local
+    # 1) 로컬 매칭 먼저 — faq/rules/words/patterns 안에서 바로 찾아지면 Gemini 호출 없이 즉시 반환.
+    #    단, "그거/왜 그래"처럼 방금 대화를 가리키는 질문은 로컬 단어겹침 매칭이 무관한 항목에
+    #    걸릴 위험이 있어(2026-09-11 재현) 건너뛰고 대화 맥락을 보는 LLM 경로로 바로 넘긴다.
+    if not _REFERENTIAL_PATTERN.search(question):
+        local = _local_match(question, all_faqs, all_rules, words_pool, patterns_pool)
+        if local is not None:
+            return local
 
     # 2) 로컬 매칭 실패 → llm.py 폴백 (faq 전체를 프롬프트에 넣고 고르게 함)
     if not settings.has_api_key:
@@ -486,14 +499,22 @@ def _answer(body: AskIn) -> dict:
             alt["llm"] = llm_info
             return alt
 
+    answer = out.get("answer") or ""
+
+    # LLM이 faq_id는 골라놓고 실제 answer 텍스트는 전혀 다른 내용으로 자유롭게 쓰는 경우가 있어서
+    # (예: faq_id=F-44(be동사 과거시제)를 골랐는데 답은 go/eat 같은 일반동사 얘기, 2026-09-11
+    # 오답노트 채팅에서 재현) — 답변과 그 FAQ 내용이 실제로 겹치는지 확인하고, 안 겹치면 그 FAQ의
+    # rule_ids를 근거로 붙이지 않는다(엉뚱한 규칙을 근거라고 우기는 걸 방지).
     faq = next((f for f in all_faqs if f["id"] == out.get("faq_id")), None)
+    if faq and not (set(_content_words(answer)) & set(_content_words(faq["question"] + " " + faq["answer"]))):
+        print(f"[ask][진단] faq_id={faq['id']} 골랐는데 answer 내용이 안 겹쳐 근거로 안 붙임: {answer!r}", flush=True)
+        faq = None
+
     source = [{"chunk_id": rid} for rid in (faq.get("rule_ids") or [])] if faq else []
     if faq:
         source.append({"chunk_id": faq["id"]})
     if log and log.get("rule_id") and not any(s["chunk_id"] == log["rule_id"] for s in source):
         source.append({"chunk_id": log["rule_id"]})
-
-    answer = out.get("answer") or ""
     offtopic = bool(out.get("offtopic"))
     if offtopic and answer.strip() and "선생님" not in answer:
         # 모델이 offtopic=true 라면서도 answer 는 유용하게 주는 경우가 잦음 — 프롬프트가 정한
