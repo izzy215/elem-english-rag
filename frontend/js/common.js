@@ -1,5 +1,6 @@
 /* 공통 (B안): API · 화면 간 상태 · 상단바 · 샘플 데이터 폴백 · 오답노트(로컬) · 오디오 · 물어보기 챗
  * /fix /ask /notebook /drill /patterns 는 서버에 다 있다. 여기의 폴백은 서버가 404 를 줄 때(서버 없이 화면만 열었을 때)만 대신 그린다.
+ * 화면은 서버가 준 값(규칙 이름·short·추천 질문)만 쓴다. sample-B 규칙표는 id 체계가 골든과 달라 화면을 열 때 미리 읽지 않는다.
  * 그 밖에 DEV 뷰(발표용 근거 박스·모드 배지) 와 setBusy(상단 진행바 + 버튼 잠금) 도 여기 있다. */
 
 // ---------- API ----------
@@ -11,6 +12,7 @@ async function api(path, opts = {}) {
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const escapeRe = s => String(s ?? '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');   // new RegExp(값) 앞에 (E-0009 "Please help me." 처럼 . 이 든 값)
 const shuffle = a => a.sort(() => Math.random() - .5);
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -54,6 +56,7 @@ function showResult(sel, html, kind = '') { const el = $(sel); el.className = 'r
 function hideResult(sel) { const el = $(sel); if (el) el.className = 'result'; }
 
 // ---------- 샘플 데이터 폴백 (frontend/data/sample-B/ — 서버가 404 일 때만. 규칙 id 체계가 골든(38개)과 다른 옛 샘플 9개) ----------
+// loadSampleB() 는 fixSentence 의 404/405 폴백, askChat 의 404 폴백, learn/shadow 의 최종 폴백에서만 부른다. 화면을 열 때 선로드 금지 — 골든 규칙 이름 위에 덮어쓰게 된다.
 const SB = { loaded: false, rules: [], faq: [], errors: [], patterns: [], units: [] };
 function parseCSV(t) {
   const lines = t.replace(/\r/g, '').split('\n').filter(l => l.trim()); const head = lines.shift().split(',');
@@ -84,7 +87,7 @@ const NB = {
 };
 async function fetchNotebook(student) {           // 서버 우선, 없으면 로컬
   try { return await api(`/api/notebook?student=${student}`); }
-  catch (_) { await loadSampleB(); return { active: NB.active(student).map(e => ({ ...e, name: ruleOf(e.rule_id)?.type || e.rule_id })), overcome: NB.overcome(student).map(e => ({ ...e, name: ruleOf(e.rule_id)?.type || e.rule_id })), local: true }; }
+  catch (_) { return { active: NB.active(student).map(e => ({ ...e, name: e.rule_id, short: '' })), overcome: NB.overcome(student).map(e => ({ ...e, name: e.rule_id })), local: true }; }   // 서버 없음: 규칙 이름을 알 수 없어 id 그대로 (sample-B 이름은 id 체계가 달라 안 씀)
 }
 
 // ---------- 오디오: 듣기(TTS) · 녹음 · 파형 ----------
@@ -191,12 +194,12 @@ function injectChat(screen) {
     <div class="inp"><input id="chatIn" placeholder="궁금한 걸 써 보세요" onkeydown="if(event.key==='Enter') sendChat()"><button class="mic" onclick="chatMic()">🎙</button><button onclick="sendChat()">보내기</button></div></div>`);
   CHAT.screen = screen;
 }
-async function openChat(extra = {}) {
-  await loadSampleB(); const s = S.get(); CHAT.ctx = { screen: CHAT.screen, unit: s.unit?.unit, ...extra }; CHAT.turns = 0;
-  const chips = []; if (s.unit) chips.push(`${s.unit.unit} ${s.unit.title}`); if (CHAT.ctx.rule_id) chips.push('방금: ' + (ruleOf(CHAT.ctx.rule_id)?.type || CHAT.ctx.rule_id)); if (CHAT.screen === 'notebook') chips.push('오답노트'); if (CHAT.screen === 'shadow') chips.push('따라 말하기');
+async function openChat({ rule_name = '', suggested = [], ...extra } = {}) {   // extra(rule_id·log_id) 는 /ask 의 context 로 감. rule_name·suggested 는 화면 표시용 (서버 /fix 응답 값)
+  const s = S.get(); CHAT.ctx = { screen: CHAT.screen, unit: s.unit?.unit, ...extra }; CHAT.turns = 0;
+  const chips = []; if (s.unit) chips.push(`${s.unit.unit} ${s.unit.title}`); if (CHAT.ctx.rule_id) chips.push('방금: ' + (rule_name || CHAT.ctx.rule_id)); if (CHAT.screen === 'notebook') chips.push('오답노트'); if (CHAT.screen === 'shadow') chips.push('따라 말하기');
   $('#chatCtx').innerHTML = chips.map(c => `<span>📍 ${esc(c)}</span>`).join('');
-  $('#chatMsgs').innerHTML = `<div class="msg bot">안녕! 지금 배우는 것에 대해 뭐든 물어봐. 아래 질문을 눌러도 돼 🙂</div>`;
-  const sug = CHAT.ctx.rule_id ? SB.faq.filter(f => f.rule_ids.includes(CHAT.ctx.rule_id)).map(f => f.question) : SB.faq.filter(f => f.unit === 'ALL' || f.unit === CHAT.ctx.unit).map(f => f.question);
+  const sug = Array.isArray(suggested) ? suggested.filter(q => typeof q === 'string' && q) : [];   // 추천 칩은 서버(/fix suggested_questions · /ask suggested)가 준 것만. 화면 샘플 FAQ 로 만들지 않는다
+  $('#chatMsgs').innerHTML = `<div class="msg bot">안녕! 지금 배우는 것에 대해 뭐든 물어봐.${sug.length ? ' 아래 질문을 눌러도 돼 🙂' : ' 🙂'}</div>`;
   renderSugg(sug.slice(0, 3)); $('#chat').classList.add('on'); $('#chatBg').classList.add('on');
 }
 function renderSugg(list) {   // 질문 문구를 onclick 속성에 넣지 않고 data 속성 + 이벤트로 (따옴표가 들어가면 속성이 깨져 클릭이 안 됨)
@@ -218,9 +221,12 @@ async function askChat(q) {
   const t0 = performance.now();
   let r;
   try { r = await api('/api/ask', { method: 'POST', body: JSON.stringify({ student: S.get().student, question: q, context: CHAT.ctx }) }); }
-  catch (_) { const f = faqMatch(q); r = f ? { answer: f.answer, source: f.rule_ids.map(id => ({ chunk_id: id })).concat([{ chunk_id: f.id }]), offtopic: false, fallback: true } : { answer: '음, 그건 영어 공부랑은 조금 다른 것 같아. 선생님께 물어볼까? 🙂', offtopic: true, fallback: true }; }
+  catch (e) {
+    if (e.status && e.status !== 404 && e.status !== 405) r = { answer: `지금은 답을 가져오지 못했어요. 잠시 후 다시 물어봐 주세요. (${e.message})`, offtopic: false, failed: true };   // 서버 /ask 는 있는데 실패(한도 등) → 샘플로 덮지 않는다
+    else { await loadSampleB(); const f = faqMatch(q); r = f ? { answer: f.answer, source: f.rule_ids.map(id => ({ chunk_id: id })).concat([{ chunk_id: f.id }]), offtopic: false, fallback: true } : { answer: '음, 그건 영어 공부랑은 조금 다른 것 같아. 선생님께 물어볼까? 🙂', offtopic: true, fallback: true }; }   // 서버 /ask 없음(404): 화면 샘플 FAQ 로 임시 답변
+  }
   finally { $('#chatTyping')?.remove(); setBusy(false); if (DEV.on()) console.log(`[ask] ${Math.round(performance.now() - t0)}ms`); }
-  m.insertAdjacentHTML('beforeend', `<div class="msg bot ${r.offtopic ? 'warn' : ''}">${esc(r.answer)}${r.source && r.source.length ? `<div class="src">📚 근거 · ${r.source.map(s => esc(s.chunk_id)).join(' · ')}</div>` : (r.offtopic ? `<div class="src">검색 점수 낮음 → 조각 밖 답변 안 함</div>` : '')}${r.fallback ? `<div class="src" style="opacity:.7">서버 /ask 구현 전 · FAQ 샘플로 임시 답변</div>` : ''}</div>`);
+  m.insertAdjacentHTML('beforeend', `<div class="msg bot ${r.offtopic ? 'warn' : ''}">${esc(r.answer)}${r.source && r.source.length ? `<div class="src">📚 근거 · ${r.source.map(s => esc(s.chunk_id)).join(' · ')}</div>` : (r.offtopic ? `<div class="src">검색 점수 낮음 → 조각 밖 답변 안 함</div>` : '')}${r.fallback ? `<div class="src" style="opacity:.7">서버 /ask 없음(404) · 화면 샘플 FAQ 로 임시 답변</div>` : r.failed ? `<div class="src" style="opacity:.7">서버 연결 실패</div>` : ''}</div>`);
   m.scrollTop = m.scrollHeight; CHAT.turns++;
   if (r.suggested && r.suggested.length) renderSugg(r.suggested); if (CHAT.turns >= 3) $('#chatSugg').innerHTML = `<button onclick="closeChat()">이제 돌아갈게요 ↩</button>`;
 }
