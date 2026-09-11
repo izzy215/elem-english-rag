@@ -1,301 +1,361 @@
-text,expected_rule_id,note
-I hello.,R-01,형용사 앞엔 be동사 · 새 문장 (E-0001 대응)
-The garden pale.,R-01,형용사 앞엔 be동사 · 새 문장 (E-0003 대응)
-This animal cat.,R-01,형용사 앞엔 be동사 · 새 문장 (E-0002 대응)
-Good goodbye Mom.,R-02,인사말 뒤 쉼표·느낌표 · 새 문장 (E-0006 대응)
-Night Mike.,R-02,인사말 뒤 쉼표·느낌표 · 새 문장 (E-0005 대응)
-Thanks Tom.,R-02,인사말 뒤 쉼표·느낌표 · 새 문장 (E-0007 대응)
-She is family.,R-03,누구 것? 's / my · 새 문장 (E-0010 대응)
-She is parents.,R-03,누구 것? 's / my · 새 문장 (E-0009 대응)
-She is son.,R-03,누구 것? 's / my · 새 문장 (E-0011 대응)
-This is my daughters.,R-04,"한 명 This is, 여럿 These are · 새 문장 (E-0014 대응)"
-This is my relatives.,R-04,"한 명 This is, 여럿 These are · 새 문장 (E-0015 대응)"
-This is my sons.,R-04,"한 명 This is, 여럿 These are · 새 문장 (E-0013 대응)"
-There are education.,R-05,"하나 There is, 여럿 There are · 새 문장 (E-0019 대응)"
-There are lesson.,R-05,"하나 There is, 여럿 There are · 새 문장 (E-0017 대응)"
-There are principal.,R-05,"하나 There is, 여럿 There are · 새 문장 (E-0018 대응)"
-She a grade has every day.,R-06,주어+동사+목적어 순서 · 새 문장 (E-0022 대응)
-She a schedule learns every day.,R-06,주어+동사+목적어 순서 · 새 문장 (E-0021 대응)
-She her classmate finishes every day.,R-06,주어+동사+목적어 순서 · 새 문장 (E-0023 대응)
-The bird can runs fast.,R-07,can 뒤엔 동사원형 · 새 문장 (E-0027 대응)
-The cat can climbs balls.,R-07,can 뒤엔 동사원형 · 새 문장 (E-0026 대응)
-The ecosystem can flies high.,R-07,can 뒤엔 동사원형 · 새 문장 (E-0025 대응)
-This birds are amazing.,R-08,"This+단수, These+복수 · 새 문장 (E-0029 대응)"
-This fishes are amazing.,R-08,"This+단수, These+복수 · 새 문장 (E-0030 대응)"
-This rabbits are amazing.,R-08,"This+단수, These+복수 · 새 문장 (E-0031 대응)"
-I have many soup.,R-09,셀 수 없으면 much/some · 새 문장 (E-0033 대응)
-Running builds many coach.,R-09,셀 수 없으면 much/some · 새 문장 (E-0035 대응)
-We heard many forecast last night.,R-09,셀 수 없으면 much/some · 새 문장 (E-0034 대응)
-I want to a dessert.,R-10,want 뒤엔 명사 바로 · 새 문장 (E-0037 대응)
-I want to a meal.,R-10,want 뒤엔 명사 바로 · 새 문장 (E-0039 대응)
-I want to a snack.,R-10,want 뒤엔 명사 바로 · 새 문장 (E-0038 대응)
-I see leaf a black.,R-11,형용사는 명사 앞에 · 새 문장 (E-0043 대응)
-I see shoe a yellow.,R-11,형용사는 명사 앞에 · 새 문장 (E-0042 대응)
-I see window a red.,R-11,형용사는 명사 앞에 · 새 문장 (E-0041 대응)
-I have nine pencil.,R-12,숫자 2 이상+복수형 · 새 문장 (E-0046 대응)
-I have one bananas.,R-12,숫자 2 이상+복수형 · 새 문장 (E-0045 대응)
-I have two cookie.,R-12,숫자 2 이상+복수형 · 새 문장 (E-0047 대응)
-He was first in line.,R-13,"서수 앞엔 the · 새 문장 (E-0049 대응, 수동 보완)"
-It was first on the shelf.,R-13,"서수 앞엔 the · 새 문장 (E-0050 대응, 수동 보완)"
-She was first at school today.,R-13,"서수 앞엔 the · 새 문장 (E-0051 대응, 수동 보완)"
-This is cold today.,R-14,날씨는 It is ~ · 새 문장 (E-0053 대응)
-This is snowy today.,R-14,날씨는 It is ~ · 새 문장 (E-0055 대응)
-This is windy today.,R-14,날씨는 It is ~ · 새 문장 (E-0054 대응)
-A snowy will hits the coast.,R-15,will 뒤엔 동사원형 · 새 문장 (E-0057 대응)
-The climate says it will rains.,R-15,will 뒤엔 동사원형 · 새 문장 (E-0059 대응)
-The storm says it will rains.,R-15,will 뒤엔 동사원형 · 새 문장 (E-0058 대응)
-Solstices bloom on spring.,R-16,계절 앞엔 in · 새 문장 (E-0061 대응)
-We enjoy annual activities on fall.,R-16,계절 앞엔 in · 새 문장 (E-0062 대응)
-We enjoy transition activities on summer.,R-16,계절 앞엔 in · 새 문장 (E-0063 대응)
-He wear a zipper now.,R-17,지금 입고 있다=be+wearing · 새 문장 (E-0065 대응)
-She wear a pretty fabric now.,R-17,지금 입고 있다=be+wearing · 새 문장 (E-0066 대응)
-She wear a red style now.,R-17,지금 입고 있다=be+wearing · 새 문장 (E-0067 대응)
-Ear is cold.,R-18,신체부위 앞엔 소유격 · 새 문장 (E-0070 대응)
-Eye is cold.,R-18,신체부위 앞엔 소유격 · 새 문장 (E-0071 대응)
-Hand hurts.,R-18,신체부위 앞엔 소유격 · 새 문장 (E-0069 대응)
-I like athlete.,R-19,like 뒤엔 동사-ing/to동사원형 · 새 문장 (E-0075 대응)
-I like race.,R-19,like 뒤엔 동사-ing/to동사원형 · 새 문장 (E-0073 대응)
-I like team.,R-19,like 뒤엔 동사-ing/to동사원형 · 새 문장 (E-0074 대응)
-I enjoy collect.,R-20,enjoy 뒤엔 동사-ing · 새 문장 (E-0079 대응)
-I enjoy paint.,R-20,enjoy 뒤엔 동사-ing · 새 문장 (E-0078 대응)
-I enjoy play.,R-20,enjoy 뒤엔 동사-ing · 새 문장 (E-0077 대응)
-I have a test in friday.,R-21,요일은 on+대문자 · 새 문장 (E-0081 대응)
-I have a test in week.,R-21,요일은 on+대문자 · 새 문장 (E-0082 대응)
-I have a test in weekend.,R-21,요일은 on+대문자 · 새 문장 (E-0083 대응)
-I visit usually my grandparents on the month.,R-22,빈도부사는 동사 앞 · 새 문장 (E-0087 대응)
-I visit usually my grandparents on the saturday.,R-22,빈도부사는 동사 앞 · 새 문장 (E-0085 대응)
-I visit usually my grandparents on the sunday.,R-22,빈도부사는 동사 앞 · 새 문장 (E-0086 대응)
-We go to school by a highway.,R-23,"by+교통수단, 관사 없이 · 새 문장 (E-0090 대응)"
-We go to school by a ticket.,R-23,"by+교통수단, 관사 없이 · 새 문장 (E-0089 대응)"
-We go to school by a vehicle.,R-23,"by+교통수단, 관사 없이 · 새 문장 (E-0091 대응)"
-We go to community every day.,R-24,장소 앞엔 go to the · 새 문장 (E-0094 대응)
-We go to facility every day.,R-24,장소 앞엔 go to the · 새 문장 (E-0095 대응)
-We go to hospital every day.,R-24,장소 앞엔 go to the · 새 문장 (E-0093 대응)
-She wants to be designer.,R-25,장래희망=want to be a/an · 새 문장 (E-0098 대응)
-She wants to be scientist.,R-25,장래희망=want to be a/an · 새 문장 (E-0097 대응)
-She wants to be writer.,R-25,장래희망=want to be a/an · 새 문장 (E-0099 대응)
-My uncle is dancer.,R-26,직업 앞엔 a/an · 새 문장 (E-0103 대응)
-My uncle is pilot.,R-26,직업 앞엔 a/an · 새 문장 (E-0101 대응)
-My uncle is singer.,R-26,직업 앞엔 a/an · 새 문장 (E-0102 대응)
-She is bored for her son.,R-27,감정형용사+알맞은 전치사 · 새 문장 (E-0107 대응)
-She is scared of her speech.,R-27,감정형용사+알맞은 전치사 · 새 문장 (E-0105 대응)
-She is surprised for his friend.,R-27,감정형용사+알맞은 전치사 · 새 문장 (E-0106 대응)
-He felt very too nervous to continue.,R-28,지나치면 too+형용사 · 새 문장 (E-0109 대응)
-He was very too jealous to speak.,R-28,지나치면 too+형용사 · 새 문장 (E-0111 대응)
-He was very too proud to speak.,R-28,지나치면 too+형용사 · 새 문장 (E-0110 대응)
-How many is our money?,R-29,"가격 How much, 개수 How many · 새 문장 (E-0113 대응)"
-How many is this dog?,R-29,"가격 How much, 개수 How many · 새 문장 (E-0114 대응)"
-How many is this toy?,R-29,"가격 How much, 개수 How many · 새 문장 (E-0115 대응)"
-The furniture is on the bedroom.,R-30,"안=in, 위=on, 아래=under · 새 문장 (E-0117 대응)"
-The garage is on the neighborhood.,R-30,"안=in, 위=on, 아래=under · 새 문장 (E-0118 대응)"
-The room is on the roof.,R-30,"안=in, 위=on, 아래=under · 새 문장 (E-0119 대응)"
-He buy a new shoes yesterday.,R-31,과거를 말할 땐 동사를 과거형으로 · 새 문장 (E-0123 대응)
-I say thanks to my new friend yesterday.,R-31,과거를 말할 땐 동사를 과거형으로 · 새 문장 (E-0121 대응)
-She eat a big cheese last night.,R-31,과거를 말할 땐 동사를 과거형으로 · 새 문장 (E-0122 대응)
-A farmer harvest rice in transition.,R-32,he/she/it 주어면 동사에 -s · 새 문장 (E-0127 대응)
-She dye her chair red.,R-32,he/she/it 주어면 동사에 -s · 새 문장 (E-0126 대응)
-She invite her teacher every morning.,R-32,he/she/it 주어면 동사에 -s · 새 문장 (E-0125 대응)
-I have two snack.,R-33,둘 이상이면 -s · 새 문장 (E-0129 대응)
-She has three coat.,R-33,둘 이상이면 -s · 새 문장 (E-0130 대응)
-We saw five motorcycle on the road.,R-33,둘 이상이면 -s · 새 문장 (E-0131 대응)
-I have a elephant.,R-34,모음 소리 앞엔 an · 새 문장 (E-0135 대응)
-I have a homework.,R-34,모음 소리 앞엔 an · 새 문장 (E-0134 대응)
-I have a mom.,R-34,모음 소리 앞엔 an · 새 문장 (E-0133 대응)
-He is eat a milk now.,R-35,지금 하는 일은 be + -ing · 새 문장 (E-0138 대응)
-She is hello her classmates now.,R-35,지금 하는 일은 be + -ing · 새 문장 (E-0137 대응)
-They are wear new style now.,R-35,지금 하는 일은 be + -ing · 새 문장 (E-0139 대응)
-My accessory is new.,R-36,I am · you are · he is · 새 문장 (E-0141 대응)
-My wardrobe is warm.,R-36,I am · you are · he is · 새 문장 (E-0142 대응)
-These textile is too long.,R-36,I am · you are · he is · 새 문장 (E-0143 대응)
-It is rainy thursday.,R-37,과거의 be동사는 was/were · 새 문장 (E-0147 대응)
-It is rainy tomorrow.,R-37,과거의 be동사는 was/were · 새 문장 (E-0145 대응)
-It is rainy wednesday.,R-37,과거의 be동사는 was/were · 새 문장 (E-0146 대응)
-I have an daughter.,R-38,하나면 앞에 a · 새 문장 (E-0150 대응)
-I have an student.,R-38,하나면 앞에 a · 새 문장 (E-0151 대응)
-It was an welcome.,R-38,하나면 앞에 a · 새 문장 (E-0149 대응)
-Amy likes playing.,R-39,안부 묻기=How are you? · 새 문장 (E-0155 대응)
-How you are on your birthday?,R-39,"안부 묻기=How are you? · 새 문장 (E-0153 대응, 수동 보완)"
-How you are this invite?,R-39,안부 묻기=How are you? · 새 문장 (E-0154 대응)
-"Great to meet you, also.",R-40,"초면 인사+too로 답하기 · 새 문장 (E-0157 대응, 수동 보완)"
-Mike likes playing.,R-40,초면 인사+too로 답하기 · 새 문장 (E-0159 대응)
-"Wonderful to meet you, also.",R-40,"초면 인사+too로 답하기 · 새 문장 (E-0158 대응, 수동 보완)"
-They hi.,R-41,고마움엔 You're welcome · 새 문장 (E-0163 대응)
-You morning.,R-41,고마움엔 You're welcome · 새 문장 (E-0161 대응)
-You night.,R-41,고마움엔 You're welcome · 새 문장 (E-0162 대응)
-He has a cousin a generation.,R-42,가족 나열엔 and · 새 문장 (E-0165 대응)
-He has a uncle a ancestor.,R-42,가족 나열엔 and · 새 문장 (E-0167 대응)
-He has a uncle a spouse.,R-42,가족 나열엔 and · 새 문장 (E-0166 대응)
-Her grandparents is kind.,R-43,parents는 항상 복수 · 새 문장 (E-0170 대응)
-Our grandparents is wise.,R-43,"parents는 항상 복수 · 새 문장 (E-0171 대응, 수동 보완)"
-Their grandparents is generous.,R-43,"parents는 항상 복수 · 새 문장 (E-0169 대응, 수동 보완)"
-My daughter is nine year old.,R-44,나이=숫자+years old · 새 문장 (E-0173 대응)
-My grandchild is nine year old.,R-44,나이=숫자+years old · 새 문장 (E-0175 대응)
-My relative is nine year old.,R-44,나이=숫자+years old · 새 문장 (E-0174 대응)
-"You close the plate, please.",R-45,지시문=동사원형으로 시작 · 새 문장 (E-0177 대응)
-"You close the rock, please.",R-45,지시문=동사원형으로 시작 · 새 문장 (E-0178 대응)
-"You close the tree, please.",R-45,지시문=동사원형으로 시작 · 새 문장 (E-0179 대응)
-Who homework is this?,R-46,누구 것?=Whose+명사 · 새 문장 (E-0181 대응)
-Who subject is this?,R-46,누구 것?=Whose+명사 · 새 문장 (E-0183 대응)
-Who test is this?,R-46,누구 것?=Whose+명사 · 새 문장 (E-0182 대응)
-My bag is at the desk and the window.,R-47,"옆=next to, 사이=between · 새 문장 (E-0185 대응)"
-My book is at the desk and the shoe.,R-47,"옆=next to, 사이=between · 새 문장 (E-0186 대응)"
-My chair is at the desk and the shirt.,R-47,"옆=next to, 사이=between · 새 문장 (E-0187 대응)"
-A bear can not flies.,R-48,동물의 불가능=can't · 새 문장 (E-0189 대응)
-A insect can not flies.,R-48,동물의 불가능=can't · 새 문장 (E-0191 대응)
-A wildlife can not flies.,R-48,동물의 불가능=can't · 새 문장 (E-0190 대응)
-There isn't many creatures in this zoo.,R-49,없음=There isn't/aren't · 새 문장 (E-0195 대응)
-There isn't many mammals in this zoo.,R-49,없음=There isn't/aren't · 새 문장 (E-0194 대응)
-There isn't many reptiles in this zoo.,R-49,없음=There isn't/aren't · 새 문장 (E-0193 대응)
-A bird is strong than a endangered.,R-50,비교=형용사+er+than · 새 문장 (E-0197 대응)
-A cat is strong than a species.,R-50,비교=형용사+er+than · 새 문장 (E-0198 대응)
-A lion is strong than a habitat.,R-50,비교=형용사+er+than · 새 문장 (E-0199 대응)
-He would like to a coin.,R-51,정중한 want=would like · 새 문장 (E-0201 대응)
-He would like to a drum.,R-51,정중한 want=would like · 새 문장 (E-0203 대응)
-He would like to a kite.,R-51,정중한 want=would like · 새 문장 (E-0202 대응)
-I don't have some banana at home.,R-52,"긍정=some, 의문·부정=any · 새 문장 (E-0207 대응)"
-I don't have some egg at home.,R-52,"긍정=some, 의문·부정=any · 새 문장 (E-0205 대응)"
-I don't have some pizza at home.,R-52,"긍정=some, 의문·부정=any · 새 문장 (E-0206 대응)"
-He ate a banana piece for lunch.,R-53,셀수없는명사 단위=a piece/glass of · 새 문장 (E-0211 대응)
-He ate a egg piece for lunch.,R-53,셀수없는명사 단위=a piece/glass of · 새 문장 (E-0209 대응)
-He ate a pizza piece for lunch.,R-53,셀수없는명사 단위=a piece/glass of · 새 문장 (E-0210 대응)
-He likes purples balloons at the party.,R-54,색깔형용사는 복수에도 그대로 · 새 문장 (E-0214 대응)
-He likes purples kites in the sky.,R-54,색깔형용사는 복수에도 그대로 · 새 문장 (E-0213 대응)
-She likes oranges balloons at the party.,R-54,색깔형용사는 복수에도 그대로 · 새 문장 (E-0215 대응)
-What animal you like the best?,R-55,"선택 의문문=Which · 새 문장 (E-0218 대응, 수동 보완)"
-What color you like the most?,R-55,선택 의문문=Which · 새 문장 (E-0217 대응)
-What subject you like the best?,R-55,"선택 의문문=Which · 새 문장 (E-0219 대응, 수동 보완)"
-That clock looks brownly in this light.,R-56,look+형용사 · 새 문장 (E-0221 대응)
-That lamp looks brownly in this light.,R-56,look+형용사 · 새 문장 (E-0222 대응)
-That spoon looks brownly in this light.,R-56,look+형용사 · 새 문장 (E-0223 대응)
-How many plate is there in the room?,R-57,개수 묻기=How many~are there · 새 문장 (E-0226 대응)
-How many spoon is there on the shelf?,R-57,개수 묻기=How many~are there · 새 문장 (E-0225 대응)
-Sam likes playing.,R-57,개수 묻기=How many~are there · 새 문장 (E-0227 대응)
-He has one triple the money now.,R-58,"두 배=double, 세 배=triple · 새 문장 (E-0229 대응)"
-I have three double the candy now.,R-58,"두 배=double, 세 배=triple · 새 문장 (E-0230 대응)"
-She has four triple the money now.,R-58,"두 배=double, 세 배=triple · 새 문장 (E-0231 대응)"
-There are hundred of bikes on the highway.,R-59,아주 많음=hundreds/thousands of · 새 문장 (E-0233 대응)
-There are hundred of books in the library.,R-59,"아주 많음=hundreds/thousands of · 새 문장 (E-0234 대응, 수동 보완)"
-There are thousand of stars in the sky.,R-59,"아주 많음=hundreds/thousands of · 새 문장 (E-0235 대응, 수동 보완)"
-How's the drought like tomorrow?,R-60,날씨 묻기=What's the weather like? · 새 문장 (E-0237 대응)
-How's the lightning like tomorrow?,R-60,날씨 묻기=What's the weather like? · 새 문장 (E-0239 대응)
-How's the thunder like tomorrow?,R-60,날씨 묻기=What's the weather like? · 새 문장 (E-0238 대응)
-He is getting cloudly this morning.,R-61,날씨 변화=get+형용사 · 새 문장 (E-0241 대응)
-He is getting sunnly this afternoon.,R-61,날씨 변화=get+형용사 · 새 문장 (E-0243 대응)
-She is getting rainly this weekend.,R-61,날씨 변화=get+형용사 · 새 문장 (E-0242 대응)
-He carries an umbrella because cold.,R-62,이유=because+문장 · 새 문장 (E-0245 대응)
-He carries an umbrella because snowy.,R-62,이유=because+문장 · 새 문장 (E-0247 대응)
-He carries an umbrella because windy.,R-62,이유=because+문장 · 새 문장 (E-0246 대응)
-She goes to skate in blossom every year.,R-63,계절 활동=go+동명사 · 새 문장 (E-0249 대응)
-She goes to skate in hibernate every year.,R-63,계절 활동=go+동명사 · 새 문장 (E-0251 대응)
-She goes to skate in migrate every year.,R-63,계절 활동=go+동명사 · 새 문장 (E-0250 대응)
-Fall is warmest solstice of all.,R-64,최상급=the+형용사est · 새 문장 (E-0253 대응)
-Spring is warmest annual of all.,R-64,최상급=the+형용사est · 새 문장 (E-0254 대응)
-Summer is warmest transition of all.,R-64,최상급=the+형용사est · 새 문장 (E-0255 대응)
-She travels while flower every year.,R-65,기간 동안=during+명사 · 새 문장 (E-0259 대응)
-She travels while leaf every year.,R-65,기간 동안=during+명사 · 새 문장 (E-0258 대응)
-She travels while season every year.,R-65,기간 동안=during+명사 · 새 문장 (E-0257 대응)
-She wears off her accessory at home.,R-66,put on/wear/take off 구별 · 새 문장 (E-0261 대응)
-She wears off her textile at home.,R-66,put on/wear/take off 구별 · 새 문장 (E-0263 대응)
-She wears off her wardrobe at home.,R-66,put on/wear/take off 구별 · 새 문장 (E-0262 대응)
-His hats is warm in winter.,R-67,pants/shoes는 항상 복수 · 새 문장 (E-0265 대응)
-His jackets is warm in winter.,R-67,pants/shoes는 항상 복수 · 새 문장 (E-0267 대응)
-His sockses is warm in winter.,R-67,pants/shoes는 항상 복수 · 새 문장 (E-0266 대응)
-He looks coolly in his new dress.,R-68,look+형용사(옷) · 새 문장 (E-0271 대응)
-He looks coolly in his new hat.,R-68,look+형용사(옷) · 새 문장 (E-0269 대응)
-He looks coolly in his new skirt.,R-68,look+형용사(옷) · 새 문장 (E-0270 대응)
-He has backache now.,R-69,"아픔 표현=have a+통증명사 · 새 문장 (E-0273 대응, 수동 보완)"
-She has earache tonight.,R-69,"아픔 표현=have a+통증명사 · 새 문장 (E-0274 대응, 수동 보완)"
-They have stomachache after lunch.,R-69,"아픔 표현=have a+통증명사 · 새 문장 (E-0275 대응, 수동 보완)"
-He washes hands before eating.,R-70,"wash/brush+소유격+신체부위 · 새 문장 (E-0277 대응, 수동 보완)"
-She brushes teeth every night.,R-70,"wash/brush+소유격+신체부위 · 새 문장 (E-0278 대응, 수동 보완)"
-They wash face in the morning.,R-70,"wash/brush+소유격+신체부위 · 새 문장 (E-0279 대응, 수동 보완)"
-He has white tooths.,R-71,"foot→feet, tooth→teeth · 새 문장 (E-0283 대응)"
-He hurt his mouths playing soccer.,R-71,"foot→feet, tooth→teeth · 새 문장 (E-0281 대응)"
-I have two shoulders.,R-71,"foot→feet, tooth→teeth · 새 문장 (E-0282 대응)"
-He plays a baseball after school.,R-72,"구기=play+무관사, 악기=play the · 새 문장 (E-0285 대응)"
-He plays a race after school.,R-72,"구기=play+무관사, 악기=play the · 새 문장 (E-0286 대응)"
-He plays a team after school.,R-72,"구기=play+무관사, 악기=play the · 새 문장 (E-0287 대응)"
-Let's biking around the park.,R-73,"제안=Let's+동사원형 · 새 문장 (E-0291 대응, 수동 보완)"
-Let's dancing at the party.,R-73,"제안=Let's+동사원형 · 새 문장 (E-0289 대응, 수동 보완)"
-Let's playing coach today.,R-73,제안=Let's+동사원형 · 새 문장 (E-0290 대응)
-They are good at play endurance.,R-74,잘함=be good at+동명사 · 새 문장 (E-0295 대응)
-They are good at play stadium.,R-74,잘함=be good at+동명사 · 새 문장 (E-0293 대응)
-They are good at play tournament.,R-74,잘함=be good at+동명사 · 새 문장 (E-0294 대응)
-He spends time to collection every day.,R-75,시간 보내기=spend time+동명사 · 새 문장 (E-0297 대응)
-I spend time to creativity every weekend.,R-75,시간 보내기=spend time+동명사 · 새 문장 (E-0298 대응)
-She spends time to leisure every day.,R-75,시간 보내기=spend time+동명사 · 새 문장 (E-0299 대응)
-How many often do you passion at home?,R-76,빈도 묻기=How often · 새 문장 (E-0303 대응)
-How many often do you skill at home?,R-76,빈도 묻기=How often · 새 문장 (E-0302 대응)
-How many often do you talent at home?,R-76,빈도 묻기=How often · 새 문장 (E-0301 대응)
-He is interested at paint these days.,R-77,관심=be interested in · 새 문장 (E-0307 대응)
-He is interested at play these days.,R-77,관심=be interested in · 새 문장 (E-0306 대응)
-He is interested at read these days.,R-77,관심=be interested in · 새 문장 (E-0305 대응)
-"What time it is, Ben asked.",R-78,시간 묻기=What time is it? · 새 문장 (E-0310 대응)
-"What time it is, Tom wondered.",R-78,"시간 묻기=What time is it? · 새 문장 (E-0309 대응, 수동 보완)"
-"What time it is, the teacher asked.",R-78,"시간 묻기=What time is it? · 새 문장 (E-0311 대응, 수동 보완)"
-He wakes up on one o'clock every day.,R-79,on(요일)/at(시각·밤)/in(월·계절) · 새 문장 (E-0313 대응)
-She wakes up on four o'clock every day.,R-79,on(요일)/at(시각·밤)/in(월·계절) · 새 문장 (E-0315 대응)
-She wakes up on three o'clock every day.,R-79,on(요일)/at(시각·밤)/in(월·계절) · 새 문장 (E-0314 대응)
-"Then I do my homework, first I have a snack.",R-80,"순서=First/Then/After that · 새 문장 (E-0318 대응, 수동 보완)"
-"Then I get dressed, first I wake up.",R-80,순서=First/Then/After that · 새 문장 (E-0317 대응)
-"Then I read a book, first I turn on the lamp.",R-80,"순서=First/Then/After that · 새 문장 (E-0319 대응, 수동 보완)"
-How long take it to the motorcycle?,R-81,소요시간 묻기=How long does it take? · 새 문장 (E-0323 대응)
-How long take it to the ship?,R-81,소요시간 묻기=How long does it take? · 새 문장 (E-0321 대응)
-How long take it to the truck?,R-81,소요시간 묻기=How long does it take? · 새 문장 (E-0322 대응)
-How you go to the passenger every day?,R-82,교통수단 묻기=How do you go to~? · 새 문장 (E-0326 대응)
-How you go to the ticket every day?,R-82,교통수단 묻기=How do you go to~? · 새 문장 (E-0327 대응)
-How you go to the traffic every day?,R-82,교통수단 묻기=How do you go to~? · 새 문장 (E-0325 대응)
-She gets in the highway every morning.,R-83,"타다=get on, 내리다=get off · 새 문장 (E-0330 대응)"
-She gets in the ticket every morning.,R-83,"타다=get on, 내리다=get off · 새 문장 (E-0329 대응)"
-She gets in the vehicle every morning.,R-83,"타다=get on, 내리다=get off · 새 문장 (E-0331 대응)"
-The bank is on the zoo in our town.,R-84,장소 위치=next to/between/in front of/behind · 새 문장 (E-0333 대응)
-The hospital is on the hospital in our town.,R-84,장소 위치=next to/between/in front of/behind · 새 문장 (E-0334 대응)
-The museum is on the museum in our town.,R-84,장소 위치=next to/between/in front of/behind · 새 문장 (E-0335 대응)
-Where the landmark is in this town?,R-85,장소 묻기=Where is the~? · 새 문장 (E-0337 대응)
-Where the suburb is in this town?,R-85,장소 묻기=Where is the~? · 새 문장 (E-0339 대응)
-Where the urban is in this town?,R-85,장소 묻기=Where is the~? · 새 문장 (E-0338 대응)
-There are a lot bananas on this street.,R-86,많음=a lot of · 새 문장 (E-0341 대응)
-There are a lot cookies on this street.,R-86,많음=a lot of · 새 문장 (E-0343 대응)
-There are a lot oranges on this street.,R-86,많음=a lot of · 새 문장 (E-0342 대응)
-He works a school as a aunt.,R-87,근무=work at/in+장소 · 새 문장 (E-0347 대응)
-He works a school as a grandpa.,R-87,근무=work at/in+장소 · 새 문장 (E-0345 대응)
-He works a school as a uncle.,R-87,근무=work at/in+장소 · 새 문장 (E-0346 대응)
-"What does he works, the teacher asked.",R-88,"직업 묻기=What does~do? · 새 문장 (E-0349 대응, 수동 보완)"
-"What does he works, they asked their uncle.",R-88,직업 묻기=What does~do? · 새 문장 (E-0350 대응)
-"What does she works, I asked my aunt.",R-88,직업 묻기=What does~do? · 새 문장 (E-0351 대응)
-He would like be a designer someday.,R-89,정중한 장래희망=would like to be · 새 문장 (E-0353 대응)
-He would like be a photographer someday.,R-89,정중한 장래희망=would like to be · 새 문장 (E-0355 대응)
-He would like be a writer someday.,R-89,정중한 장래희망=would like to be · 새 문장 (E-0354 대응)
-The game makes him to embarrassed every time.,R-90,감정 유발=make+목적어+형용사 · 새 문장 (E-0357 대응)
-The game makes him to frustrated every time.,R-90,감정 유발=make+목적어+형용사 · 새 문장 (E-0359 대응)
-The game makes him to grateful every time.,R-90,감정 유발=make+목적어+형용사 · 새 문장 (E-0358 대응)
-He is so much excited after the race.,R-91,강조=so+형용사 · 새 문장 (E-0362 대응)
-He is so much hungry after the race.,R-91,강조=so+형용사 · 새 문장 (E-0361 대응)
-He is so much scared after the race.,R-91,강조=so+형용사 · 새 문장 (E-0363 대응)
-"Why she is excited today, he wondered.",R-92,이유 묻기=Why~? / Because~. · 새 문장 (E-0366 대응)
-"Why she is hungry today, he wondered.",R-92,이유 묻기=Why~? / Because~. · 새 문장 (E-0365 대응)
-"Why she is scared today, he wondered.",R-92,이유 묻기=Why~? / Because~. · 새 문장 (E-0367 대응)
-It's eight dollar for this cap.,R-93,가격 답변=It's+숫자+dollars · 새 문장 (E-0369 대응)
-It's nine dollar for this cap.,R-93,가격 답변=It's+숫자+dollars · 새 문장 (E-0370 대응)
-It's ten dollar for this cap.,R-93,가격 답변=It's+숫자+dollars · 새 문장 (E-0371 대응)
-"I have this fork, please, she said.",R-94,"정중한 요청=Can I have~, please? · 새 문장 (E-0373 대응)"
-"I have this plate, please, she said.",R-94,"정중한 요청=Can I have~, please? · 새 문장 (E-0374 대응)"
-"I have this rock, please, she said.",R-94,"정중한 요청=Can I have~, please? · 새 문장 (E-0375 대응)"
-He buyed a car his sister yesterday.,R-95,buy A for B(과거 bought) · 새 문장 (E-0379 대응)
-He buyed a flower his sister yesterday.,R-95,buy A for B(과거 bought) · 새 문장 (E-0378 대응)
-He buyed a tree his sister yesterday.,R-95,buy A for B(과거 bought) · 새 문장 (E-0377 대응)
-She studies at her architecture every evening.,R-96,방의 용도=동사+in+장소 · 새 문장 (E-0381 대응)
-She studies at her interior every evening.,R-96,방의 용도=동사+in+장소 · 새 문장 (E-0383 대응)
-She studies at her structure every evening.,R-96,방의 용도=동사+in+장소 · 새 문장 (E-0382 대응)
-Her bathroom is four bedrooms and a garage.,R-97,집 구조=house has+숫자+명사 · 새 문장 (E-0386 대응)
-Her kitchen is four bedrooms and a garage.,R-97,집 구조=house has+숫자+명사 · 새 문장 (E-0385 대응)
-Her sofa is four bedrooms and a garage.,R-97,집 구조=house has+숫자+명사 · 새 문장 (E-0387 대응)
-"This bathroom is there, near the window.",R-98,"가까움=this, 멈=that · 새 문장 (E-0390 대응)"
-"This kitchen is there, near the window.",R-98,"가까움=this, 멈=that · 새 문장 (E-0389 대응)"
-"This lamp is there, near the window.",R-98,"가까움=this, 멈=that · 새 문장 (E-0391 대응)"
-He don't likes rainy days.,R-99,"부정문=don't/doesn't+동사원형 · 새 문장 (E-0394 대응, 수동 보완)"
-She don't likes cats.,R-99,"부정문=don't/doesn't+동사원형 · 새 문장 (E-0393 대응, 수동 보완)"
-We don't likes carrots.,R-99,부정문=don't/doesn't+동사원형 · 새 문장 (E-0395 대응)
-Do they plays chess well?,R-100,"의문문=Do/Does+주어+동사원형 · 새 문장 (E-0398 대응, 수동 보완)"
-Does he plays badminton well?,R-100,"의문문=Do/Does+주어+동사원형 · 새 문장 (E-0399 대응, 수동 보완)"
-Does she plays tennis well?,R-100,"의문문=Do/Does+주어+동사원형 · 새 문장 (E-0397 대응, 수동 보완)"
+text,expected_rule_id,note,twin_group,status
+I hungry now.,R-01,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+The garden pale.,R-01,형용사 앞엔 be동사 · 새 문장 (E-0003 대응),,원본 유지
+This soup salty.,R-01,정제본 교체(라벨과 다른 오류 유형),,교체
+Good evening Dad.,R-02,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+Good night Amy.,R-02,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+Thanks Tom.,R-02,인사말 뒤 쉼표·느낌표 · 새 문장 (E-0007 대응),,원본 유지
+This is Tom pencil.,R-03,정제본 교체(라벨과 다른 오류 유형),,교체
+She is niece.,R-03,정제본 교체(이중 오류→단일 오류로),,교체
+He is uncle.,R-03,정제본 교체(라벨과 다른 오류 유형),,교체
+This is my daughters.,R-04,"한 명 This is, 여럿 These are · 새 문장 (E-0014 대응)",T6(This/These),원본 유지
+This is my relatives.,R-04,"한 명 This is, 여럿 These are · 새 문장 (E-0015 대응)",T6(This/These),원본 유지
+This is my sons.,R-04,"한 명 This is, 여럿 These are · 새 문장 (E-0013 대응)",T6(This/These),원본 유지
+There are a book on the desk.,R-05,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+There are a chair in the room.,R-05,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+There are a teacher in the classroom.,R-05,정제본 교체(이중 오류→단일 오류로),,교체
+She a grade has every day.,R-06,주어+동사+목적어 순서 · 새 문장 (E-0022 대응),,원본 유지
+She a schedule learns every day.,R-06,주어+동사+목적어 순서 · 새 문장 (E-0021 대응),,원본 유지
+He his lunch eats every day.,R-06,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+The bird can runs fast.,R-07,can 뒤엔 동사원형 · 새 문장 (E-0027 대응),,원본 유지
+The cat can jumps high.,R-07,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+The eagle can flies high.,R-07,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+This birds are amazing.,R-08,"This+단수, These+복수 · 새 문장 (E-0029 대응)",T6(This/These),원본 유지
+This fishes are amazing.,R-08,"This+단수, These+복수 · 새 문장 (E-0030 대응)",T6(This/These),원본 유지
+This rabbits are amazing.,R-08,"This+단수, These+복수 · 새 문장 (E-0031 대응)",T6(This/These),원본 유지
+I have many soup.,R-09,셀 수 없으면 much/some · 새 문장 (E-0033 대응),,원본 유지
+I need many sugar.,R-09,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+She drinks many milk every day.,R-09,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+I want to a dessert.,R-10,want 뒤엔 명사 바로 · 새 문장 (E-0037 대응),,원본 유지
+I want to a meal.,R-10,want 뒤엔 명사 바로 · 새 문장 (E-0039 대응),,원본 유지
+I want to a snack.,R-10,want 뒤엔 명사 바로 · 새 문장 (E-0038 대응),,원본 유지
+I see leaf a black.,R-11,형용사는 명사 앞에 · 새 문장 (E-0043 대응),,원본 유지
+I see shoe a yellow.,R-11,형용사는 명사 앞에 · 새 문장 (E-0042 대응),,원본 유지
+I see window a red.,R-11,형용사는 명사 앞에 · 새 문장 (E-0041 대응),,원본 유지
+I have nine pencil.,R-12,숫자 2 이상+복수형 · 새 문장 (E-0046 대응),T1(복수형),원본 유지
+I have one bananas.,R-12,숫자 2 이상+복수형 · 새 문장 (E-0045 대응),T1(복수형),원본 유지
+I have two cookie.,R-12,숫자 2 이상+복수형 · 새 문장 (E-0047 대응),T1(복수형),원본 유지
+He was first in line.,R-13,"서수 앞엔 the · 새 문장 (E-0049 대응, 수동 보완)",,원본 유지
+He was second in the race.,R-13,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+She was first at school today.,R-13,"서수 앞엔 the · 새 문장 (E-0051 대응, 수동 보완)",,원본 유지
+This is cold today.,R-14,날씨는 It is ~ · 새 문장 (E-0053 대응),,원본 유지
+This is snowy today.,R-14,날씨는 It is ~ · 새 문장 (E-0055 대응),,원본 유지
+This is windy today.,R-14,날씨는 It is ~ · 새 문장 (E-0054 대응),,원본 유지
+A storm will hits the coast.,R-15,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+The news says it will rains.,R-15,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+My mom says it will rains.,R-15,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+Trees bloom on spring.,R-16,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+We enjoy outdoor activities on fall.,R-16,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+We swim on summer.,R-16,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+He wear a blue coat now.,R-17,정제본 교체(문장 성립 불가/의미 붕괴),T3(진행형),교체
+She wear a pretty skirt now.,R-17,정제본 교체(문장 성립 불가/의미 붕괴),T3(진행형),교체
+She wear a red hat now.,R-17,정제본 교체(문장 성립 불가/의미 붕괴),T3(진행형),교체
+Ear is cold.,R-18,신체부위 앞엔 소유격 · 새 문장 (E-0070 대응),,원본 유지
+Eye is cold.,R-18,신체부위 앞엔 소유격 · 새 문장 (E-0071 대응),,원본 유지
+Hand hurts.,R-18,신체부위 앞엔 소유격 · 새 문장 (E-0069 대응),,원본 유지
+I like dance.,R-19,정제본 교체(정답 문장에 오답 라벨),,교체
+I like sing.,R-19,정제본 교체(정답 문장에 오답 라벨),,교체
+I like ride a bike.,R-19,정제본 교체(정답 문장에 오답 라벨),,교체
+I enjoy collect.,R-20,enjoy 뒤엔 동사-ing · 새 문장 (E-0079 대응),,원본 유지
+I enjoy paint.,R-20,enjoy 뒤엔 동사-ing · 새 문장 (E-0078 대응),,원본 유지
+I enjoy play.,R-20,enjoy 뒤엔 동사-ing · 새 문장 (E-0077 대응),,원본 유지
+I have a test in friday.,R-21,요일은 on+대문자 · 새 문장 (E-0081 대응),,원본 유지
+We have a quiz in tuesday.,R-21,정제본 교체(라벨과 다른 오류 유형),,교체
+I have a test in sunday.,R-21,정제본 교체(라벨과 다른 오류 유형),,교체
+I visit usually my grandparents every month.,R-22,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+I visit usually my grandparents on Saturday.,R-22,정제본 교체(이중 오류→단일 오류로),,교체
+He goes always to school early.,R-22,정제본 교체(이중 오류→단일 오류로),,교체
+We go to school by a subway.,R-23,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+We go to school by a taxi.,R-23,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+They travel by a boat.,R-23,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+We go to library every day.,R-24,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+We go to museum every day.,R-24,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+We go to hospital every day.,R-24,장소 앞엔 go to the · 새 문장 (E-0093 대응),,원본 유지
+She wants to be designer.,R-25,장래희망=want to be a/an · 새 문장 (E-0098 대응),,원본 유지
+She wants to be scientist.,R-25,장래희망=want to be a/an · 새 문장 (E-0097 대응),,원본 유지
+She wants to be writer.,R-25,장래희망=want to be a/an · 새 문장 (E-0099 대응),,원본 유지
+My uncle is dancer.,R-26,직업 앞엔 a/an · 새 문장 (E-0103 대응),,원본 유지
+My uncle is pilot.,R-26,직업 앞엔 a/an · 새 문장 (E-0101 대응),,원본 유지
+My uncle is singer.,R-26,직업 앞엔 a/an · 새 문장 (E-0102 대응),,원본 유지
+She is bored for her son.,R-27,감정형용사+알맞은 전치사 · 새 문장 (E-0107 대응),,원본 유지
+She is worried of the test.,R-27,정제본 교체(정답 문장에 오답 라벨),,교체
+She is surprised for his friend.,R-27,감정형용사+알맞은 전치사 · 새 문장 (E-0106 대응),,원본 유지
+He felt very too nervous to continue.,R-28,지나치면 too+형용사 · 새 문장 (E-0109 대응),,원본 유지
+He was very too jealous to speak.,R-28,지나치면 too+형용사 · 새 문장 (E-0111 대응),,원본 유지
+He was very too proud to speak.,R-28,지나치면 too+형용사 · 새 문장 (E-0110 대응),,원본 유지
+How many is our money?,R-29,"가격 How much, 개수 How many · 새 문장 (E-0113 대응)",,원본 유지
+How many is this bag?,R-29,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+How many is this toy?,R-29,"가격 How much, 개수 How many · 새 문장 (E-0115 대응)",,원본 유지
+The furniture is on the bedroom.,R-30,"안=in, 위=on, 아래=under · 새 문장 (E-0117 대응)",,원본 유지
+The garage is on the neighborhood.,R-30,"안=in, 위=on, 아래=under · 새 문장 (E-0118 대응)",,원본 유지
+The fish is on the water.,R-30,정제본 교체(정답 문장에 오답 라벨),,교체
+He buy new shoes yesterday.,R-31,정제본 교체(이중 오류→단일 오류로),T2(과거시제),교체
+I say thanks to my new friend yesterday.,R-31,과거를 말할 땐 동사를 과거형으로 · 새 문장 (E-0121 대응),T2(과거시제),원본 유지
+She eat a big cheese last night.,R-31,과거를 말할 땐 동사를 과거형으로 · 새 문장 (E-0122 대응),T2(과거시제),원본 유지
+A farmer harvest corn in fall.,R-32,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+She dye her shirt blue.,R-32,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+She invite her friends every weekend.,R-32,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+I have two snack.,R-33,둘 이상이면 -s · 새 문장 (E-0129 대응),T1(복수형),원본 유지
+She has three coat.,R-33,둘 이상이면 -s · 새 문장 (E-0130 대응),T1(복수형),원본 유지
+We saw five motorcycle on the road.,R-33,둘 이상이면 -s · 새 문장 (E-0131 대응),T1(복수형),원본 유지
+I have a elephant.,R-34,모음 소리 앞엔 an · 새 문장 (E-0135 대응),T4(관사),원본 유지
+I have a umbrella.,R-34,정제본 교체(라벨과 다른 오류 유형),T4(관사),교체
+I have a orange.,R-34,정제본 교체(정답 문장에 오답 라벨),T4(관사),교체
+He is eat lunch now.,R-35,정제본 교체(이중 오류→단일 오류로),T3(진행형),교체
+She is read a book now.,R-35,정제본 교체(문장 성립 불가/의미 붕괴),T3(진행형),교체
+They are watch TV now.,R-35,정제본 교체(문장 성립 불가/의미 붕괴),T3(진행형),교체
+She are my cousin.,R-36,정제본 교체(정답 문장에 오답 라벨),T5(be수일치),교체
+You is my best friend.,R-36,정제본 교체(정답 문장에 오답 라벨),T5(be수일치),교체
+They is my classmates.,R-36,정제본 교체(이중 오류→단일 오류로),T5(be수일치),교체
+It is cold yesterday.,R-37,정제본 교체(라벨과 다른 오류 유형),T2(과거시제),교체
+They are at school yesterday.,R-37,정제본 교체(라벨과 다른 오류 유형),T2(과거시제),교체
+I am tired last night.,R-37,정제본 교체(라벨과 다른 오류 유형),T2(과거시제),교체
+I have pencil.,R-38,정제본 교체(라벨과 다른 오류 유형),T4(관사),교체
+She wants cookie.,R-38,정제본 교체(라벨과 다른 오류 유형),T4(관사),교체
+He carries umbrella.,R-38,정제본 교체(라벨과 다른 오류 유형),T4(관사),교체
+How you are this evening?,R-39,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+How you are on your birthday?,R-39,"안부 묻기=How are you? · 새 문장 (E-0153 대응, 수동 보완)",,원본 유지
+"How you are, Tom?",R-39,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+"Great to meet you, also.",R-40,"초면 인사+too로 답하기 · 새 문장 (E-0157 대응, 수동 보완)",,원본 유지
+"So happy to meet you, also.",R-40,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+"Wonderful to meet you, also.",R-40,"초면 인사+too로 답하기 · 새 문장 (E-0158 대응, 수동 보완)",,원본 유지
+"You welcome, Tom.",R-41,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+"You welcome, Amy.",R-41,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+"You welcome, my friend.",R-41,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+He has a brother a cousin.,R-42,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+She has a sister a brother.,R-42,정제본 교체(이중 오류→단일 오류로),,교체
+I have a mom a dad.,R-42,정제본 교체(이중 오류→단일 오류로),,교체
+Her grandparents is kind.,R-43,parents는 항상 복수 · 새 문장 (E-0170 대응),T5(be수일치),원본 유지
+Our grandparents is wise.,R-43,"parents는 항상 복수 · 새 문장 (E-0171 대응, 수동 보완)",T5(be수일치),원본 유지
+Their grandparents is generous.,R-43,"parents는 항상 복수 · 새 문장 (E-0169 대응, 수동 보완)",T5(be수일치),원본 유지
+My daughter is nine year old.,R-44,나이=숫자+years old · 새 문장 (E-0173 대응),,원본 유지
+My grandchild is nine year old.,R-44,나이=숫자+years old · 새 문장 (E-0175 대응),,원본 유지
+My relative is nine year old.,R-44,나이=숫자+years old · 새 문장 (E-0174 대응),,원본 유지
+"You close the door, please.",R-45,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+"You open the box, please.",R-45,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+"You clean the desk, please.",R-45,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+Who homework is this?,R-46,누구 것?=Whose+명사 · 새 문장 (E-0181 대응),,원본 유지
+Who subject is this?,R-46,누구 것?=Whose+명사 · 새 문장 (E-0183 대응),,원본 유지
+Who test is this?,R-46,누구 것?=Whose+명사 · 새 문장 (E-0182 대응),,원본 유지
+My bag is at the desk and the window.,R-47,"옆=next to, 사이=between · 새 문장 (E-0185 대응)",,원본 유지
+My book is at the desk and the bed.,R-47,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+My chair is at the desk and the wall.,R-47,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+A bear can not flies.,R-48,동물의 불가능=can't · 새 문장 (E-0189 대응),,원본 유지
+An insect can not flies.,R-48,정제본 교체(이중 오류→단일 오류로),,교체
+A turtle can not flies.,R-48,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+There isn't many creatures in this zoo.,R-49,없음=There isn't/aren't · 새 문장 (E-0195 대응),,원본 유지
+There isn't many mammals in this zoo.,R-49,없음=There isn't/aren't · 새 문장 (E-0194 대응),,원본 유지
+There isn't many reptiles in this zoo.,R-49,없음=There isn't/aren't · 새 문장 (E-0193 대응),,원본 유지
+A bird is strong than a cat.,R-50,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+A dog is strong than a rabbit.,R-50,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+A lion is strong than a fox.,R-50,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+He would like to a juice.,R-51,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+She would like to a sandwich.,R-51,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+I would like to a milk.,R-51,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+I don't have some bananas at home.,R-52,정제본 교체(이중 오류→단일 오류로),,교체
+I don't have some eggs at home.,R-52,정제본 교체(이중 오류→단일 오류로),,교체
+I don't have some pizza at home.,R-52,"긍정=some, 의문·부정=any · 새 문장 (E-0206 대응)",,원본 유지
+He drank a milk glass after dinner.,R-53,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+She ate a cake piece for dessert.,R-53,정제본 교체(이중 오류→단일 오류로),,교체
+He ate a pizza piece for lunch.,R-53,셀수없는명사 단위=a piece/glass of · 새 문장 (E-0210 대응),,원본 유지
+He likes purples balloons at the party.,R-54,색깔형용사는 복수에도 그대로 · 새 문장 (E-0214 대응),,원본 유지
+He likes purples kites in the sky.,R-54,색깔형용사는 복수에도 그대로 · 새 문장 (E-0213 대응),,원본 유지
+She likes oranges balloons at the party.,R-54,색깔형용사는 복수에도 그대로 · 새 문장 (E-0215 대응),,원본 유지
+What animal you like the best?,R-55,"선택 의문문=Which · 새 문장 (E-0218 대응, 수동 보완)",,원본 유지
+What color you like the most?,R-55,선택 의문문=Which · 새 문장 (E-0217 대응),,원본 유지
+What subject you like the best?,R-55,"선택 의문문=Which · 새 문장 (E-0219 대응, 수동 보완)",,원본 유지
+That clock looks brownly in this light.,R-56,look+형용사 · 새 문장 (E-0221 대응),,원본 유지
+That lamp looks brownly in this light.,R-56,look+형용사 · 새 문장 (E-0222 대응),,원본 유지
+That spoon looks brownly in this light.,R-56,look+형용사 · 새 문장 (E-0223 대응),,원본 유지
+How many plate is there in the room?,R-57,개수 묻기=How many~are there · 새 문장 (E-0226 대응),,원본 유지
+How many spoon is there on the shelf?,R-57,개수 묻기=How many~are there · 새 문장 (E-0225 대응),,원본 유지
+How many cup is there on the table?,R-57,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+He has one triple the money now.,R-58,"두 배=double, 세 배=triple · 새 문장 (E-0229 대응)",,원본 유지
+I have three double the candy now.,R-58,"두 배=double, 세 배=triple · 새 문장 (E-0230 대응)",,원본 유지
+She has four triple the money now.,R-58,"두 배=double, 세 배=triple · 새 문장 (E-0231 대응)",,원본 유지
+There are hundred of bikes on the highway.,R-59,아주 많음=hundreds/thousands of · 새 문장 (E-0233 대응),,원본 유지
+There are hundred of books in the library.,R-59,"아주 많음=hundreds/thousands of · 새 문장 (E-0234 대응, 수동 보완)",,원본 유지
+There are thousand of stars in the sky.,R-59,"아주 많음=hundreds/thousands of · 새 문장 (E-0235 대응, 수동 보완)",,원본 유지
+How's the weather like today?,R-60,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+How's the lightning like tomorrow?,R-60,날씨 묻기=What's the weather like? · 새 문장 (E-0239 대응),,원본 유지
+How's the thunder like tomorrow?,R-60,날씨 묻기=What's the weather like? · 새 문장 (E-0238 대응),,원본 유지
+It is getting warmly these days.,R-61,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+It is getting darkly outside.,R-61,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+It is getting coldly this winter.,R-61,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+He carries an umbrella because cold.,R-62,이유=because+문장 · 새 문장 (E-0245 대응),,원본 유지
+He carries an umbrella because snowy.,R-62,이유=because+문장 · 새 문장 (E-0247 대응),,원본 유지
+He carries an umbrella because windy.,R-62,이유=because+문장 · 새 문장 (E-0246 대응),,원본 유지
+She goes to skate every December.,R-63,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+He goes to swim every summer.,R-63,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+They go to fish in spring.,R-63,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+Fall is coolest season of all.,R-64,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+Spring is nicest season of all.,R-64,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+Summer is hottest season of all.,R-64,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+She travels while August every year.,R-65,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+He reads while breakfast every morning.,R-65,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+They ski while vacation every winter.,R-65,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+She wears off her gloves at home.,R-66,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+He wears off his shoes at home.,R-66,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+He wears off his socks at night.,R-66,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+Her pants is dirty.,R-67,정제본 교체(라벨과 다른 오류 유형),T5(be수일치),교체
+My shoes is wet.,R-67,정제본 교체(라벨과 다른 오류 유형),T5(be수일치),교체
+His socks is warm.,R-67,정제본 교체(이중 오류→단일 오류로),T5(be수일치),교체
+He looks coolly in his new dress.,R-68,look+형용사(옷) · 새 문장 (E-0271 대응),,원본 유지
+He looks coolly in his new hat.,R-68,look+형용사(옷) · 새 문장 (E-0269 대응),,원본 유지
+He looks coolly in his new skirt.,R-68,look+형용사(옷) · 새 문장 (E-0270 대응),,원본 유지
+He has backache now.,R-69,"아픔 표현=have a+통증명사 · 새 문장 (E-0273 대응, 수동 보완)",,원본 유지
+She has earache tonight.,R-69,"아픔 표현=have a+통증명사 · 새 문장 (E-0274 대응, 수동 보완)",,원본 유지
+They have stomachache after lunch.,R-69,"아픔 표현=have a+통증명사 · 새 문장 (E-0275 대응, 수동 보완)",,원본 유지
+He washes hands before eating.,R-70,"wash/brush+소유격+신체부위 · 새 문장 (E-0277 대응, 수동 보완)",,원본 유지
+She brushes teeth every night.,R-70,"wash/brush+소유격+신체부위 · 새 문장 (E-0278 대응, 수동 보완)",,원본 유지
+They wash face in the morning.,R-70,"wash/brush+소유격+신체부위 · 새 문장 (E-0279 대응, 수동 보완)",,원본 유지
+He has white tooths.,R-71,"foot→feet, tooth→teeth · 새 문장 (E-0283 대응)",,원본 유지
+His foots are cold.,R-71,정제본 교체(라벨과 다른 오류 유형),,교체
+She has small foots.,R-71,정제본 교체(정답 문장에 오답 라벨),,교체
+He plays a baseball after school.,R-72,"구기=play+무관사, 악기=play the · 새 문장 (E-0285 대응)",,원본 유지
+He plays a soccer after school.,R-72,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+She plays a badminton after school.,R-72,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+Let's biking around the park.,R-73,"제안=Let's+동사원형 · 새 문장 (E-0291 대응, 수동 보완)",,원본 유지
+Let's dancing at the party.,R-73,"제안=Let's+동사원형 · 새 문장 (E-0289 대응, 수동 보완)",,원본 유지
+Let's playing badminton today.,R-73,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+They are good at play soccer.,R-74,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+She is good at play tennis.,R-74,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+He is good at play baseball.,R-74,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+He spends time to paint every day.,R-75,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+I spend time to read every weekend.,R-75,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+She spends time to dance every day.,R-75,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+How many often do you paint at home?,R-76,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+How many often do you study at home?,R-76,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+How many often do you swim?,R-76,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+He is interested at drawing these days.,R-77,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+She is interested at dancing these days.,R-77,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+They are interested at soccer these days.,R-77,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+What time it is now?,R-78,정제본 교체(간접화법 래퍼로 오류가 소멸),,교체
+"Tom, what time it is?",R-78,정제본 교체(간접화법 래퍼로 오류가 소멸),,교체
+What time it is today?,R-78,정제본 교체(간접화법 래퍼로 오류가 소멸),,교체
+He wakes up on one o'clock every day.,R-79,on(요일)/at(시각·밤)/in(월·계절) · 새 문장 (E-0313 대응),,원본 유지
+She wakes up on four o'clock every day.,R-79,on(요일)/at(시각·밤)/in(월·계절) · 새 문장 (E-0315 대응),,원본 유지
+She wakes up on three o'clock every day.,R-79,on(요일)/at(시각·밤)/in(월·계절) · 새 문장 (E-0314 대응),,원본 유지
+"Then I do my homework, first I have a snack.",R-80,"순서=First/Then/After that · 새 문장 (E-0318 대응, 수동 보완)",,원본 유지
+"Then I get dressed, first I wake up.",R-80,순서=First/Then/After that · 새 문장 (E-0317 대응),,원본 유지
+"Then I read a book, first I turn on the lamp.",R-80,"순서=First/Then/After that · 새 문장 (E-0319 대응, 수동 보완)",,원본 유지
+How long take it to school?,R-81,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+How long take it to the library?,R-81,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+How long take it by bus?,R-81,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+How you go to the library every day?,R-82,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+How you go to the park every day?,R-82,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+How you go to church on Sunday?,R-82,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+She gets in the train every morning.,R-83,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+He gets in the subway every morning.,R-83,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+They get in the airplane at the airport.,R-83,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+The bank is on the zoo in our town.,R-84,장소 위치=next to/between/in front of/behind · 새 문장 (E-0333 대응),,원본 유지
+The hospital is on the school in our town.,R-84,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+The theater is on the park in our town.,R-84,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+Where the landmark is in this town?,R-85,장소 묻기=Where is the~? · 새 문장 (E-0337 대응),,원본 유지
+Where the suburb is in this town?,R-85,장소 묻기=Where is the~? · 새 문장 (E-0339 대응),,원본 유지
+Where the bakery is in this town?,R-85,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+There are a lot bananas on this street.,R-86,많음=a lot of · 새 문장 (E-0341 대응),,원본 유지
+There are a lot cookies on this street.,R-86,많음=a lot of · 새 문장 (E-0343 대응),,원본 유지
+There are a lot oranges on this street.,R-86,많음=a lot of · 새 문장 (E-0342 대응),,원본 유지
+He works a library as a teacher.,R-87,정제본 교체(이중 오류→단일 오류로),,교체
+She works a hospital as a nurse.,R-87,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+He works a bank in our town.,R-87,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+What does he works?,R-88,정제본 교체(간접화법 래퍼로 오류가 소멸),,교체
+What does she works every day?,R-88,정제본 교체(간접화법 래퍼로 오류가 소멸),,교체
+What does your uncle works?,R-88,정제본 교체(간접화법 래퍼로 오류가 소멸),,교체
+He would like be a designer someday.,R-89,정중한 장래희망=would like to be · 새 문장 (E-0353 대응),,원본 유지
+He would like be a photographer someday.,R-89,정중한 장래희망=would like to be · 새 문장 (E-0355 대응),,원본 유지
+He would like be a writer someday.,R-89,정중한 장래희망=would like to be · 새 문장 (E-0354 대응),,원본 유지
+The game makes him to embarrassed every time.,R-90,감정 유발=make+목적어+형용사 · 새 문장 (E-0357 대응),,원본 유지
+The game makes him to frustrated every time.,R-90,감정 유발=make+목적어+형용사 · 새 문장 (E-0359 대응),,원본 유지
+The game makes him to grateful every time.,R-90,감정 유발=make+목적어+형용사 · 새 문장 (E-0358 대응),,원본 유지
+He is so much excited after the race.,R-91,강조=so+형용사 · 새 문장 (E-0362 대응),,원본 유지
+He is so much hungry after the race.,R-91,강조=so+형용사 · 새 문장 (E-0361 대응),,원본 유지
+He is so much scared after the race.,R-91,강조=so+형용사 · 새 문장 (E-0363 대응),,원본 유지
+Why she is excited today?,R-92,정제본 교체(간접화법 래퍼로 오류가 소멸),,교체
+Why he is hungry now?,R-92,정제본 교체(간접화법 래퍼로 오류가 소멸),,교체
+Why they are scared?,R-92,정제본 교체(간접화법 래퍼로 오류가 소멸),,교체
+It's eight dollar for this cap.,R-93,가격 답변=It's+숫자+dollars · 새 문장 (E-0369 대응),,원본 유지
+It's nine dollar for this cap.,R-93,가격 답변=It's+숫자+dollars · 새 문장 (E-0370 대응),,원본 유지
+It's ten dollar for this cap.,R-93,가격 답변=It's+숫자+dollars · 새 문장 (E-0371 대응),,원본 유지
+"I have this fork, please?",R-94,정제본 교체(간접화법 래퍼로 오류가 소멸),,교체
+"I have this juice, please?",R-94,정제본 교체(간접화법 래퍼로 오류가 소멸),,교체
+"I have this cookie, please?",R-94,정제본 교체(간접화법 래퍼로 오류가 소멸),,교체
+He buyed a car his sister yesterday.,R-95,buy A for B(과거 bought) · 새 문장 (E-0379 대응),,원본 유지
+He buyed a flower his sister yesterday.,R-95,buy A for B(과거 bought) · 새 문장 (E-0378 대응),,원본 유지
+He buyed a tree his sister yesterday.,R-95,buy A for B(과거 bought) · 새 문장 (E-0377 대응),,원본 유지
+She studies at her bedroom every evening.,R-96,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+He reads at his room every night.,R-96,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+They eat at the kitchen every morning.,R-96,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+Her house is four bedrooms and a big garage.,R-97,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+His house is two bathrooms and a kitchen.,R-97,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+Their house is five rooms and a yard.,R-97,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+"This bathroom is there, near the window.",R-98,"가까움=this, 멈=that · 새 문장 (E-0390 대응)",,원본 유지
+"This kitchen is there, near the window.",R-98,"가까움=this, 멈=that · 새 문장 (E-0389 대응)",,원본 유지
+"This lamp is there, near the window.",R-98,"가까움=this, 멈=that · 새 문장 (E-0391 대응)",,원본 유지
+He don't likes rainy days.,R-99,"부정문=don't/doesn't+동사원형 · 새 문장 (E-0394 대응, 수동 보완)",,원본 유지
+She don't likes cats.,R-99,"부정문=don't/doesn't+동사원형 · 새 문장 (E-0393 대응, 수동 보완)",,원본 유지
+We don't likes carrots.,R-99,부정문=don't/doesn't+동사원형 · 새 문장 (E-0395 대응),,원본 유지
+Do they plays chess well?,R-100,"의문문=Do/Does+주어+동사원형 · 새 문장 (E-0398 대응, 수동 보완)",,원본 유지
+Does he plays badminton well?,R-100,"의문문=Do/Does+주어+동사원형 · 새 문장 (E-0399 대응, 수동 보완)",,원본 유지
+Does she plays tennis well?,R-100,"의문문=Do/Does+주어+동사원형 · 새 문장 (E-0397 대응, 수동 보완)",,원본 유지
+"Hi, Ben!",NONE,정상 문장(평범) · threshold 측정용,,신규
+"Good morning, everyone!",NONE,정상 문장(평범) · threshold 측정용,,신규
+This is my dad.,NONE,정상 문장(평범) · threshold 측정용,,신규
+These are my cousins.,NONE,정상 문장(평범) · threshold 측정용,,신규
+I have a pencil.,NONE,정상 문장(평범) · threshold 측정용,,신규
+There is a cup on the table.,NONE,정상 문장(평범) · threshold 측정용,,신규
+Dogs can swim well.,NONE,정상 문장(평범) · threshold 측정용,,신규
+I have an apple.,NONE,정상 문장(평범) · threshold 측정용,,신규
+I want some water.,NONE,정상 문장(평범) · threshold 측정용,,신규
+I see a blue bird.,NONE,정상 문장(평범) · threshold 측정용,,신규
+I have three books.,NONE,정상 문장(평범) · threshold 측정용,,신규
+It is windy today.,NONE,정상 문장(평범) · threshold 측정용,,신규
+It will snow tomorrow.,NONE,정상 문장(평범) · threshold 측정용,,신규
+He is wearing a warm coat.,NONE,정상 문장(평범) · threshold 측정용,,신규
+My arm hurts.,NONE,정상 문장(평범) · threshold 측정용,,신규
+I like drawing.,NONE,정상 문장(평범) · threshold 측정용,,신규
+She enjoys singing.,NONE,정상 문장(평범) · threshold 측정용,,신규
+We have a quiz on Friday.,NONE,정상 문장(평범) · threshold 측정용,,신규
+She usually walks to school.,NONE,정상 문장(평범) · threshold 측정용,,신규
+We go to school by bus.,NONE,정상 문장(평범) · threshold 측정용,,신규
+They go to the park every day.,NONE,정상 문장(평범) · threshold 측정용,,신규
+My mom is a nurse.,NONE,정상 문장(평범) · threshold 측정용,,신규
+I am proud of my sister.,NONE,정상 문장(평범) · threshold 측정용,,신규
+This soup is too hot.,NONE,정상 문장(평범) · threshold 측정용,,신규
+How much is this bag?,NONE,정상 문장(평범) · threshold 측정용,,신규
+The ball is under the chair.,NONE,정상 문장(평범) · threshold 측정용,,신규
+I watched a movie yesterday.,NONE,정상 문장(평범) · threshold 측정용,,신규
+She reads books every night.,NONE,정상 문장(평범) · threshold 측정용,,신규
+I brush my teeth every day.,NONE,정상 문장(평범) · threshold 측정용,,신규
+My feet are cold.,NONE,정상 문장(평범) · threshold 측정용,,신규
+We play soccer after school.,NONE,정상 문장(평범) · threshold 측정용,,신규
+Let's go swimming.,NONE,정상 문장(평범) · threshold 측정용,,신규
+He is good at cooking.,NONE,정상 문장(평범) · threshold 측정용,,신규
+What time is it now?,NONE,정상 문장(평범) · threshold 측정용,,신규
+I get up at seven.,NONE,정상 문장(평범) · threshold 측정용,,신규
+The library is next to the bank.,NONE,정상 문장(평범) · threshold 측정용,,신규
+There are a lot of flowers in the garden.,NONE,정상 문장(평범) · threshold 측정용,,신규
+My dad works at a bank.,NONE,정상 문장(평범) · threshold 측정용,,신규
+This game makes me happy.,NONE,정상 문장(평범) · threshold 측정용,,신규
+Our house has four rooms.,NONE,정상 문장(평범) · threshold 측정용,,신규
+I am hungry now.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+She is very kind.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+"Hello, Amy!",NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+There are many students in my class.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+The bird can fly high.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+I don't have much time.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+I want a hamburger.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+I see a red rose.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+I have two dogs.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+It is cloudy today.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+She is wearing glasses.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+My head hurts a little.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+I like playing badminton.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+I enjoy reading comics.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+I have a test on Monday.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+We travel by train.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+She wants to be a singer.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+My uncle is an actor.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+He is scared of dogs.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+Does she like pizza?,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
