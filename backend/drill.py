@@ -60,6 +60,26 @@ def _update_streak(student: str, rule_id: str, all_correct: bool) -> int:
 # ─────────────────────────────────────────────
 # API
 # ─────────────────────────────────────────────
+_PLACEHOLDER = {"", "-", "—", "–"}
+
+
+def _distractors(e: dict, pool: list[dict]) -> list[str]:
+    """오답 보기 3개. errors.jsonl 의 distractors 에서 자리표시("—")·정답과 같은 것·중복을 빼고,
+    3개가 안 되면 같은 규칙의 다른 문제 정답(fix)으로 채운다 (납품본 400행 중 317행이 보기 하나가 "—" 라서 화면에 그대로 뜨던 것)."""
+    out: list[str] = []
+    for d in e.get("distractors") or []:
+        d = (d or "").strip()
+        if d and d not in _PLACEHOLDER and d != e["fix"] and d not in out:
+            out.append(d)
+    if len(out) < 3:                                         # 단어 수가 같은 정답을 먼저 (a ↔ an ↔ the), 없으면 아무거나
+        n = len(e["fix"].split())
+        others = list({x["fix"] for x in pool if x["id"] != e["id"] and x["fix"] != e["fix"] and x["fix"] not in out})
+        random.shuffle(others)
+        others.sort(key=lambda f: abs(len(f.split()) - n))
+        out += others[: 3 - len(out)]
+    return out[:3]
+
+
 @router.get("/drill")
 def get_drill(student: str, rule: str, count: int = 2):
     rule_doc = golden.find_rule(rule)
@@ -70,7 +90,7 @@ def get_drill(student: str, rule: str, count: int = 2):
 
     questions = []
     for i, e in enumerate(picked):
-        choices = [e["fix"]] + list(e.get("distractors", []))[:3]
+        choices = [e["fix"]] + _distractors(e, pool)
         random.shuffle(choices)
         questions.append({
             "id": f"d{i + 1}", "error_id": e["id"], "sentence": e["error"], "target": e["target"],
