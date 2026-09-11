@@ -47,8 +47,10 @@ async function record() {
 let rounds = [];   // 이 문장의 회차별 /fix 결과 [1차, 2차]. 발표용 토글 때 전부 다시 그리려고 보관
 // 진단 카드. 근거 박스는 두 겹 — 학생용(기본): 규칙 한 줄 / 발표·개발용(상단 학생 칩 길게 누르기·더블클릭): id·점수·순위·2위·후보 5·원문·모델·시간·모드
 function evidenceBox(r) {
-  const rule = ruleOf(r.rule.id);
-  if (!DEV.on()) return `<div class="src">📚 <b>${esc(rule?.short || r.rule.name)}</b></div>`;
+  if (!DEV.on()) {   // 학생용: 서버가 준 규칙 이름 + 근거 조각 첫 문장만 (화면 샘플 규칙표는 안 본다 — id 체계가 달라 다른 규칙이 찍힌다)
+    const first = (r.source?.text || '').split(/(?<=[.!?])\s+/)[0];
+    return `<div class="src">📚 <b>${esc(r.rule.name)}</b>${first ? ` · ${esc(first)}` : ''}</div>`;
+  }
   const title = r.mode === 'rag' ? 'RAG가 찾은 근거' : r.mode === 'fallback' ? '참고한 규칙 (검색 없이 전체 규칙 중 고름)' : '참고한 규칙 (화면 샘플)';
   const cands = (r.candidates || []).map((c, i) => `${i + 1}위 ${esc(c.name)} ${c.score}`).join(' · ');
   const tm = r.timing ? ` · 전체 ${r.timing.total_ms}ms (검색 ${r.timing.search_ms}ms · 모델 ${r.timing.llm_ms}ms ×${r.timing.llm_calls})` : '';
@@ -64,14 +66,14 @@ function diagHTML(r, n, isLast) {
   if (r.ok) return `<div class="type ok">${n > 1 ? '✓ 이제 다 맞았어요!' : '✓ 잘 썼어요!'}</div><div class="fixed">${esc(r.fixed)}</div><div class="why">${esc(r.why)}</div>${spell}${badge}`;
   if (r.rule?.id === 'OTHER') return `<div class="type">✎ 우리 규칙 밖이에요</div><div class="fixed">${esc(r.fixed)}</div><div class="why">${esc(r.why)}</div><div class="hint" style="margin-top:6px">교과서 규칙에는 없는 부분이라 오답노트에는 안 들어가요. 하려던 말이 다르면 문장을 다시 써 주세요.</div>${badge}`;
   const tail = !isLast ? '' : n < 2
-    ? `${r.more_errors ? '<div class="result on todo">하나 더 있어요!</div>' : ''}<button class="btn ghost" style="margin-top:8px" onclick='fixAgain(${JSON.stringify(r.fixed)})'>${r.more_errors ? '고친 문장으로 다시 고쳐줘 ✨' : '혹시 더 고칠 곳 있나 한 번 더 봐줘 🔍'}</button>`
+    ? `${r.more_errors ? '<div class="result on todo">하나 더 있어요!</div>' : ''}<button type="button" class="btn ghost" style="margin-top:8px" data-fixed="${esc(r.fixed)}">${r.more_errors ? '고친 문장으로 다시 고쳐줘 ✨' : '혹시 더 고칠 곳 있나 한 번 더 봐줘 🔍'}</button>`
     : (r.more_errors ? `<div class="result on todo">아직 고칠 곳이 남았어요. 다 고치면 이렇게 돼요 👇</div><div class="fixed" style="color:var(--primary)">${esc(r.full_fixed || r.fixed)}</div>` : '');
   const spell2 = (r.spelling || []).length ? `<div class="hint" style="margin-top:4px">✏️ 철자도 살짝: ${r.spelling.map(s => `<s>${esc(s.wrong)}</s> → <b>${esc(s.fix)}</b>`).join(', ')}</div>` : '';
   return `<div class="type">✕ 헷갈린 규칙: ${esc(r.rule.name)}</div><div class="fixed"><s>${esc(r.wrong)}</s><em>${esc(r.fix)}</em> → ${esc(r.fixed)}</div>${spell2}<div class="why">${esc(r.why)}</div>${evidenceBox(r)}${tail}${badge}`;
 }
 function spellHTML(text, pairs) {   // 원문에서 틀린 단어를 <s>틀림</s><em>맞음</em> 으로 (틀린 규칙 카드의 wrong→fix 표기와 같은 모양)
   let html = esc(text);
-  for (const p of pairs) html = html.replace(new RegExp('(^|[^A-Za-z])(' + p.wrong + ')(?![A-Za-z])', 'i'), (m, pre, w) => pre + '<s>' + esc(w) + '</s><em>' + esc(p.fix) + '</em>');
+  for (const p of pairs) html = html.replace(new RegExp('(^|[^A-Za-z])(' + escapeRe(p.wrong) + ')(?![A-Za-z])', 'i'), (m, pre, w) => pre + '<s>' + esc(w) + '</s><em>' + esc(p.fix) + '</em>');
   return html;
 }
 function renderAll() {   // 이전 회차는 흐린 카드(버튼 없음)로 위에, 마지막 회차는 #diag 에
@@ -79,6 +81,7 @@ function renderAll() {   // 이전 회차는 흐린 카드(버튼 없음)로 위
   const d = $('#diag'); if (!rounds.length) { d.style.display = 'none'; return; }
   rounds.slice(0, -1).forEach((r, i) => d.insertAdjacentHTML('beforebegin', `<div class="diag diag-prev" style="opacity:.6"><div class="hint" style="margin:0 0 6px">${i + 1}차 고침</div>${diagHTML(r, i + 1, false)}</div>`));
   d.style.display = 'block'; d.innerHTML = diagHTML(rounds[rounds.length - 1], rounds.length, true);
+  $$('#diag button[data-fixed]').forEach(b => b.addEventListener('click', () => fixAgain(b.dataset.fixed)));   // 문장을 onclick 속성에 넣지 않는다 (따옴표가 들어가면 속성이 깨짐)
 }
 window.addEventListener('devview', () => { if (rounds.length) renderAll(); });
 async function runFix() {
@@ -104,11 +107,14 @@ async function runFix() {
   if (m && !m.ok) showResult('#missionNote', `🎯 ${esc(m.nudge)}${m.local ? ' <span style="opacity:.6;font-weight:500">(서버 없이 힌트 단어만 확인한 결과)</span>' : ''}`, 'todo'); else hideResult('#missionNote');
   localStorage.setItem(`spoken_${state.student}_${state.unit.unit}_${Date.now()}`, '1'); S.set({ lastFix: { log_id: r.log_id, rule_id: r.rule?.id || null } });
   const chips = $('#askChips'); chips.style.display = 'flex';
-  chips.innerHTML = `<span class="hint" style="width:100%;margin:0">더 물어보기</span>` + (r.suggested_questions || []).map(q => `<button class="chip" onclick='openChat({rule_id:${JSON.stringify(r.rule?.id || null)},log_id:${JSON.stringify(r.log_id)}}).then(()=>askChat(${JSON.stringify(q)}))'>${esc(q)}</button>`).join('') + `<button class="chip" onclick='openChat({rule_id:${JSON.stringify(r.rule?.id || null)},log_id:${JSON.stringify(r.log_id)}})'>🙋 직접 물어보기</button>`;
+  const sugg = (r.suggested_questions || []).filter(q => typeof q === 'string' && q);
+  const chatCtx = { rule_id: r.rule?.id || null, rule_name: r.rule?.name || '', log_id: r.log_id, suggested: sugg };   // 전부 서버 /fix 응답 값
+  chips.innerHTML = `<span class="hint" style="width:100%;margin:0">더 물어보기</span>` + sugg.map(q => `<button type="button" class="chip" data-q="${esc(q)}">${esc(q)}</button>`).join('') + `<button type="button" class="chip" data-q="">🙋 직접 물어보기</button>`;
+  $$('#askChips button[data-q]').forEach(b => b.addEventListener('click', () => openChat(chatCtx).then(() => { if (b.dataset.q) askChat(b.dataset.q); })));   // 질문 문구는 data 속성 + 이벤트로 (renderSugg 와 같은 방식)
   $('#nav').style.display = 'grid';
 }
 (async function init() {
-  if (!state) return; renderTopbar(); showHealth(); injectChat('tutor'); await loadSampleB();
+  if (!state) return; renderTopbar(); showHealth(); injectChat('tutor');
   const u = state.unit; $('#mission').textContent = u.mission || `${u.title} 단어로 한 문장 말해봐요`;
   const hint = (u.hint_words && u.hint_words.length) ? u.hint_words : (S.get().words || []).slice(0, 4).map(w => w.word);
   $('#hintWords').textContent = hint.length ? '힌트: ' + hint.join(' · ') : ''; reset();
