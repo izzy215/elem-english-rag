@@ -51,13 +51,25 @@ function evidenceBox(r) {
     const first = (r.source?.text || '').split(/(?<=[.!?])\s+/)[0];
     return `<div class="src">📚 <b>${esc(r.rule.name)}</b>${first ? ` · ${esc(first)}` : ''}</div>`;
   }
-  const title = r.mode === 'rag' ? 'RAG가 찾은 근거' : r.mode === 'fallback' ? '참고한 규칙 (검색 없이 전체 규칙 중 고름)' : '참고한 규칙 (화면 샘플)';
-  const cands = (r.candidates || []).map((c, i) => `${i + 1}위 ${esc(c.name)} ${c.score}`).join(' · ');
-  const tm = r.timing ? ` · 전체 ${r.timing.total_ms}ms (검색 ${r.timing.search_ms}ms · 모델 ${r.timing.llm_ms}ms ×${r.timing.llm_calls})` : '';
-  const llm = r.llm ? `${esc(r.llm.backend)}:${esc(r.llm.model || '')} ${r.llm.ms}ms${r.llm.fallback_from ? ` (${esc(r.llm.fallback_from)} 실패 → 대체)` : ''}${tm}` : '';
-  return `<div class="src">📚 <b>${title}</b> · ${esc(r.source?.chunk_id || '')}${r.rule.score != null ? ` · 검색 점수 ${r.rule.score}${r.rule.rank ? ` (${r.rule.rank}위)` : ''}` : ''}${r.runner_up ? ` · 다른 후보 ${r.runner_up.rank ? r.runner_up.rank + '위 ' : ''}${esc(r.runner_up.name)} ${r.runner_up.score}` : ''}
+  // 발표용: "검색(RAG)이 고른 것" 과 "LLM 이 고른 것" 을 구분 — 검색 후보 5 + 유닛·공통 규칙(extra_rules) 을 순서대로 보여 주고 LLM 이 고른 규칙에 ✓ 강조
+  const chosen = r.rule?.id, cands = r.candidates || [], extras = r.extra_rules || [];
+  const mark = (name, id) => id === chosen ? `<b style="color:var(--primary)">✓${esc(name)}</b>` : esc(name);
+  const candLine = cands.map((c, i) => `${i + 1}위 ${mark(c.name, c.id)} ${c.score}`).join(' · ');
+  const from = x => x.from === 'unit' ? '유닛' : '공통';
+  const extraLine = extras.map(x => `${mark(x.name, x.id)}(${from(x)}${x.rank ? `, 검색 ${x.rank}위` : ''})`).join(' · ');
+  const inTop = cands.some(c => c.id === chosen), extra = extras.find(x => x.id === chosen);
+  const name = esc(r.rule?.name || r.rule?.id || ''), nTop = cands.length || 5;
+  const pick = r.rule?.rank == null ? `검색 없이 규칙 전부를 보고 LLM이 ${name} 규칙을 골랐어요`   // rank 없음 = 검색 실패·폴백·화면 임시 진단
+    : inTop ? `RAG 후보 ${nTop}개 중 LLM이 ${r.rule.rank}위 ${name} 규칙을 골라 설명했어요`
+    : `RAG 후보 ${nTop}개 밖의 ${extra ? from(extra) : '다른'} 규칙 ${name}(검색 ${r.rule.rank}위)를 LLM이 골랐어요`;
+  const top1 = r.runner_up && r.rule?.rank !== 1 ? `RAG ${r.runner_up.rank || 1}위는 ${esc(r.runner_up.name)}(${r.runner_up.score})` : '';   // 고른 게 1위면 생략 (그때 runner_up 은 2위)
+  const sec = ms => `${(ms / 1000).toFixed(1)}초`;
+  const embLine = r.embedding ? `검색 모델: ${esc(r.embedding.provider || '')} · ${esc(r.embedding.model || '')}` : '';   // 서버가 embedding 을 안 주면 생략
+  const t = r.timing;
+  const llmLine = r.llm ? `답변 모델: ${esc(r.llm.backend)} · ${esc(r.llm.model || '')} · ${sec(t ? t.total_ms : r.llm.ms)}${t ? ` (검색 ${sec(t.search_ms)} · 모델 호출 ${t.llm_calls}회)` : ''}${r.llm.fallback_from ? ` · ${esc(r.llm.fallback_from)} 실패 → 대체` : ''}` : '';
+  return `<div class="src">📚 <b>근거</b> — ${pick} · ${esc(r.source?.chunk_id || '')}${r.rule.score != null ? ` · 검색 점수 ${r.rule.score}` : ''}${top1 ? ` · ${top1}` : ''}
     <br><span style="opacity:.8;white-space:normal;word-break:keep-all;overflow-wrap:anywhere">${esc(r.source?.text || '')}</span>
-    ${cands ? `<br><span style="opacity:.7">검색 후보: ${cands}</span>` : ''}${llm ? `<br><span style="opacity:.7">모델: ${llm}</span>` : ''}</div>`;
+    ${candLine ? `<br><span style="opacity:.7">검색 후보 ${cands.length}: ${candLine}</span>` : ''}${extraLine ? `<br><span style="opacity:.7">유닛·공통 규칙: ${extraLine}</span>` : ''}${embLine ? `<br><span style="opacity:.7">${embLine}</span>` : ''}${llmLine ? `<br><span style="opacity:.7">${llmLine}</span>` : ''}</div>`;
 }
 function diagHTML(r, n, isLast) {
   const badge = !DEV.on() ? '' : r.mode === 'local' ? `<div class="src" style="opacity:.75">서버 /fix 없음(404) · 화면 임시 진단 (규칙 샘플 기준)</div>`

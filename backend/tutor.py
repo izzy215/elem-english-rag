@@ -406,6 +406,15 @@ def _full_fixed_ok(text: str, full_fixed: str, fix: str | None) -> bool:
     return len(new_words) <= 2 and len(dst) <= len(src) + 2
 
 
+def _embedding_info() -> dict | None:
+    """검색에 쓰는 임베딩 모델 (backend/embedding.py 상수, RAG 담당). 근거 박스에 '검색 모델' 로 표시."""
+    try:
+        from backend import embedding
+        return {"provider": embedding.EMBEDDING_PROVIDER, "model": embedding.EMBEDDING_MODEL}
+    except Exception:
+        return None
+
+
 def _search_candidates(text: str, k: int) -> tuple[list[dict], str, str | None]:
     """RAG 검색 (rag.py 의 search_rules, RAG 담당). 반환: (후보 목록, mode, fallback_reason). 호출부는 k=규칙 전부.
     후보는 score 내림차순 (순수 임베딩 순위. 예전 R-01 어휘 안전망은 2026-09-10 rag.py 에서 제거 — 규칙 데이터 보강으로 대체).
@@ -530,12 +539,19 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
     if mode == "rag":
         if len(cands) != len(all_rules):                    # 색인이 rules.jsonl 과 다름 (데이터 갱신 뒤 --rebuild 안 함)
             print(f"[fix] 경고: 색인 {len(cands)}개 ≠ rules.jsonl {len(all_rules)}개 → python -m backend.indexing --rebuild 필요", flush=True)
-        extra_ids = set(unit_row.get("rule_ids") or []) | {r["id"] for r in all_rules if r.get("unit") == "ALL"}
+        unit_ids = set(unit_row.get("rule_ids") or [])
+        all_ids = {r["id"] for r in all_rules if r.get("unit") == "ALL"}
+        extra_ids = unit_ids | all_ids
         prompt_rules = cands[:RAG_TOP_K] + [c for c in cands[RAG_TOP_K:] if c["id"] in extra_ids]
         seen = {r["id"] for r in prompt_rules}              # 색인에 없는 Unit·공통 규칙은 rules.jsonl 에서 보충
         prompt_rules += [r for r in all_rules if r["id"] in extra_ids and r["id"] not in seen]
+        # 발표용 근거 박스: 검색 5위 밖에서 유닛·공통 규칙으로 들어온 후보를 출처와 함께 (모델이 고른 게 검색 밖이면 여기서 보임)
+        extra_rules = [{"id": r["id"], "name": r["type"], "from": "unit" if r["id"] in unit_ids else "all",
+                        "rank": next((i + 1 for i, c in enumerate(cands) if c["id"] == r["id"]), None)}
+                       for r in prompt_rules[RAG_TOP_K:]]
     else:
         prompt_rules = all_rules
+        extra_rules = []
     prompt_rules = list(prompt_rules) + [SPELLING_RULE, OTHER_RULE]
     allowed_ids = {r["id"] for r in prompt_rules}          # 모델이 고를 수 있는 규칙 = 실제로 전달한 것만 (SPELL·OTHER 포함)
 
@@ -683,6 +699,8 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         "mode": mode,
         "fallback_reason": fallback_reason,                    # "search_error" | "no_results" | None
         "candidates": [{"id": c["id"], "name": c["type"], "score": round(c["score"], 4)} for c in cands[:RAG_TOP_K]],   # 검색 상위 RAG_TOP_K (관리자·실험용)
+        "extra_rules": extra_rules,                            # 검색 5위 밖에서 유닛(unit)·공통(all) 규칙으로 후보에 들어온 것 [{id,name,from,rank}]
+        "embedding": _embedding_info(),                        # 검색(임베딩) 모델 {"provider","model"} — 발표용 근거 박스 "검색 모델 · 답변 모델"
         "llm": llm_info,                                       # {"backend","model","ms","fallback_from"} — 비교 실험·관리자용
         "timing": timing,                                      # {"search_ms","llm_ms","llm_calls","total_ms"} — 발표용 근거 박스·로그
     }
