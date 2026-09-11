@@ -50,10 +50,20 @@ class AskIn(BaseModel):
 
 
 def _norm_words(text: str) -> list[str]:
-    return [w for w in re.sub(r"[?？.!,]", "", text.lower()).split() if w]
+    # "make+목적어+형용사가"처럼 "+"/"/"로 붙은 단어가 공백 split()으론 하나로 뭉쳐서, _best_match의
+    # "후보 단어 2개 이상인데 1개만 겹치면 스킵" 안전장치를 우연히 피해가는 문제가 있었음(2026-09-11,
+    # "형용사 앞에 뭐가 와요?"가 무관한 FAQ에 1.0 점수로 매칭됨) — "+"/"/"도 구분자로 취급해 쪼갠다.
+    cleaned = re.sub(r"[?？.!,]", "", text.lower())
+    return [w for w in re.split(r"[\s+/]+", cleaned) if w]
 
 
-_GENERIC_WORDS = {"뭐예요", "뭐야", "무슨", "뜻이", "뜻이에요", "뜻인가요", "뜻이야"}
+_GENERIC_WORDS = {
+    "뭐예요", "뭐야", "무슨", "뜻이", "뜻이에요", "뜻인가요", "뜻이야",
+    # "X랑 Y 뭐가 달라요?"류 비교 질문의 꼬리 표현 — 토픽(X, Y)이 아니라 어느 비교 질문에나
+    # 붙는 상투어라, 이것만으로 겹쳐서 무관한 FAQ가 이기는 문제가 있었음(2026-09-11,
+    # "many랑 much 차이" 질문이 "want랑 뭐가 달라요"(F-81, want vs would like)에 잘못 매칭됨).
+    "뭐가", "달라요", "다른가요", "다르나요", "차이가", "차이는", "차이예요",
+}
 
 
 def _content_words(text: str) -> list[str]:
