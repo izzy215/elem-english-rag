@@ -76,6 +76,9 @@ def _best_match(question: str, items: list[dict], candidates_of) -> tuple[dict |
             # 부분 문자열 겹침은 두 단어 다 3글자 이상일 때만 인정 — 2글자는 "an"이 "elephant"의
             # 부분 문자열이라 무관한 단어끼리 겹치는 경우가 있음(2026-09-10). 완전히 같은 단어는 길이 상관없이 인정.
             hit = sum(1 for w in cs if any(w == x or (len(w) >= 3 and len(x) >= 3 and (w in x or x in w)) for x in qs))
+            if len(cs) >= 2 and hit < 2:
+                continue   # 단어 2개 이상인 후보가 1개만 겹치면 우연의 일치로 보고 스킵 — "과거형이 뭐에요?"가
+                           # "see 과거형"과 "과거형" 한 단어만 겹쳐 saw 전용 FAQ로 잘못 매칭되던 문제(2026-09-10)
             score = hit / len(cs)
             if score > best_score:
                 best_score, best = score, item
