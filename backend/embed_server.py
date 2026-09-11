@@ -19,20 +19,26 @@ GPU는 EMBED_SERVER_DEVICE로 고른다(기본 cuda:0) — 이 서버는 team1�
 같은 장비를 공유해서, GPU 0이 다른 팀 작업으로 이미 꽉 차 있으면 큰 모델 로드가 CUDA OOM으로
 실패한다(2026-09-11, e5-large·bge-m3에서 발생). `nvidia-smi`로 여유 있는 GPU 번호를 확인해
 EMBED_SERVER_DEVICE=cuda:1 처럼 지정하고 재시작.
+
+/rerank 엔드포인트(크로스인코더 재랭킹, 2026-09-11 추가) — tests/rerank_compare.py 등이 로컬
+CPU 대신 이 서버 GPU를 쓰게 함(로컬 CPU로 돌리면 느리고 메모리 부족 에러도 남). 기본 모델은
+BAAI/bge-reranker-v2-m3(다국어, bge-m3와 같은 계열).
 """
 import os
 
 import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, CrossEncoder
 
 DEFAULT_MODEL = os.environ.get("EMBED_SERVER_MODEL", "intfloat/multilingual-e5-base")
+DEFAULT_RERANKER = os.environ.get("EMBED_SERVER_RERANKER", "BAAI/bge-reranker-v2-m3")
 PORT = int(os.environ.get("EMBED_SERVER_PORT", "8002"))
 DEVICE = os.environ.get("EMBED_SERVER_DEVICE", "cuda:0")
 
 app = FastAPI()
 _models: dict[str, "SentenceTransformer"] = {}   # 모델 이름별 캐시 — 팀원마다 다른 모델 요청해도 한 번만 로드
+_rerankers: dict[str, "CrossEncoder"] = {}       # 재랭커도 모델 이름별로 따로 캐시
 
 
 def _get_model(name: str):
@@ -41,10 +47,22 @@ def _get_model(name: str):
     return _models[name]
 
 
+def _get_reranker(name: str):
+    if name not in _rerankers:
+        _rerankers[name] = CrossEncoder(name, device=DEVICE)
+    return _rerankers[name]
+
+
 class EmbedIn(BaseModel):
     texts: list[str]
     task_type: str = "RETRIEVAL_DOCUMENT"   # "RETRIEVAL_DOCUMENT" | "RETRIEVAL_QUERY"
     model: str = DEFAULT_MODEL
+
+
+class RerankIn(BaseModel):
+    query: str
+    candidates: list[str]
+    model: str = DEFAULT_RERANKER
 
 
 def _needs_e5_prefix(name: str) -> bool:
@@ -62,9 +80,18 @@ def embed(body: EmbedIn):
     return {"embeddings": [[float(x) for x in v] for v in vectors], "model": body.model}
 
 
+@app.post("/rerank")
+def rerank(body: RerankIn):
+    reranker = _get_reranker(body.model)
+    pairs = [[body.query, c] for c in body.candidates]
+    scores = reranker.predict(pairs)
+    return {"scores": [float(s) for s in scores], "model": body.model}
+
+
 @app.get("/health")
 def health():
-    return {"ok": True, "models_loaded": list(_models.keys()), "default_model": DEFAULT_MODEL, "device": DEVICE}
+    return {"ok": True, "models_loaded": list(_models.keys()), "rerankers_loaded": list(_rerankers.keys()),
+            "default_model": DEFAULT_MODEL, "default_reranker": DEFAULT_RERANKER, "device": DEVICE}
 
 
 if __name__ == "__main__":
