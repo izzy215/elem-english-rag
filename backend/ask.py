@@ -137,9 +137,14 @@ def _pattern_match(question: str, patterns_pool: list[dict], faq_list: list[dict
 def _local_match(question: str, faq_list: list[dict], rule_list: list[dict],
                   words_pool: dict[str, dict], patterns_pool: list[dict]) -> dict | None:
     """faq→rules→patterns→words 순으로 로컬 매칭. 전부 실패하거나 RAG 힌트와 어긋나면 None → 폴백."""
-    rag_rule_id, rag_score = _rag_hint_rule_id(question)
+    _rag_cache: dict[str, tuple[str | None, float]] = {}
 
     def _rag_disagrees(rule_ids: list[str]) -> bool:
+        # RAG 임베딩은 실제로 어긋남 검사가 필요해질 때(faq/rule 매칭이 0.5를 넘었을 때)만 계산한다 —
+        # 패턴·단어 매칭이나 LLM 폴백으로 빠지는 질문까지 매번 임베딩 API를 부르던 낭비를 없앤다(2026-09-11).
+        if "v" not in _rag_cache:
+            _rag_cache["v"] = _rag_hint_rule_id(question)
+        rag_rule_id, rag_score = _rag_cache["v"]
         return bool(rule_ids) and rag_rule_id is not None and rag_score >= 0.5 and rag_rule_id not in rule_ids
 
     faq, faq_score = _best_match(question, faq_list, lambda f: [f["question"]] + (f.get("variants") or []))
@@ -149,14 +154,14 @@ def _local_match(question: str, faq_list: list[dict], rule_list: list[dict],
             source = [{"chunk_id": rid} for rid in faq_rule_ids] + [{"chunk_id": faq["id"]}]
             suggested = _followup_questions(faq_rule_ids, faq_list, exclude_id=faq["id"])
             return {"answer": faq["answer"], "source": source, "offtopic": False, "suggested": suggested}
-        print(f"[ask] 로컬 매칭 {faq['id']}(단어겹침 {faq_score:.2f}) 이 RAG 힌트({rag_rule_id}, {rag_score:.2f})와 어긋나 폴백으로 넘김", flush=True)
+        print(f"[ask] 로컬 매칭 {faq['id']}(단어겹침 {faq_score:.2f}) 이 RAG 힌트({_rag_cache['v'][0]}, {_rag_cache['v'][1]:.2f})와 어긋나 폴백으로 넘김", flush=True)
 
     rule, rule_score = _best_match(question, rule_list, lambda r: [r["type"], r.get("short", "")])
     if rule_score >= 0.5:
         if not _rag_disagrees([rule["id"]]):
             return {"answer": rule.get("short") or rule["text"], "source": [{"chunk_id": rule["id"]}],
                     "offtopic": False, "suggested": _followup_questions([rule["id"]], faq_list)}
-        print(f"[ask] 로컬 매칭 {rule['id']}(단어겹침 {rule_score:.2f}) 이 RAG 힌트({rag_rule_id}, {rag_score:.2f})와 어긋나 폴백으로 넘김", flush=True)
+        print(f"[ask] 로컬 매칭 {rule['id']}(단어겹침 {rule_score:.2f}) 이 RAG 힌트({_rag_cache['v'][0]}, {_rag_cache['v'][1]:.2f})와 어긋나 폴백으로 넘김", flush=True)
 
     # 패턴(전체 문장) 매칭을 단어 매칭보다 먼저 본다 — "Good night!"가 그 안의 "night" 단어
     # 매칭에 먼저 걸려버리면 더 정확한 문장 전체 뜻 대신 단어 하나 뜻만 나오는 문제가 있었음(2026-09-10)
