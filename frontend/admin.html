@@ -27,7 +27,8 @@
   #evalRuns tr.best td{background:var(--primary-soft);font-weight:700}
   #evalRuns tr.best td.n b,#evalRuns tr.best td{color:var(--primary)}
   /* 두 표는 고정 레이아웃 + 100% 폭 — 열이 내용 때문에 패널 밖으로 넘치지 않게. 부모(.bars · .tw)의 overflow-x:auto 는 보험 (정상 폭에선 스크롤 없음) */
-  #evalRuns,#missTable{table-layout:fixed;width:100%}
+  #evalRuns,#missTable,#fixRuns,#fixMiss{table-layout:fixed;width:100%}
+  #fixRuns td,#fixMiss td{overflow-wrap:anywhere} #fixRuns tr.best td{background:var(--primary-soft);font-weight:700;color:var(--primary)}
   #evalRuns th,#missTable th{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #evalRuns th,#evalRuns td,#missTable th,#missTable td{padding-left:6px;padding-right:6px}   /* 430px 폭에서 hit@3 · 재랭킹 · 정답 규칙 머리글이 잘리지 않게 */
   #evalRuns td .sm{display:block;font-size:.85em;color:var(--muted);font-weight:400}   /* 시험지 칸 둘째 줄: 측정일 */
@@ -101,6 +102,31 @@
         <div class="hint" id="missHint"></div>
       </section>
     </div>
+
+    <section class="panel" style="margin-top:14px">
+      <div class="head wrap">
+        <h2>튜터 정확도 — /fix 끝까지 (검색 → 모델 → 검증 → 정답 규칙과 비교)</h2>
+        <div class="row3" id="fixCtl">
+          <select class="small" id="fxBackend" title="답변 모델 (LLM)"></select>
+          <select class="small" id="fxSize" title="문장 수"><option value="1">규칙당 1문장 + 정상 20 (120)</option><option value="2">규칙당 2문장 + 정상 40 (240)</option><option value="all">전체 시험지 (360)</option></select>
+          <input class="small" id="fxLimit" type="number" min="0" max="360" value="0" style="width:64px" title="앞 N문장만 (0 = 위 선택대로 전부)">
+          <select class="small" id="fxRag" title="검색(RAG) 사용 여부"><option value="rag">검색 5개 + 유닛·공통 규칙 (실제 서비스)</option><option value="norag">검색 없이 규칙 100개 전부 (기준선)</option></select>
+          <button class="btn small" id="fxBtn" onclick="runFix()">실행</button>
+        </div>
+      </div>
+      <div class="d">시험지 문장을 실제 튜터에 넣고 <b>모델이 고른 규칙</b>이 정답 규칙과 같은지 봐요. 위 "RAG 정확도"는 후보 안에 정답이 들어갔나(1단계)이고, 여기는 끝까지 맞혔나(2단계)예요.
+        정상 문장 60개는 "고칠 게 없다"고 해야 맞음 — 그 비율이 <b>정상 유지율</b>이고, 고치겠다고 나선 게 <b>오교정</b>이에요. "빠르게"(120문장)는 강의실 32b 로 15분쯤, 전체 360문장은 40분 넘게 걸려요.</div>
+      <div class="hint" id="fxStatus"></div>
+      <div class="kpis">
+        <div class="kpi"><div class="num na" id="fxRuleAcc">–</div><div class="lbl">규칙 정답률</div></div>
+        <div class="kpi"><div class="num na" id="fxKept">–</div><div class="lbl">정상 유지율</div></div>
+        <div class="kpi"><div class="num na" id="fxFail">–</div><div class="lbl">실패</div></div>
+      </div>
+      <div class="hint" id="fxHint"></div>
+      <div class="tw"><table class="mini" id="fixRuns"></table></div>
+      <div class="tw"><table class="mini" id="fixMiss"></table></div>
+      <div class="hint" id="fxMissHint"></div>
+    </section>
 
     <!-- STT 정확도 — TTS 담당 실험 결과 자리 (API 미정) -->
     <section class="panel">

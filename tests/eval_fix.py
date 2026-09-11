@@ -158,6 +158,8 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--backend", default=None, help="gemini | claude | <LLM_ENDPOINTS 이름> | all | 콤마 목록 (기본: .env 의 LLM_BACKEND)")
     ap.add_argument("--limit", type=int, default=0, help="앞 n 문장만")
+    ap.add_argument("--per-rule", type=int, default=0, help="규칙당 앞 n 문장만 (0 = 전부). 예) --per-rule 1 → 규칙 100개 × 1문장")
+    ap.add_argument("--normal", type=int, default=-1, help="정상(NONE) 문장 앞 n개만 (-1 = 전부, 0 = 없음). --per-rule 과 같이 써서 빠른 부분 평가")
     ap.add_argument("--out", default=None, help="저장 파일명 (기본: data/rag_eval/fix_compare_<시각>[_label].json + _latest 복사본)")
     ap.add_argument("--label", default="", help="실행 이름 (예: gemini-embedding). 파일명과 표 제목에 붙는다")
     ap.add_argument("--no-rag", action="store_true", help="검색 없이 규칙 전부를 프롬프트에 (RAG 없을 때 기준선)")
@@ -170,6 +172,16 @@ def main() -> None:
     b = (args.backend or settings.llm_backend or "gemini").lower()
     backends = llm.backends() if b == "all" else [x.strip() for x in b.split(",") if x.strip()]
     rows = load_sentences(Path(args.sentences)) if demo else load_eval()
+    if not demo and (args.per_rule or args.normal >= 0):        # 부분 평가: 규칙당 n문장 + 정상 n문장 (순서는 eval.csv 그대로)
+        seen: dict[str, int] = {}
+        picked = []
+        for r in rows:
+            key = "NONE" if r["is_normal"] else r["expected_rule_id"]
+            cap = (args.normal if args.normal >= 0 else 10**9) if r["is_normal"] else (args.per_rule or 10**9)
+            if seen.get(key, 0) < cap:
+                seen[key] = seen.get(key, 0) + 1
+                picked.append(r)
+        rows = picked
     if args.limit:
         rows = rows[: args.limit]
     rules = golden.rules()

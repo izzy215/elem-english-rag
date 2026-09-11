@@ -195,6 +195,35 @@ def eval_run_start(body: EvalRunIn):
     return evalrun.start_job(body.backend, (body.model or "").strip() or None, (body.rerank or "").strip() or None, body.topn)
 
 
+# ── 튜터 평가 (/fix 끝까지: 검색 → LLM → 검증 → 정답 규칙과 비교) → tests/eval_fix.py 서브프로세스 ──
+class FixRunIn(BaseModel):
+    backend: str | None = None         # gemini | claude | LLM_ENDPOINTS 이름. 없으면 .env 의 LLM_BACKEND
+    no_rag: bool = False               # True 면 검색 없이 규칙 전부를 프롬프트에 (RAG 없을 때 기준선)
+    label: str = ""                    # 실행 이름 (파일명에 붙음)
+    limit: int = 0                     # 앞 n 문장만 (0 = 전부)
+    per_rule: int = 0                  # 규칙당 n 문장만 (0 = 전부). 화면의 "빠르게" 가 1
+    normal: int = -1                   # 정상 문장 n 개만 (-1 = 전부)
+
+
+@router.get("/fix_history")
+def fix_history():
+    """fix_compare_*.json 전부 → 실행별 규칙 정답률·정상 유지율 + 지금 시험지 최신 실행의 놓친 문장."""
+    return evalrun.fix_history()
+
+
+@router.get("/fix_run")
+def fix_run_status():
+    return {"job": evalrun.fix_job_status(), "backends": llm.backends(), "default_backend": settings.llm_backend}
+
+
+@router.post("/fix_run")
+def fix_run_start(body: FixRunIn):
+    backend = (body.backend or settings.llm_backend or "gemini").strip()
+    if backend not in llm.backends():
+        raise HTTPException(400, f"모르는 백엔드: {backend} (가능: {llm.backends()})")
+    return evalrun.start_fix_job(backend, body.no_rag, body.label, max(0, min(body.limit, 1000)), max(0, body.per_rule), max(-1, body.normal))
+
+
 def eval_sheet_hash() -> str:
     """지금 eval.csv 의 지문. 평가 파일의 evaluation_hash 와 대조해 '같은 시험지' 판정 (tests/rerank_compare.py 도 이 값을 기록)."""
     return "sha256:" + hashlib.sha256(json.dumps(golden.eval_set(), ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]

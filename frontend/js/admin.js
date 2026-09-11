@@ -199,8 +199,63 @@ async function runEval() {
   loadEvalRun();
 }
 
+// ---------- 튜터 정확도 (/fix 끝까지) — GET /api/admin/fix_history 표 + GET/POST /api/admin/fix_run 실행 ----------
+let fxTimer = null, fxInit = false;
+function renderFix(h) {
+  const runs = (h.runs || []).filter(r => r.same_sheet);
+  const L = h.latest;
+  $('#fxRuleAcc').textContent = L ? pct(L.rule_acc) : '–'; $('#fxRuleAcc').classList.toggle('na', !L);
+  $('#fxKept').textContent = L && L.normal_kept != null ? pct(L.normal_kept) : '–'; $('#fxKept').classList.toggle('na', !L || L.normal_kept == null);
+  $('#fxFail').textContent = L ? String(L.failures) : '–'; $('#fxFail').classList.toggle('na', !L);
+  $('#fxHint').textContent = L ? `최근 실행 ${when(L.ran_at)} · ${L.backend}:${L.model || ''} · ${L.no_rag ? '검색 없음' : 'RAG (임베딩 ' + (L.embedding || '?') + ')'} · 오류 ${L.n_err}문장 중 정답 규칙 ${L.hit} · 놓침 ${L.missed} · 다른 규칙 ${L.wrong_rule} · 정상 ${L.n_norm}문장 중 오교정 ${L.false_fix} · 평균 ${L.avg_ms ?? '?'}ms`
+    : `지금 시험지(${h.sheet?.n ?? '?'}문장)로 돌린 실행이 아직 없어요. 모델을 고르고 [실행]을 눌러 주세요.${h.sheet?.hidden ? ` (다른 시험지 실행 ${h.sheet.hidden}건은 숨김)` : ''}`;
+  if (!runs.length) { $('#fixRuns').innerHTML = ''; $('#fixMiss').innerHTML = ''; $('#fxMissHint').textContent = ''; return; }
+  const best = Math.max(...runs.filter(r => r.n === (L && L.n)).map(r => r.rule_acc || 0));   // 최고 강조는 최근 실행과 문장 수가 같은 것끼리
+  $('#fixRuns').innerHTML = `<colgroup><col style="width:22%"><col style="width:26%"><col style="width:13%"><col style="width:13%"><col style="width:13%"><col style="width:13%"></colgroup>
+    <tr><th>실행</th><th>모델</th><th>검색</th><th style="text-align:right" title="오류 문장 중 정답 규칙을 고른 비율">규칙 정답</th><th style="text-align:right" title="정상 문장을 고치지 않은 비율">정상 유지</th><th style="text-align:right">응답</th></tr>` + runs.map(r => `
+    <tr class="${r.n === (L && L.n) && (r.rule_acc || 0) === best ? 'best' : ''}" title="${esc(r.file)} · 놓침 ${r.missed} · 다른 규칙 ${r.wrong_rule} · 오교정 ${r.false_fix} · 실패 ${r.failures}">
+      <td>${esc(day(r.ran_at))}<span class="sm">${r.n}문장${r.label ? ' · ' + esc(r.label) : ''}</span></td><td class="m">${esc(r.backend)}:${esc(r.model || '')}</td><td>${r.no_rag ? '없음' : 'RAG'}</td>
+      <td class="n">${pct(r.rule_acc)}</td><td class="n">${r.normal_kept != null ? pct(r.normal_kept) : '–'}</td><td class="n">${r.avg_ms != null ? (r.avg_ms / 1000).toFixed(1) + 's' : '–'}</td></tr>`).join('');
+  const miss = h.misses || [];
+  if (!miss.length) { $('#fixMiss').innerHTML = ''; $('#fxMissHint').textContent = '틀린 문장 없음'; return; }
+  $('#fixMiss').innerHTML = `<colgroup><col style="width:40%"><col style="width:14%"><col style="width:22%"><col style="width:24%"></colgroup><tr><th>문장</th><th>정답</th><th>튜터 판정</th><th>고친 문장</th></tr>` + miss.map(x => `
+    <tr><td>${esc(x.text)}</td><td><b>${esc(x.expected)}</b></td><td class="${x.judge && x.judge.startsWith('!') ? 'bad' : ''}">${esc(x.judge || '')}${x.rank ? ` <span style="color:var(--muted)">(검색 ${x.rank}위)</span>` : ''}</td><td>${esc(x.fixed || x.error || '')}</td></tr>`).join('');
+  $('#fxMissHint').textContent = `최근 실행에서 틀린 ${miss.length}문장 — "✗ R-xx" = 다른 규칙을 고름, "✗ 놓침" = 오류인데 맞다고 함, "✗ 오교정" = 정상 문장을 고침, "!" = 실패`;
+}
+async function loadFix() {
+  let r = null, h = null;
+  try { [r, h] = await Promise.all([api('/api/admin/fix_run'), api('/api/admin/fix_history')]); }
+  catch (e) { $('#fxStatus').innerHTML = e.status === 404 ? '<span class="tag">서버 재시작 필요</span> <code>/api/admin/fix_run</code> (backend/evalrun.py)' : '읽기 실패: ' + esc(e.message); $('#fxBtn').disabled = true; return; }
+  if (!fxInit) {
+    fxInit = true;
+    $('#fxBackend').innerHTML = (r.backends || []).map(b => `<option value="${esc(b)}" ${b === r.default_backend ? 'selected' : ''}>${esc(b)}${b === r.default_backend ? ' (.env)' : ''}</option>`).join('');
+  }
+  const j = r.job || {};
+  $('#fxBtn').disabled = !!j.running;
+  if (j.running) {
+    const pct_ = j.total ? Math.round(j.done / j.total * 100) : 0;
+    $('#fxStatus').innerHTML = `⏳ <b>${esc(j.label)}</b> ${j.total ? `${j.done}/${j.total} (${pct_}%)` : '준비 중'} … ${esc((j.log || []).slice(-1)[0] || '')}`;
+    if (!fxTimer) fxTimer = setInterval(loadFix, 4000);
+  } else {
+    if (fxTimer) { clearInterval(fxTimer); fxTimer = null; }
+    if (j.error) $('#fxStatus').innerHTML = `<span class="pill warn">실패</span> ${esc(j.label || '')} — ${esc(j.error)}`;
+    else if (j.result_file) $('#fxStatus').innerHTML = `완료 <b>${esc(j.label)}</b> · <code>${esc(j.result_file)}</code>`;
+    else $('#fxStatus').textContent = '';
+  }
+  renderFix(h);
+}
+async function runFix() {
+  const backend = $('#fxBackend').value || null, no_rag = $('#fxRag').value === 'norag', sz = $('#fxSize').value, limit = parseInt($('#fxLimit').value) || 0;
+  const size = sz === 'all' ? { limit } : { per_rule: parseInt(sz), normal: 20 * parseInt(sz), limit };   // 규칙당 n + 정상 20n, 그 위에 앞 N문장 자르기
+  if (backend === 'gemini' && !confirm('Gemini 는 분당 15회 제한이라 360문장에 30분 넘게 걸려요. 계속할까요?')) return;
+  $('#fxBtn').disabled = true; $('#fxStatus').textContent = '시작하는 중…';
+  try { await api('/api/admin/fix_run', { method: 'POST', body: JSON.stringify({ backend, no_rag, ...size }) }); }
+  catch (e) { $('#fxStatus').innerHTML = '시작 실패: ' + esc(e.message); $('#fxBtn').disabled = false; return; }
+  loadFix();
+}
+
 (async function init() {
   renderTopbar({ crumbs: false });      // 관리자 화면은 학습 위치(Level·Unit)와 무관
   const h = await showHealth();
-  await Promise.all([loadGolden(h), loadEval(), loadLog(), loadGen(), loadEvalRun()]);
+  await Promise.all([loadGolden(h), loadEval(), loadLog(), loadGen(), loadEvalRun(), loadFix()]);
 })();
