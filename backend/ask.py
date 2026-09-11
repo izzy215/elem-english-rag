@@ -398,7 +398,10 @@ def _answer(body: AskIn) -> dict:
     if not question:
         return {"answer": "", "source": [], "offtopic": True}
 
-    if _CORRECTNESS_PATTERN.search(question):
+    # "내가 뭘 틀렸나요?"처럼 판정할 영어 문장이 질문 안에 없는 메타 질문은 이 패턴에 걸려도
+    # _check_correctness가 답할 게 없어 "" 가 맞아요 처럼 빈 답을 냄(2026-09-11 오답노트 화면에서
+    # 재현) — 질문에 영어 알파벳이 실제로 있을 때만(판정 대상 문장이 있다는 뜻) 이 경로로 보낸다.
+    if _CORRECTNESS_PATTERN.search(question) and re.search(r"[A-Za-z]", question):
         if not settings.has_api_key:
             return {"answer": "", "source": [], "offtopic": True, "error": "GEMINI_API_KEY 미설정"}
         try:
