@@ -1,5 +1,5 @@
 /* 관리자 (PRD 3.7 · docs/plan-B/mockup.html 관리자 웹)
- * 골든 데이터 파일별 개수(/api/admin/golden) · RAG 정확도(/api/rag/eval) · 학생 문장 로그 + 우리 규칙으로 못 짚은 문장(/api/admin/log 의 rows·gaps)
+ * 골든 데이터 파일별 개수(/api/admin/golden) · RAG 정확도(/api/rag/eval + 모델별 비교 /api/admin/eval_history) · 학생 문장 로그 + 우리 규칙으로 못 짚은 문장(/api/admin/log 의 rows·gaps)
  * 서버에 아직 없는 API(404)면 그 패널만 "서버 재시작 필요" 로 두고 나머지는 그린다.
  */
 const pct = v => v == null ? '–' : Math.round(v * 100) + '%';
@@ -36,25 +36,51 @@ async function loadEval() {
   $('#hit1').textContent = pct(r.hit_at_1); $('#hit1').className = 'num';
   $('#evalN').textContent = r.n; $('#evalN').className = 'num';
   if (r.total_n) $('#evalDesc').textContent = `시험지(eval.csv) ${r.total_n}문장 중 오류 문장 ${r.n}개 채점 (정상 문장 ${r.normal_n ?? r.total_n - r.n}개 제외) · 정답 규칙이 상위 3개 안에 들면 맞힘`;
-  const runs = r.runs || [];
-  const best = Math.max(...runs.map(x => x.hit_at_3 || 0));
-  $('#runs').innerHTML = runs.length ? `<div class="d">비교 실험 — 색인 방식 · 임베딩 모델별 hit@3 (RAG 담당이 runs 에 추가)</div>` + runs.map(x => `
-    <div class="bar"><span>${esc(x.label)}</span>
-      <div class="track"><i class="${x.hit_at_3 === best ? 'best' : ''}" style="width:${Math.round((x.hit_at_3 || 0) * 100)}%"></i></div>
-      <span class="v">${pct(x.hit_at_3)}</span></div>`).join('') : '';
+  let hist = null;                                          // 모델(+재랭킹)별 최신 실행 — 서버 재시작 전(404)이면 null → 예전 runs 방식으로 폴백
+  try { hist = await api('/api/admin/eval_history'); } catch (_) { hist = null; }
+  renderRuns(hist, r.runs || []);
   const extra = [r.hit_at_5 != null ? `hit@5 ${pct(r.hit_at_5)} (/fix 가 받는 검색 후보 안 — tutor.py RAG_TOP_K=5 와 같이 바꿀 것)` : '', r.evaluated_at ? `${when(r.evaluated_at)} 측정` : '', r.index?.model ? esc(r.index.model) : ''].filter(Boolean).join(' · ');
   const stale = (r.stale && r.evaluation_hash) ? ' · <span class="pill warn">색인·시험지가 평가 뒤에 바뀜 — eval_rag 다시 돌려야 함</span>' : '';   // evaluation_hash 는 eval_rag 가 아직 안 써서(RAG 담당) 그 전엔 stale 이 항상 true → 값이 생긴 뒤에만 표시
   $('#evalHint').innerHTML = (r.hit_at_3 >= .8 ? '목표(80%) 달성' : '목표 80%까지 ' + Math.round((.8 - r.hit_at_3) * 100) + '%p 남음') + (extra ? ' · ' + extra : '') + stale;
   renderMiss(r.rows || []);
+}
+function renderRuns(hist, runs) {   // 표: eval_history.latest (모델·재랭킹별 최신 실행) — 시험지(문장 수 + data_hash)별로 묶고, 같은 시험지 안에서 hit@3 최고 행 강조. 서버 재시작 전(404)이면 예전 runs 막대
+  const latest = (hist && Array.isArray(hist.latest) && hist.latest.length) ? hist.latest : null;
+  if (!latest) {
+    if (hist && hist.sheet) { $('#runs').innerHTML = `<div class="d">임베딩 모델 · 재랭킹 비교 — 지금 시험지(${hist.sheet.n}문장)로 돌린 실행이 아직 없어요 · <code>python -m tests.eval_rag --retrieval-only</code></div>`; return; }
+    if (!runs.length) { $('#runs').innerHTML = ''; return; }
+    const best = Math.max(...runs.map(x => x.hit_at_3 || 0));
+    $('#runs').innerHTML = `<div class="d">비교 실험 — 색인 방식 · 임베딩 모델별 hit@3 (RAG 담당이 runs 에 추가)</div>` + runs.map(x => `
+      <div class="bar"><span class="lb">${esc(x.label)}</span><div class="track"><i class="${x.hit_at_3 === best ? 'best' : ''}" style="width:${Math.round((x.hit_at_3 || 0) * 100)}%"></i></div><span class="v">${pct(x.hit_at_3)}</span></div>`).join('');
+    return;
+  }
+  const sheet = x => `${x.n ?? 0}|${String(x.data_hash || '').replace(/^sha256:/, '').slice(0, 6)}`;   // 시험지 = 문장 수 + 해시 앞 6자리 (다르면 직접 비교 불가)
+  const rows = [...latest].sort((a, b) => (b.n || 0) - (a.n || 0) || sheet(a).localeCompare(sheet(b)) || (b.hit_at_3 || 0) - (a.hit_at_3 || 0));
+  const bestOf = {}; rows.forEach(x => { const k = sheet(x); bestOf[k] = Math.max(bestOf[k] ?? -1, x.hit_at_3 || 0); });
+  const day = iso => iso ? iso.slice(5, 10) : '–';
+  let prev = null;
+  const hidden = hist.sheet && hist.sheet.hidden_labels ? ` · 지금 시험지(${hist.sheet.n}문장)와 짝이 안 맞는 실행 ${hist.sheet.hidden_labels}건은 숨김` : '';
+  $('#runs').innerHTML = `<div class="d">임베딩 모델 · 재랭킹 비교 (같은 시험지 ${hist.sheet ? hist.sheet.n + '문장' : ''} 기준)</div>`;
+  const has5 = rows.some(x => x.hit_at_5 != null);   // hit@5 = /fix 가 프롬프트에 넣는 후보 5개 안에 정답이 있나 (eval_rag 가 K=5 로 기록할 때만 열이 생김)
+  $('#runs').innerHTML += `
+    <table class="mini" id="evalRuns"><colgroup><col style="width:20%"><col style="width:${has5 ? 26 : 36}%"><col style="width:14%">${has5 ? '<col style="width:13%">' : ''}<col style="width:${has5 ? 13 : 15}%"><col style="width:${has5 ? 14 : 15}%"></colgroup>
+    <tr><th title="문장 수 · 측정일 (두 줄)">시험지</th><th>임베딩 모델</th><th>재랭킹</th>${has5 ? '<th style="text-align:right" title="/fix 가 LLM 에 주는 후보 5개 안에 정답 규칙이 든 비율">hit@5</th>' : ''}<th style="text-align:right">hit@3</th><th style="text-align:right">hit@1</th></tr>` + rows.map(x => {
+      const k = sheet(x), sep = prev !== null && k !== prev; prev = k;
+      const best = (x.hit_at_3 || 0) === bestOf[k];
+      const tip = `${x.file || ''}${x.evaluated_at ? ' · ' + when(x.evaluated_at) + ' 측정' : ''}${x.data_hash ? ' · ' + x.data_hash : ''}`;   // 실행 파일·측정 시각·해시는 행 툴팁으로만 (열로 두면 패널 밖으로 넘침)
+      return `<tr class="${sep ? 'sep' : ''}${best ? ' best' : ''}" title="${esc(tip)}"><td>${x.total_n ?? x.n ?? '–'}문장<span class="sm">${esc(day(x.evaluated_at))} 측정</span></td><td class="m">${esc(x.model || '?')}</td><td class="m">${x.reranker ? esc(x.reranker) : '<span style="color:var(--muted)">검색만</span>'}</td>
+        ${has5 ? `<td class="n">${x.hit_at_5 != null ? pct(x.hit_at_5) : '–'}</td>` : ''}<td class="n">${pct(x.hit_at_3)}</td><td class="n">${pct(x.hit_at_1)}</td></tr>`;
+    }).join('') + `</table>
+    <div class="d sub">실행 ${(hist.runs || []).length}회${hidden} · <code>python -m tests.eval_rag --retrieval-only</code> 로 실행하면 자동 추가 · 행에 마우스를 올리면 실행 파일 · 측정 시각 · 해시</div>`;
 }
 function renderMiss(rows) {   // 검색이 3위 안에 정답 규칙을 못 넣은 시험 문장 — 어느 규칙을 놓쳤고 대신 무엇을 골랐나 (RAG 담당·데이터팀이 볼 곳)
   const miss = rows.filter(x => !x.is_normal && !x.hit_at_3);
   if (!rows.length) { $('#missTable').innerHTML = ''; $('#missHint').textContent = ''; return; }
   if (!miss.length) { $('#missTable').innerHTML = ''; $('#missHint').textContent = '놓친 문장 없음 — 오류 문장 전부 3위 안에 정답 규칙이 들어 있어요'; return; }
   const name = c => `${esc(c.id)} ${esc(c.type || '')}`;
-  $('#missTable').innerHTML = `<tr><th>놓친 문장</th><th>정답 규칙</th><th>검색이 고른 1~3위</th></tr>` + miss.map(x => `
+  $('#missTable').innerHTML = `<colgroup><col style="width:42%"><col style="width:18%"><col style="width:40%"></colgroup><tr><th>놓친 문장</th><th>정답 규칙</th><th>검색이 고른 1~3위</th></tr>` + miss.map(x => `
     <tr><td>${esc(x.text)}</td><td><b>${esc(x.expected_rule_id)}</b></td>
-      <td>${(x.candidates || []).slice(0, 3).map(c => `${name(c)} <span style="color:var(--muted)">${(c.score ?? 0).toFixed(2)}</span>`).join(' · ')}${x.error ? ` <span class="pill warn">${esc(x.error)}</span>` : ''}</td></tr>`).join('');
+      <td class="c">${(x.candidates || []).slice(0, 3).map(c => `${name(c)} <span style="color:var(--muted)">${(c.score ?? 0).toFixed(2)}</span>`).join(' · ')}${x.error ? ` <span class="pill warn">${esc(x.error)}</span>` : ''}</td></tr>`).join('');
   $('#missHint').textContent = `놓친 문장 ${miss.length}개 — 이 규칙들의 설명문·예문을 보강하거나(데이터팀) 검색 방식을 손보는(RAG 담당) 근거`;
 }
 
@@ -124,8 +150,57 @@ async function runGen() {
   loadGen();
 }
 
+// ---------- 검색 평가 실행 (GET/POST /api/admin/eval_run → tests/eval_embed.py 서브프로세스, 끝나면 비교 표 새로고침) ----------
+let evTimer = null, evOpts = null;
+function evFillModels() {
+  const b = $('#evBackend').value, sel = $('#evModel');
+  const d = evOpts?.default || {};
+  if (b === 'gemini') { sel.innerHTML = '<option value="">gemini-embedding-001</option>'; sel.disabled = true; }
+  else {
+    sel.disabled = false;
+    sel.innerHTML = (evOpts?.models || []).map(m => `<option value="${esc(m)}" ${b === d.backend && m === d.model ? 'selected' : ''}>${esc(m)}</option>`).join('');
+  }
+  $('#evTopn').disabled = !$('#evRerank').value;
+}
+async function loadEvalRun() {
+  let r = null;
+  try { r = await api('/api/admin/eval_run'); }
+  catch (e) { $('#evStatus').innerHTML = e.status === 404 ? '<span class="tag">서버 재시작 필요</span> <code>/api/admin/eval_run</code> (backend/evalrun.py)' : '읽기 실패: ' + esc(e.message); $('#evBtn').disabled = true; return; }
+  if (!evOpts) {
+    evOpts = r.options || {};
+    const d = evOpts.default || {};
+    $('#evBackend').innerHTML = (evOpts.backends || []).map(b => `<option value="${esc(b)}" ${b === d.backend ? 'selected' : ''}>${esc(b)}${b === d.backend ? ' (.env)' : ''}</option>`).join('');
+    $('#evRerank').innerHTML = '<option value="">재랭킹 없음(검색만)</option>' + (evOpts.rerankers || []).map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
+    $('#evBackend').addEventListener('change', evFillModels); $('#evRerank').addEventListener('change', evFillModels);
+    evFillModels();
+  }
+  const j = r.job || {};
+  $('#evBtn').disabled = !!j.running;
+  if (j.running) {
+    const pct = j.total ? Math.round(j.done / j.total * 100) : 0;
+    $('#evStatus').innerHTML = `⏳ <b>${esc(j.label)}</b> ${j.total ? `${j.done}/${j.total} (${pct}%)` : '준비 중(모델 로드·규칙 임베딩)'} … ${esc((j.log || []).slice(-1)[0] || '')}`;
+    if (!evTimer) evTimer = setInterval(loadEvalRun, 2500);
+    return;
+  }
+  if (evTimer) { clearInterval(evTimer); evTimer = null; loadEval(); }   // 끝남 → 비교 표·놓친 문장 새로고침
+  if (j.error) $('#evStatus').innerHTML = `<span class="pill warn">실패</span> ${esc(j.label || '')} — ${esc(j.error)}`;
+  else if (j.result_file) $('#evStatus').innerHTML = `완료 <b>${esc(j.label)}</b> · ${esc((j.log || []).filter(l => l.includes('hit@1')).slice(-1)[0] || '')} · <code>${esc(j.result_file)}</code>`;
+  else $('#evStatus').textContent = evOpts?.note?.[$('#evBackend').value] || '';
+}
+async function runEval() {
+  const backend = $('#evBackend').value, model = $('#evModel').value || null, rerank = $('#evRerank').value || null, topn = parseInt($('#evTopn').value) || 10;
+  if (backend === 'gemini') {
+    const n = (parseInt($('#evalN').textContent) || 0) + 100;
+    if (!confirm(`Gemini 임베딩 약 ${n}회를 써요 (무료 한도 하루 1,000회). 계속할까요?`)) return;
+  }
+  $('#evBtn').disabled = true; $('#evStatus').textContent = '시작하는 중…';
+  try { await api('/api/admin/eval_run', { method: 'POST', body: JSON.stringify({ backend, model, rerank, topn }) }); }
+  catch (e) { $('#evStatus').innerHTML = '시작 실패: ' + esc(e.message); $('#evBtn').disabled = false; return; }
+  loadEvalRun();
+}
+
 (async function init() {
   renderTopbar({ crumbs: false });      // 관리자 화면은 학습 위치(Level·Unit)와 무관
   const h = await showHealth();
-  await Promise.all([loadGolden(h), loadEval(), loadLog(), loadGen()]);
+  await Promise.all([loadGolden(h), loadEval(), loadLog(), loadGen(), loadEvalRun()]);
 })();
