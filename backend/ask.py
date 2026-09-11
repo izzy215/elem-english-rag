@@ -169,7 +169,17 @@ def _local_match(question: str, faq_list: list[dict], rule_list: list[dict],
     if pattern:
         return pattern
 
-    return _word_match(question, words_pool)
+    # 단어 하나만 겹쳐서 잡히는 게 원래 목적("play가 무슨 뜻이야?")인데, 영단어가 여러 개
+    # 섞인 질문("I want a doctor 이거랑 I want to be a doctor 뭐가 달라요?")도 그중 하나만
+    # 걸려서 문장 비교 대신 단어 뜻풀이로 잘못 답하던 문제(2026-09-11) — RAG 힌트로 걸러보려
+    # 했으나 점수 자체가 신뢰하기엔 너무 자주 틀려서(단순 단어 질문에도 0.83으로 확신) 대신
+    # 질문에 영단어가 2개를 넘으면(비교·복문 가능성) 단어 매칭을 건너뛰고 LLM 폴백으로 넘긴다.
+    if len(re.findall(r"[A-Za-z']+", question)) <= 2:
+        word = _word_match(question, words_pool)
+        if word is not None:
+            return word
+
+    return None
 
 
 def _log_entry(log_id: str) -> dict | None:
