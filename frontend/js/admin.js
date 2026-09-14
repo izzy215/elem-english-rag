@@ -44,6 +44,7 @@ async function loadEval() {
   $('#evalHint').innerHTML = (r.hit_at_3 >= .8 ? '목표(80%) 달성' : '목표 80%까지 ' + Math.round((.8 - r.hit_at_3) * 100) + '%p 남음') + (extra ? ' · ' + extra : '') + stale;
   renderMiss(r.rows || []);
 }
+const day = iso => iso ? iso.slice(5, 10) : '–';   // "09-14" — 비교 표(renderRuns)·튜터 표(renderFix) 공용
 function renderRuns(hist, runs) {   // 표: eval_history.latest (모델·재랭킹별 최신 실행) — 시험지(문장 수 + data_hash)별로 묶고, 같은 시험지 안에서 hit@3 최고 행 강조. 서버 재시작 전(404)이면 예전 runs 막대
   const latest = (hist && Array.isArray(hist.latest) && hist.latest.length) ? hist.latest : null;
   if (!latest) {
@@ -57,7 +58,6 @@ function renderRuns(hist, runs) {   // 표: eval_history.latest (모델·재랭�
   const sheet = x => `${x.n ?? 0}|${String(x.data_hash || '').replace(/^sha256:/, '').slice(0, 6)}`;   // 시험지 = 문장 수 + 해시 앞 6자리 (다르면 직접 비교 불가)
   const rows = [...latest].sort((a, b) => (b.n || 0) - (a.n || 0) || sheet(a).localeCompare(sheet(b)) || (b.hit_at_3 || 0) - (a.hit_at_3 || 0));
   const bestOf = {}; rows.forEach(x => { const k = sheet(x); bestOf[k] = Math.max(bestOf[k] ?? -1, x.hit_at_3 || 0); });
-  const day = iso => iso ? iso.slice(5, 10) : '–';
   let prev = null;
   const hidden = hist.sheet && hist.sheet.hidden_labels ? ` · 지금 시험지(${hist.sheet.n}문장)와 짝이 안 맞는 실행 ${hist.sheet.hidden_labels}건은 숨김` : '';
   $('#runs').innerHTML = `<div class="d">임베딩 모델 · 재랭킹 비교 (같은 시험지 ${hist.sheet ? hist.sheet.n + '문장' : ''} 기준)</div>`;
@@ -68,7 +68,7 @@ function renderRuns(hist, runs) {   // 표: eval_history.latest (모델·재랭�
       const k = sheet(x), sep = prev !== null && k !== prev; prev = k;
       const best = (x.hit_at_3 || 0) === bestOf[k];
       const tip = `${x.file || ''}${x.evaluated_at ? ' · ' + when(x.evaluated_at) + ' 측정' : ''}${x.data_hash ? ' · ' + x.data_hash : ''}`;   // 실행 파일·측정 시각·해시는 행 툴팁으로만 (열로 두면 패널 밖으로 넘침)
-      return `<tr class="${sep ? 'sep' : ''}${best ? ' best' : ''}" title="${esc(tip)}"><td>${x.total_n ?? x.n ?? '–'}문장<span class="sm">${esc(day(x.evaluated_at))} 측정</span></td><td class="m">${esc(x.model || '?')}</td><td class="m">${x.reranker ? esc(x.reranker) : '<span style="color:var(--muted)">검색만</span>'}</td>
+      return `<tr class="${sep ? 'sep' : ''}${best ? ' best' : ''}" title="${esc(tip)}"><td>${x.total_n ?? x.n ?? '–'}문장<span class="sm">${esc(day(x.evaluated_at))} 측정</span></td><td class="m">${esc(x.model || '?')}${x.corpus && x.corpus !== 'rules' ? `<span class="sm">${esc(x.corpus_label || x.corpus)}</span>` : ''}</td><td class="m">${x.reranker ? esc(x.reranker) : '<span style="color:var(--muted)">검색만</span>'}</td>
         ${has5 ? `<td class="n">${x.hit_at_5 != null ? pct(x.hit_at_5) : '–'}</td>` : ''}<td class="n">${pct(x.hit_at_3)}</td><td class="n">${pct(x.hit_at_1)}</td></tr>`;
     }).join('') + `</table>
     <div class="d sub">실행 ${(hist.runs || []).length}회${hidden} · <code>python -m tests.eval_rag --retrieval-only</code> 로 실행하면 자동 추가 · 행에 마우스를 올리면 실행 파일 · 측정 시각 · 해시</div>`;
@@ -96,7 +96,9 @@ async function loadLog() {
   }
   const llm = Object.entries(r.llm || {}).map(([k, v]) => `${esc(k)} ${v}`).join(' · ');
   const tm = r.timing ? ` · 평균 응답 <b>${(r.timing.total_ms / 1000).toFixed(1)}초</b> (검색 ${(r.timing.search_ms / 1000).toFixed(1)}초 · 모델 호출 ${r.timing.llm_calls}회, ${r.timing.n}문장 기준)` : '';
-  $('#logDesc').innerHTML = `문장 <b>${r.n}</b>개 · 맞음 ${r.ok_n} · 고침 ${r.n - r.ok_n} · 학생 ${r.students}명${llm ? ` · 처리 모델: ${llm}` : ''}${tm}`;
+  const gr = r.grounded ? ` · 설명이 규칙 문서에서 나옴 <b>${r.grounded.yes}/${r.grounded.n}</b>` : '';   // 규칙으로 고친 문장 중 설명(why)이 검색된 규칙 문서 본문인 비율 — RAG 근거성 지표
+  const tbl = r.textbook ? ` · 교과서 표현으로 고침 <b>${r.textbook.used_pattern}/${r.textbook.n}</b> · 학년 밖 단어 나온 문장 <b>${r.textbook.outside.length}</b>` : '';   // 서버가 used_pattern·outside_words 를 로그에 쓰기 시작하면 표시
+  $('#logDesc').innerHTML = `문장 <b>${r.n}</b>개 · 맞음 ${r.ok_n} · 고침 ${r.n - r.ok_n} · 학생 ${r.students}명${llm ? ` · 처리 모델: ${llm}` : ''}${tm}${gr}${tbl}`;
   if (!r.rows.length) { $('#logTable').innerHTML = ''; $('#logHint').innerHTML = '<div class="empty">이 기간에 고친 문장이 없어요.</div>'; return; }
   $('#logTable').innerHTML = `<tr><th>규칙</th><th style="text-align:right">걸린 횟수</th><th style="text-align:right">학생 수</th><th>예시 문장 (최근)</th></tr>` + r.rows.map((x, i) => `
     <tr><td>${esc(x.name)} <span style="color:var(--muted);font-size:.75rem">${esc(x.rule_id)}</span></td>
@@ -171,6 +173,7 @@ async function loadEvalRun() {
     const d = evOpts.default || {};
     $('#evBackend').innerHTML = (evOpts.backends || []).map(b => `<option value="${esc(b)}" ${b === d.backend ? 'selected' : ''}>${esc(b)}${b === d.backend ? ' (.env)' : ''}</option>`).join('');
     $('#evRerank').innerHTML = '<option value="">재랭킹 없음(검색만)</option>' + (evOpts.rerankers || []).map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
+    $('#evCorpus').innerHTML = (evOpts.corpora || [{ id: 'rules', label: '규칙 설명문' }]).map(c => `<option value="${esc(c.id)}">${esc(c.label)}</option>`).join('');
     $('#evBackend').addEventListener('change', evFillModels); $('#evRerank').addEventListener('change', evFillModels);
     evFillModels();
   }
@@ -188,13 +191,13 @@ async function loadEvalRun() {
   else $('#evStatus').textContent = evOpts?.note?.[$('#evBackend').value] || '';
 }
 async function runEval() {
-  const backend = $('#evBackend').value, model = $('#evModel').value || null, rerank = $('#evRerank').value || null, topn = parseInt($('#evTopn').value) || 10;
+  const backend = $('#evBackend').value, model = $('#evModel').value || null, rerank = $('#evRerank').value || null, topn = parseInt($('#evTopn').value) || 10, corpus = $('#evCorpus').value || 'rules';
   if (backend === 'gemini') {
     const n = (parseInt($('#evalN').textContent) || 0) + 100;
     if (!confirm(`Gemini 임베딩 약 ${n}회를 써요 (무료 한도 하루 1,000회). 계속할까요?`)) return;
   }
   $('#evBtn').disabled = true; $('#evStatus').textContent = '시작하는 중…';
-  try { await api('/api/admin/eval_run', { method: 'POST', body: JSON.stringify({ backend, model, rerank, topn }) }); }
+  try { await api('/api/admin/eval_run', { method: 'POST', body: JSON.stringify({ backend, model, rerank, topn, corpus }) }); }
   catch (e) { $('#evStatus').innerHTML = '시작 실패: ' + esc(e.message); $('#evBtn').disabled = false; return; }
   loadEvalRun();
 }
@@ -207,15 +210,18 @@ function renderFix(h) {
   $('#fxRuleAcc').textContent = L ? pct(L.rule_acc) : '–'; $('#fxRuleAcc').classList.toggle('na', !L);
   $('#fxKept').textContent = L && L.normal_kept != null ? pct(L.normal_kept) : '–'; $('#fxKept').classList.toggle('na', !L || L.normal_kept == null);
   $('#fxFail').textContent = L ? String(L.failures) : '–'; $('#fxFail').classList.toggle('na', !L);
+  const tbOn = L && L.used_pattern != null;   // 서버가 used_pattern·outside_words 를 주기 시작한 실행만 값이 있음
+  $('#fxTbUse').textContent = tbOn ? pct(L.used_pattern) : '측정 예정'; $('#fxTbUse').classList.toggle('na', !tbOn);
+  $('#fxOut').textContent = tbOn ? pct(L.outside_words) : '측정 예정'; $('#fxOut').classList.toggle('na', !tbOn);
   $('#fxHint').textContent = L ? `최근 실행 ${when(L.ran_at)} · ${L.backend}:${L.model || ''} · ${L.no_rag ? '검색 없음' : 'RAG (임베딩 ' + (L.embedding || '?') + ')'} · 오류 ${L.n_err}문장 중 정답 규칙 ${L.hit} · 놓침 ${L.missed} · 다른 규칙 ${L.wrong_rule} · 정상 ${L.n_norm}문장 중 오교정 ${L.false_fix} · 평균 ${L.avg_ms ?? '?'}ms`
     : `지금 시험지(${h.sheet?.n ?? '?'}문장)로 돌린 실행이 아직 없어요. 모델을 고르고 [실행]을 눌러 주세요.${h.sheet?.hidden ? ` (다른 시험지 실행 ${h.sheet.hidden}건은 숨김)` : ''}`;
   if (!runs.length) { $('#fixRuns').innerHTML = ''; $('#fixMiss').innerHTML = ''; $('#fxMissHint').textContent = ''; return; }
   const best = Math.max(...runs.filter(r => r.n === (L && L.n)).map(r => r.rule_acc || 0));   // 최고 강조는 최근 실행과 문장 수가 같은 것끼리
-  $('#fixRuns').innerHTML = `<colgroup><col style="width:22%"><col style="width:26%"><col style="width:13%"><col style="width:13%"><col style="width:13%"><col style="width:13%"></colgroup>
-    <tr><th>실행</th><th>모델</th><th>검색</th><th style="text-align:right" title="오류 문장 중 정답 규칙을 고른 비율">규칙 정답</th><th style="text-align:right" title="정상 문장을 고치지 않은 비율">정상 유지</th><th style="text-align:right">응답</th></tr>` + runs.map(r => `
+  $('#fixRuns').innerHTML = `<colgroup><col style="width:20%"><col style="width:22%"><col style="width:12%"><col style="width:11%"><col style="width:11%"><col style="width:12%"><col style="width:12%"></colgroup>
+    <tr><th>실행</th><th>모델</th><th>검색</th><th style="text-align:right" title="오류 문장 중 정답 규칙을 고른 비율">규칙 정답</th><th style="text-align:right" title="정상 문장을 고치지 않은 비율">정상 유지</th><th style="text-align:right" title="고친 문장이 교과서 패턴을 쓴 비율 / 학년 밖 단어가 든 비율 (서버가 주는 실행만)">교과서/밖</th><th style="text-align:right">응답</th></tr>` + runs.map(r => `
     <tr class="${r.n === (L && L.n) && (r.rule_acc || 0) === best ? 'best' : ''}" title="${esc(r.file)} · 놓침 ${r.missed} · 다른 규칙 ${r.wrong_rule} · 오교정 ${r.false_fix} · 실패 ${r.failures}">
-      <td>${esc(day(r.ran_at))}<span class="sm">${r.n}문장${r.label ? ' · ' + esc(r.label) : ''}</span></td><td class="m">${esc(r.backend)}:${esc(r.model || '')}</td><td>${r.no_rag ? '없음' : 'RAG'}</td>
-      <td class="n">${pct(r.rule_acc)}</td><td class="n">${r.normal_kept != null ? pct(r.normal_kept) : '–'}</td><td class="n">${r.avg_ms != null ? (r.avg_ms / 1000).toFixed(1) + 's' : '–'}</td></tr>`).join('');
+      <td>${esc(day(r.ran_at))}<span class="sm">${r.n}문장${r.label ? ' · ' + esc(r.label) : ''}</span></td><td class="m">${esc(r.backend)}:${esc(r.model || '')}</td><td>${r.no_rag ? '없음' : 'RAG'}${r.no_textbook ? '<span class="sm">교과서 없음</span>' : ''}</td>
+      <td class="n">${pct(r.rule_acc)}</td><td class="n">${r.normal_kept != null ? pct(r.normal_kept) : '–'}</td><td class="n">${r.used_pattern != null ? pct(r.used_pattern) + ' / ' + pct(r.outside_words) : '–'}</td><td class="n">${r.avg_ms != null ? (r.avg_ms / 1000).toFixed(1) + 's' : '–'}</td></tr>`).join('');
   const miss = h.misses || [];
   if (!miss.length) { $('#fixMiss').innerHTML = ''; $('#fxMissHint').textContent = '틀린 문장 없음'; return; }
   $('#fixMiss').innerHTML = `<colgroup><col style="width:40%"><col style="width:14%"><col style="width:22%"><col style="width:24%"></colgroup><tr><th>문장</th><th>정답</th><th>튜터 판정</th><th>고친 문장</th></tr>` + miss.map(x => `
@@ -245,17 +251,47 @@ async function loadFix() {
   renderFix(h);
 }
 async function runFix() {
-  const backend = $('#fxBackend').value || null, no_rag = $('#fxRag').value === 'norag', sz = $('#fxSize').value, limit = parseInt($('#fxLimit').value) || 0;
+  const backend = $('#fxBackend').value || null, no_rag = $('#fxRag').value === 'norag', sz = $('#fxSize').value, limit = parseInt($('#fxLimit').value) || 0, textbook = $('#fxTb').value !== '0';
   const size = sz === 'all' ? { limit } : { per_rule: parseInt(sz), normal: 20 * parseInt(sz), limit };   // 규칙당 n + 정상 20n, 그 위에 앞 N문장 자르기
   if (backend === 'gemini' && !confirm('Gemini 는 분당 15회 제한이라 360문장에 30분 넘게 걸려요. 계속할까요?')) return;
   $('#fxBtn').disabled = true; $('#fxStatus').textContent = '시작하는 중…';
-  try { await api('/api/admin/fix_run', { method: 'POST', body: JSON.stringify({ backend, no_rag, ...size }) }); }
+  try { await api('/api/admin/fix_run', { method: 'POST', body: JSON.stringify({ backend, no_rag, textbook, ...size }) }); }
   catch (e) { $('#fxStatus').innerHTML = '시작 실패: ' + esc(e.message); $('#fxBtn').disabled = false; return; }
   loadFix();
+}
+
+// ---------- 교과서 검색 시험 (GET /api/admin/textbook?q=&level=) ----------
+async function loadTextbook() {
+  let r = null;
+  try { r = await api('/api/admin/textbook'); }
+  catch (e) { $('#tbStatus').innerHTML = e.status === 404 ? '<span class="tag">서버 재시작 필요</span> <code>/api/admin/textbook</code> (backend/textbook.py)' : '읽기 실패: ' + esc(e.message); $('#tbBtn').disabled = true; return; }
+  const m = r.index;
+  $('#tbStatus').innerHTML = m ? `색인: 패턴 ${m.patterns} · 단어 ${m.words} · 임베딩 ${esc(m.model || '')} · ${esc(when(m.generated_at))} 생성` : '색인 없음 — <code>python -m backend.textbook --rebuild</code>';
+  $('#tbBtn').disabled = !m;
+  $('#tbQ').addEventListener('keydown', e => { if (e.key === 'Enter') runTextbook(); });
+}
+async function runTextbook() {
+  const q = $('#tbQ').value.trim(), level = parseInt($('#tbLevel').value) || 3;
+  if (!q) return;
+  $('#tbBtn').disabled = true; $('#tbTable').innerHTML = '<tr><td>검색 중…</td></tr>';
+  let r = null;
+  try { r = await api(`/api/admin/textbook?q=${encodeURIComponent(q)}&level=${level}&k=5`); }
+  catch (e) { $('#tbTable').innerHTML = `<tr><td class="bad">검색 실패: ${esc(e.message)}</td></tr>`; $('#tbBtn').disabled = false; return; }
+  $('#tbBtn').disabled = false;
+  const x = r.result || {};
+  if (x.error) { $('#tbTable').innerHTML = `<tr><td class="bad">${esc(x.error)}</td></tr>`; hideResult('#tbJudge'); return; }
+  if (r.gap != null) showResult('#tbJudge', `${r.hint ? '📖 교과서에 닮은 문장이 있어요 → 힌트로 넣음' : '닮은 문장이 뚜렷하지 않음 → 힌트 안 넣음 (지금 동작 그대로)'} · 1위 <b>${(r.top ?? 0).toFixed(3)}</b> (기준 ${r.top_threshold}) · 1위−5위 차이 <b>${r.gap.toFixed(3)}</b> (기준 ${r.gap_threshold})`, r.hint ? '' : 'todo'); else hideResult('#tbJudge');
+  const rows = [...(x.patterns || []).map(p => ({ kind: '패턴', score: p.score, level: p.level, unit: p.unit, text: p.text, sub: `${p.meaning || ''}${p.tip ? ' · ' + p.tip : ''}${p.rule_id ? ' · ' + p.rule_id : ''}` })),
+                ...(x.words || []).map(w => ({ kind: '단어', score: w.score, level: w.level, unit: w.unit, text: w.word, sub: `${w.meaning || ''} — ${w.example || ''}` }))];
+  const best = { 패턴: Math.max(0, ...(x.patterns || []).map(p => p.score)), 단어: Math.max(0, ...(x.words || []).map(w => w.score)) };
+  $('#tbTable').innerHTML = `<colgroup><col style="width:9%"><col style="width:10%"><col style="width:13%"><col style="width:30%"><col style="width:38%"></colgroup>
+    <tr><th>종류</th><th style="text-align:right">점수</th><th>학년·유닛</th><th>자료</th><th>뜻 · 팁</th></tr>` + rows.map(o => `
+    <tr class="${o.score === best[o.kind] ? 'top' : ''}"><td>${o.kind}</td><td class="n">${o.score.toFixed(3)}</td><td>${o.level}학년 ${esc(o.unit || '')}</td><td>${esc(o.text)}</td><td>${esc(o.sub)}</td></tr>`).join('')
+    + `<tr><td colspan="5" style="color:var(--muted)">"${esc(q)}" · ${level}학년까지 · ${x.query_ms}ms · 이 학년까지 교과서 단어 ${r.known_words_n}개 (고친 문장의 단어가 여기 없으면 "학년 밖 단어"로 표시할 예정)</td></tr>`;
 }
 
 (async function init() {
   renderTopbar({ crumbs: false });      // 관리자 화면은 학습 위치(Level·Unit)와 무관
   const h = await showHealth();
-  await Promise.all([loadGolden(h), loadEval(), loadLog(), loadGen(), loadEvalRun(), loadFix()]);
+  await Promise.all([loadGolden(h), loadEval(), loadLog(), loadGen(), loadEvalRun(), loadFix(), loadTextbook()]);
 })();

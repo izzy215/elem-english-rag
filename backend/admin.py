@@ -19,7 +19,7 @@ from fastapi import APIRouter, HTTPException
 
 from pydantic import BaseModel
 
-from backend import evalrun, gapcheck, golden, llm, tutor
+from backend import evalrun, gapcheck, golden, llm, textbook, tutor
 from backend.config import settings
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -109,6 +109,13 @@ def sentence_log(days: int = 7):
         "ok_n": sum(1 for r in rows if r.get("ok")),
         "students": len({r.get("student") for r in rows}),
         "llm": dict(Counter(r.get("llm") or "?" for r in rows)),   # 어느 모델이 몇 문장 처리했나 (발표용)
+        # 설명이 검색 문서(rules.jsonl)에서 나온 문장 수 — "RAG 답의 내용이 검색 문서에서 나오는가" 지표. grounded 필드는 2026-09-14 부터 기록 (없는 옛 행은 분모에서 뺌)
+        "grounded": (lambda t: {"n": len(t), "yes": sum(1 for x in t if x.get("grounded"))} if t else None)(
+            [r for r in rows if r.get("grounded") is not None and not r.get("ok") and r.get("rule_id") not in (None, "OTHER")]),
+        # 교과서 범위 지표 (tutor 가 used_pattern·outside_words 를 로그에 쓰기 시작하면 채워짐): 교과서 표현으로 고친 문장 수 · 학년 밖 단어가 나온 문장
+        "textbook": (lambda t: {"n": len(t), "used_pattern": sum(1 for x in t if x.get("used_pattern")),
+                                "outside": [{"text": x.get("text"), "fixed": x.get("fixed"), "words": x.get("outside_words")} for x in t if x.get("outside_words")][:20]} if t else None)(
+            [r for r in rows if "used_pattern" in r and not r.get("ok") and r.get("rule_id") not in (None, "OTHER")]),
         "rows": out,
         # 처리 시간 (ms 평균): 전체 · 검색 · 모델 호출 수 — total_ms 가 있는 행만 (성공한 문장). 시연 때 "몇 초 걸리나" 답용
         "timing": (lambda t: {"n": len(t), "total_ms": int(sum(x.get("total_ms") or 0 for x in t) / len(t)),
@@ -159,8 +166,11 @@ def eval_history():
         idx = d.get("index") or {}
         reranker = d.get("reranker") or idx.get("reranker")
         model = idx.get("model") or "?"
+        corpus = d.get("corpus") or "rules"
+        corpus_kr = d.get("corpus_label") or {"rules": "규칙 설명문", "errors": "틀린 예문", "both": "예문+설명문"}.get(corpus, corpus)
         runs.append({"file": path.name, "evaluated_at": d.get("evaluated_at"), "model": model, "provider": idx.get("provider"),
-                     "reranker": reranker, "label": model + (f" + 재랭킹({reranker})" if reranker else ""),
+                     "reranker": reranker, "corpus": corpus, "corpus_label": corpus_kr,
+                     "label": model + (f" · {corpus_kr}" if corpus != "rules" else "") + (f" + 재랭킹({reranker})" if reranker else ""),
                      "n": d.get("n"), "total_n": d.get("total_n"), "k": d.get("k"),
                      "hit_at_1": d.get("hit_at_1"), "hit_at_3": d.get("hit_at_3"), "hit_at_5": d.get("hit_at_5"),
                      "search_failures": d.get("search_failures"), "data_hash": d.get("data_hash"),
@@ -180,6 +190,7 @@ class EvalRunIn(BaseModel):
     model: str | None = None           # local/remote 모델 이름 (.env 표에서 고름)
     rerank: str | None = None          # 재랭커 이름. 없으면 검색만
     topn: int = 10                     # 재랭킹에 넣을 검색 상위 개수
+    corpus: str = "rules"              # 검색 대상: rules(규칙 설명문) | errors(틀린 예문) | both
 
 
 @router.get("/eval_run")
@@ -192,7 +203,9 @@ def eval_run_status():
 def eval_run_start(body: EvalRunIn):
     if body.backend not in ("gemini", "local", "remote"):
         raise HTTPException(400, "backend 는 gemini/local/remote 중 하나")
-    return evalrun.start_job(body.backend, (body.model or "").strip() or None, (body.rerank or "").strip() or None, body.topn)
+    if body.corpus not in ("rules", "errors", "both"):
+        raise HTTPException(400, "corpus 는 rules/errors/both 중 하나")
+    return evalrun.start_job(body.backend, (body.model or "").strip() or None, (body.rerank or "").strip() or None, body.topn, body.corpus)
 
 
 # ── 튜터 평가 (/fix 끝까지: 검색 → LLM → 검증 → 정답 규칙과 비교) → tests/eval_fix.py 서브프로세스 ──
@@ -203,6 +216,7 @@ class FixRunIn(BaseModel):
     limit: int = 0                     # 앞 n 문장만 (0 = 전부)
     per_rule: int = 0                  # 규칙당 n 문장만 (0 = 전부). 화면의 "빠르게" 가 1
     normal: int = -1                   # 정상 문장 n 개만 (-1 = 전부)
+    textbook: bool = True              # False 면 교과서 검색(패턴 힌트) 없이 — 교과서 범위 효과 비교용 (tutor 가 FIX_TEXTBOOK=0 을 읽을 때 유효)
 
 
 @router.get("/fix_history")
@@ -221,7 +235,27 @@ def fix_run_start(body: FixRunIn):
     backend = (body.backend or settings.llm_backend or "gemini").strip()
     if backend not in llm.backends():
         raise HTTPException(400, f"모르는 백엔드: {backend} (가능: {llm.backends()})")
-    return evalrun.start_fix_job(backend, body.no_rag, body.label, max(0, min(body.limit, 1000)), max(0, body.per_rule), max(-1, body.normal))
+    return evalrun.start_fix_job(backend, body.no_rag, body.label, max(0, min(body.limit, 1000)), max(0, body.per_rule), max(-1, body.normal), body.textbook)
+
+
+# ── 교과서 검색 시험 (backend/textbook.py 프로토타입 — 패턴·단어 색인에서 학생 문장과 가까운 것) ──
+@router.get("/textbook")
+def textbook_search(q: str = "", level: int = 3, k: int = 5, min_score: float = 0.0):
+    """색인 상태 + (q 가 있으면) 검색 결과. 교수님 대응 2 의 "검색이 답에 무엇을 보태나" 를 눈으로 보는 화면용."""
+    info = textbook.load_manifest()
+    q = (q or "").strip()
+    if not q:
+        return {"index": info, "result": None}
+    if not (1 <= len(q) <= 300):
+        raise HTTPException(400, "문장은 1~300자")
+    r = textbook.search_textbook(q, level=max(3, min(level, 6)), k_pattern=max(1, min(k, 10)), k_word=max(1, min(k, 10)), min_score=min_score)
+    # 힌트를 넣을지 판정 근거 (RAG 담당이 실측으로 다듬을 임시 기준): 1위 점수 ≥ 0.85 이고 1위−5위 차이 ≥ 0.06.
+    # 9/14 실측 — 교과서 문장 "I like pizza." 0.900/차이 0.107, "I go to school by bus." 0.878/0.073 · 애매한 "I like you." 0.861/0.049 · 엉뚱한 문장 0.842/0.046
+    ps = [p["score"] for p in r.get("patterns", [])]
+    gap = round(ps[0] - ps[min(4, len(ps) - 1)], 4) if len(ps) >= 2 else None
+    top = ps[0] if ps else None
+    return {"index": info, "result": r, "known_words_n": len(textbook.known_words(level)), "gap": gap, "top": top,
+            "gap_threshold": 0.06, "top_threshold": 0.85, "hint": (gap is not None and gap >= 0.06 and top >= 0.85)}
 
 
 def eval_sheet_hash() -> str:

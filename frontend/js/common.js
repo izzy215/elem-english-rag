@@ -91,13 +91,38 @@ async function fetchNotebook(student) {           // 서버 우선, 없으면 �
 }
 
 // ---------- 오디오: 듣기(TTS) · 녹음 · 파형 ----------
+// 첫 재생은 서버가 음원을 만들어서(Gemini TTS) 몇 초 걸린다. 그 사이 다른 걸 누르면 **마지막에 누른 것만** 재생한다 —
+// 이전 요청은 결과가 와도 버린다 (단어 A 를 누르고 기다리다 B 를 누르면 B 가 나온 뒤 A 가 뒤늦게 재생되던 버그).
+// 누른 버튼은 로딩 표시(🔊 … / 칩은 점선 테두리), 같은 묶음(data-tts-group)의 다른 버튼은 로딩 동안 잠근다.
+// data-tts-keep="1" 인 버튼(단어 칩처럼 안에 HTML 이 있는 것)은 글자를 바꾸지 않고 클래스만 바꾼다.
+let TTS = { seq: 0, btn: null, label: '', url: null };
+function _ttsReset(btn, label) { if (!btn) return; btn.classList.remove('on', 'loading'); btn.removeAttribute('aria-busy'); if (!btn.dataset.ttsKeep) btn.textContent = label; }
 async function playTTS(itemId, btn, label = '🔊 듣기') {
   const p = $('#player'); if (!p) return;
-  if (btn) { btn.classList.add('on'); btn.textContent = '🔊 …'; }
+  const seq = ++TTS.seq;
+  try { p.pause(); } catch (_) {}
+  if (TTS.btn && TTS.btn !== btn) _ttsReset(TTS.btn, TTS.label);
+  if (TTS.url) { URL.revokeObjectURL(TTS.url); TTS.url = null; }
+  TTS.btn = btn; TTS.label = label;
+  const group = btn?.dataset.ttsGroup ? $$(`[data-tts-group="${btn.dataset.ttsGroup}"]`) : [];
+  const lock = on => group.forEach(b => { if (b !== btn) b.disabled = on; });
+  if (btn) { btn.classList.add('on', 'loading'); btn.setAttribute('aria-busy', 'true'); if (!btn.dataset.ttsKeep) btn.textContent = '🔊 …'; }
+  lock(true);
   try {
-    const r = await fetch(`/api/tts/${itemId}`); if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
-    p.src = `/api/tts/${itemId}`; await p.play(); p.onended = () => { if (btn) { btn.classList.remove('on'); btn.textContent = label; } };
-  } catch (e) { if (btn) { btn.classList.remove('on'); btn.textContent = label; } throw e; }
+    const r = await fetch(`/api/tts/${itemId}`);
+    if (seq !== TTS.seq) return;                                         // 그 사이 다른 걸 눌렀음 → 이 결과는 버린다
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+    const blob = await r.blob(); if (seq !== TTS.seq) return;
+    const url = URL.createObjectURL(blob); TTS.url = url;                 // 받은 음원을 그대로 재생 (같은 파일을 두 번 받지 않음)
+    p.src = url; await p.play(); if (seq !== TTS.seq) return;
+    if (btn) { btn.classList.remove('loading'); btn.removeAttribute('aria-busy'); if (!btn.dataset.ttsKeep) btn.textContent = label; }   // 재생 시작: 로딩만 끄고 'on' 은 끝날 때까지
+    lock(false);
+    p.onended = () => { if (seq === TTS.seq && btn) btn.classList.remove('on'); };
+  } catch (e) {
+    if (seq !== TTS.seq) return;
+    lock(false); _ttsReset(btn, label);
+    throw e;
+  }
 }
 // 이 브라우저에서 녹음이 되는지. 안 되면 이유 문자열, 되면 null (카카오톡 인앱 브라우저 등은 마이크 API 가 없음)
 function micSupport() {

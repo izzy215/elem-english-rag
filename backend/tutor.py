@@ -2,7 +2,7 @@
 튜터 — 내 문장 고쳐주기 (PRD 4.3)   담당: 팀장
 
 POST /api/fix  {student, level, unit, text, source}
-  → {ok, rule{id,name,score,rank}, runner_up, wrong, fix, fixed, why, source, more_errors, full_fixed, spelling,
+  → {ok, rule{id,name,score,rank}, runner_up, wrong, fix, fixed, why(규칙이면 규칙 문서 본문), model_why, explanation{source,short,text,examples}, grounded, source, more_errors, full_fixed, spelling,
      suggested_questions, mission, log_id, mode, fallback_reason, candidates, llm, timing}
 
 동작:
@@ -681,6 +681,13 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         rule_field, source = None, None
     runner_up = {"id": second["id"], "name": second["type"], "score": round(second["score"], 4), "rank": cands.index(second) + 1} if (rule and second and mode == "rag") else None   # 모델이 고른 것 외 최고 후보 (rank 는 검색 순위 — 모델이 22위를 골랐으면 이게 1위일 수 있음). ok 면 null
 
+    # 설명은 검색된 규칙 문서에서 (RAG 의 "답 내용이 검색 문서에서 나온다" 조건). 모델의 why 는 규칙 문서가 없는 경우(OTHER·철자·맞는 문장)에만 쓰고,
+    # 규칙을 골랐을 때는 model_why 로만 남긴다 (DEV 화면·비교용). grounded = 설명이 문서에서 나왔는가 — 관리자 지표
+    doc = golden.find_rule(rule["id"]) if (rule and not other) else None
+    model_why = "" if ok else (out.get("why") or "")
+    explanation = ({"source": "rule", "rule_id": doc["id"], "short": doc.get("short") or doc.get("type") or "", "text": doc.get("text") or "",
+                    "examples": list(doc.get("examples") or []), "wrong_example": doc.get("wrong_example") or ""} if doc
+                   else {"source": "fixed" if ok else "model", "rule_id": rule_field["id"] if rule_field else None, "short": "", "text": "", "examples": [], "wrong_example": ""})
     result = {
         "ok": ok,
         "rule": rule_field,
@@ -688,7 +695,10 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         "wrong": None if ok else out.get("wrong"),
         "fix": None if ok else out.get("fix"),
         "fixed": orig if ok else fixed,
-        "why": "문법에 맞는 문장이에요. 다른 문장도 말해볼까요?" if ok else (out.get("why") or ""),   # 맞는 문장이면 고정 문구 — 모델이 미션 지적을 why 에 섞는 것 방지 (미션은 mission.nudge 로만)
+        "why": "문법에 맞는 문장이에요. 다른 문장도 말해볼까요?" if ok else (doc["text"] if doc else model_why),   # 맞는 문장이면 고정 문구 — 모델이 미션 지적을 why 에 섞는 것 방지 (미션은 mission.nudge 로만). 규칙이면 규칙 문서 본문
+        "model_why": model_why,                                # 모델이 쓴 설명 (규칙을 골랐을 땐 화면에 안 씀 — DEV 근거 박스·비교용)
+        "explanation": explanation,                            # {"source": rule|model|fixed, rule_id, short, text, examples, wrong_example} — 화면 설명 카드는 이걸 그린다
+        "grounded": doc is not None,                           # 설명이 검색 문서(rules.jsonl)에서 나왔는가
         "source": source,
         "more_errors": bool(out.get("more_errors")) and not ok and not other,
         "full_fixed": (full_fixed if spelling else orig) if ok else full_fixed,   # 다 고친 문장. ok 면 철자만 고친 문장(없으면 원문)
@@ -710,7 +720,7 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
             "log_id": log_id, "ts": datetime.now().isoformat(timespec="seconds"), "student": student,
             "level": level, "unit": unit, "text": orig, "source": source_kind,
             "spelled": text if pre_spelling else None,        # 사전검사로 철자 고친 뒤 실제로 진단한 문장
-            "rule_id": rule["id"] if rule else None, "ok": ok, "fixed": result["fixed"],
+            "rule_id": rule["id"] if rule else None, "ok": ok, "fixed": result["fixed"], "grounded": result["grounded"],
             "mission_ok": result["mission"]["ok"], "mode": mode, "fallback_reason": fallback_reason,
             "top_score": round(top["score"], 4) if top else None,
             "llm": llm_info.get("backend"), "llm_ms": llm_info.get("ms"),
