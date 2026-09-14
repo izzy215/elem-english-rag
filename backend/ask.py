@@ -515,9 +515,19 @@ def _answer(body: AskIn) -> dict:
         return {"answer": "", "source": [], "offtopic": True, "error": "GEMINI_API_KEY 미설정"}
 
     ctx = body.context
+    # "그거/왜 그래?" 같은 이어가기 질문인데 화면이 rule_id를 안 줬으면, 방금 대화 로그에서
+    # 마지막으로 근거 규칙이 있던 턴의 rule_id를 가져와 채운다 — history_block(자연어 대화 기록)만
+    # 주면 LLM이 안 읽고 "뭘 말하는지 모르겠다"고 답하는 경우가 있어서(2026-09-14), "방금 나온
+    # 규칙" 필드에 구조적으로 명시해 더 확실히 전달한다.
+    rule_id = ctx.rule_id
+    if not rule_id and _REFERENTIAL_PATTERN.search(question):
+        last_grounded = next((t for t in reversed(_recent_chat_turns(body.student, max_turns=5)) if t.get("rule_ids")), None)
+        if last_grounded:
+            rule_id = last_grounded["rule_ids"][0]
+
     # rule_id가 있으면 관련 FAQ를 목록 앞쪽에 둬서 프롬프트에서 더 눈에 띄게 함
-    if ctx.rule_id:
-        all_faqs = sorted(all_faqs, key=lambda f: ctx.rule_id not in (f.get("rule_ids") or []))
+    if rule_id:
+        all_faqs = sorted(all_faqs, key=lambda f: rule_id not in (f.get("rule_ids") or []))
 
     log = _log_entry(ctx.log_id) if ctx.log_id else None
     log_block = ""
@@ -536,7 +546,7 @@ def _answer(body: AskIn) -> dict:
         notebook_block = "(모름)"
 
     prompt = PROMPT.format(
-        screen=ctx.screen or "(모름)", unit=ctx.unit or "(모름)", rule_id=ctx.rule_id or "(없음)",
+        screen=ctx.screen or "(모름)", unit=ctx.unit or "(모름)", rule_id=rule_id or "(없음)",
         log_block=log_block, history_block=_history_block(body.student), notebook_block=notebook_block,
         faq_block=_faq_block(all_faqs), question=question,
     )
