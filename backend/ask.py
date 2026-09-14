@@ -159,16 +159,38 @@ def _followup_questions(rule_ids: list[str], faq_list: list[dict], exclude_id: s
     return out
 
 
+def _word_answer(entry: dict, note: str = "") -> dict:
+    answer = f"{note}{entry['word']}는 '{entry['meaning']}'라는 뜻이에요."
+    if entry.get("example"):
+        answer += f" 예: {entry['example']}"
+    return {"answer": answer, "source": [], "offtopic": False, "suggested": []}
+
+
 def _word_match(question: str, words_pool: dict[str, dict]) -> dict | None:
     """질문에 등장한 영단어가 words.csv(교재 어휘 전체, ~400개)에 정확히 있으면 그 뜻으로 답한다.
     FAQ에 없는 대다수 교재 단어(예: play)가 계속 offtopic 처리되던 걸 확인해서 추가(2026-09-10)."""
-    for w in re.findall(r"[A-Za-z']+", question):
+    eng_words = re.findall(r"[A-Za-z']+", question)
+    for w in eng_words:
         entry = words_pool.get(w.lower())
         if entry:
-            answer = f"{entry['word']}는 '{entry['meaning']}'라는 뜻이에요."
-            if entry.get("example"):
-                answer += f" 예: {entry['example']}"
-            return {"answer": answer, "source": [], "offtopic": False, "suggested": []}
+            return _word_answer(entry)
+
+    # 정확히 못 찾으면 오타로 보고 tutor.py가 이미 만들어둔 철자 사전을 재사용해 교정 시도
+    # (2026-09-14 — "pencl이 뭐예요?"가 지금까지 그냥 offtopic으로 빠지던 문제, ask.py엔 철자
+    # 교정이 아예 없었음. tutor.py 파일 자체는 안 건드리고 함수만 읽기 전용으로 재사용).
+    try:
+        from backend.tutor import _spell
+        sp = _spell()
+    except Exception:
+        sp = None
+    if sp:
+        for w in eng_words:
+            lw = w.lower()
+            if lw in words_pool or len(lw) < 3:
+                continue
+            fixed = sp.correction(lw)
+            if fixed and fixed != lw and fixed in words_pool:
+                return _word_answer(words_pool[fixed], note=f"혹시 {words_pool[fixed]['word']}를 말씀하신 거죠? ")
     return None
 
 
