@@ -68,13 +68,21 @@ body.busy button{cursor:wait}
 .mini{flex:0 0 auto;background:var(--surface);border:0;border-radius:14px;padding:10px 12px;font-size:.78rem;min-width:118px;box-shadow:var(--shadow-sm);color:var(--muted);text-align:left}
 .mini b{display:block;font-family:'Nunito',sans-serif;font-size:1rem;color:var(--ink)}
 .mini.on{outline:2px solid var(--primary-2)}
-.dots{display:flex;gap:5px;justify-content:center;margin-top:10px} .dots i{width:6px;height:6px;border-radius:3px;background:var(--line)}
-.dots i.now{width:18px;background:var(--accent)} .dots i.ok{background:var(--primary)} .dots i.bad{background:var(--danger)}
+.mini.loading{outline:2px dashed var(--accent)} .mini.loading b::after{content:' …';color:var(--accent)}   /* 음원 만드는 중 (첫 재생) */
+.mini:disabled{opacity:.55}
+/* 패턴 단계 칩: 넓은 칩 n개 — 현재 = 진한 테두리, 통과 = 초록 채움 + ✓ (목업 9/14) */
+.pstep{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px} .pstep span{flex:1 1 40px;min-width:40px;height:34px;border-radius:12px;display:grid;place-items:center;font-size:.8rem;font-weight:800;background:var(--surface);border:2px solid var(--line);color:var(--muted);cursor:pointer;box-shadow:var(--shadow-sm);white-space:nowrap;padding:0 8px}
+.pstep span.cur{flex:2 1 80px}
+.pstep span.cur{border-color:var(--primary);color:var(--primary);background:var(--primary-soft)} .pstep span.done{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn.glow{box-shadow:0 0 0 4px var(--accent-soft),0 8px 18px rgba(20,85,74,.25)}
 
 /* 튜터 · 따라 말하기 */
-.task{background:linear-gradient(135deg,#FFF6E3,#FFEBC2);border-radius:18px;padding:14px 16px;font-size:.9rem;color:#5A3A08;position:relative;overflow:hidden;box-shadow:var(--shadow-sm);margin-top:8px}
-.task::after{content:'🎯';position:absolute;right:10px;top:8px;font-size:1.6rem}
-.task b{color:#A9690F}
+/* 오늘의 미션: 🎯 는 왼쪽 칸(글 위에 안 띄움) → 라벨 → 미션 문장(굵게, 줄바꿈 OK) → 힌트 단어 칩 (목업 9/14) */
+.task{background:linear-gradient(135deg,#FFF6E3,#FFEBC2);border-radius:18px;padding:12px 14px;color:#5A3A08;display:flex;gap:12px;align-items:flex-start;box-shadow:var(--shadow-sm);margin-top:8px}
+.task .ic{font-size:1.7rem;line-height:1;flex:0 0 auto;margin-top:2px} .task>div{min-width:0} .task .lb{font-size:.68rem;font-weight:800;color:#A9690F;letter-spacing:.04em}
+.task .ms{font-size:.96rem;font-weight:800;line-height:1.4;margin-top:2px;word-break:keep-all;overflow-wrap:anywhere}
+.task .hints{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px} .task .hints span{background:#fff;border:1px solid #E9D3A3;border-radius:999px;padding:3px 9px;font-size:.76rem;font-weight:800;color:#7A5210;font-family:'Nunito',sans-serif}
+.task .hints .k{background:transparent;border:0;padding:3px 0;color:#A9690F;font-family:inherit}
 .tools{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .tool{padding:13px;border:0;border-radius:16px;background:var(--surface);font-weight:800;font-size:.9rem;box-shadow:var(--shadow-sm)}
 .tool.on{background:var(--primary);color:#fff}
@@ -92,6 +100,21 @@ body.busy button{cursor:wait}
 .diag .fixed{font-family:'Nunito',sans-serif;font-size:1.15rem;font-weight:800;margin-top:8px;line-height:1.35}
 .diag .fixed s{color:var(--danger);font-weight:700;margin-right:4px;opacity:.8} .diag .fixed em{color:var(--primary-2);font-style:normal;background:var(--primary-soft);padding:0 6px;border-radius:6px}
 .diag .why{margin-top:8px;font-size:.88rem;line-height:1.55}
+.diag .why.doc{background:var(--primary-soft);border-radius:12px;padding:9px 12px;word-break:keep-all}   /* 설명이 규칙 문서(rules.jsonl)에서 온 경우 */
+.diag .doc-tag{display:block;font-size:.72rem;font-weight:800;color:var(--primary);margin-bottom:3px}
+.diag .doc-ex{margin-top:5px;font-size:.82rem;opacity:.85}
+/* 아이용 결과 카드 (목업 9/14): 규칙 칩 + 한 줄 구호 → 고친 문장 크게 → 타일(아이콘 + 두 줄) → 접힌 설명·근거 */
+.diag .kid{display:inline-block;margin-left:6px;font-size:.86rem;font-weight:800;color:var(--ink);vertical-align:middle}
+.diag .tiles{display:grid;gap:8px;margin-top:12px}
+.diag .tile{display:flex;gap:10px;align-items:flex-start;border-radius:14px;padding:10px 12px}
+.diag .tile.book{background:var(--sky)} .diag .tile.peer{background:var(--accent-soft)} .diag .tile.new{background:var(--primary-soft)}
+.diag .ti{font-size:1.45rem;line-height:1;margin-top:2px;flex:0 0 auto} .diag .tile>div{min-width:0;flex:1}
+.diag .tl{font-size:.7rem;font-weight:800;color:var(--muted);letter-spacing:.02em}
+.diag .tv{font-family:'Nunito','Noto Sans KR',sans-serif;font-size:1rem;font-weight:800;margin-top:2px;line-height:1.35;overflow-wrap:anywhere} .diag .tv s{color:var(--danger);opacity:.8;margin-right:3px} .diag .tv b{color:var(--primary-2)} .diag .tv u{text-decoration:underline wavy var(--danger);text-underline-offset:4px}
+.diag .ts{font-size:.76rem;color:var(--muted);margin-top:2px}
+.diag .tile .go{margin-top:6px} .diag .tile .go button{font:inherit;font-size:.74rem;font-weight:800;padding:5px 10px;border-radius:999px;border:1.5px solid #E2C48A;background:#fff;color:#7A5210}
+.diag details{margin-top:8px} .diag summary{cursor:pointer;font-size:.8rem;font-weight:800;color:var(--primary);list-style:none;padding:6px 0;user-select:none} .diag summary::-webkit-details-marker{display:none}
+.diag summary::before{content:'▸ ';} .diag details[open] summary::before{content:'▾ ';}
 .src{margin-top:10px;font-size:.76rem;background:var(--sky);border-radius:12px;padding:8px 11px;color:#2B4A5E;line-height:1.5}
 .src b{color:#1F5F86}
 .result{margin-top:8px;font-size:.86rem;padding:10px 13px;border-radius:12px;background:var(--primary-soft);color:#2C4A42;display:none;font-weight:700}
@@ -114,6 +137,9 @@ body.busy button{cursor:wait}
 .card.note .my{grid-column:2/-1;font-size:.8rem;font-family:'Nunito','Noto Sans KR',sans-serif} .card.note .my s{color:var(--danger);opacity:.8} .card.note .my em{color:var(--primary-2);font-style:normal;font-weight:800}
 .card.note .srcline{grid-column:2/-1;font-size:.72rem;color:var(--muted)}
 .card.note .btn{grid-column:2/-1;margin-top:6px;padding:9px}
+.card.note.open{box-shadow:0 0 0 3px var(--primary-soft)}
+.nbdrill{grid-column:1/-1;margin-top:8px} .nbdrill .q{box-shadow:none;border:1.5px solid var(--line);margin-top:4px;padding:12px 12px 10px}
+.nbdrill .prog{font-size:.72rem;color:var(--muted);font-weight:700;margin:2px 0 4px} .nbdrill .btn{margin-top:8px;padding:11px}
 .overcome{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px} .overcome span{background:var(--primary-soft);color:var(--primary);font-size:.76rem;font-weight:800;padding:4px 11px;border-radius:999px}
 .q{background:var(--surface);border-radius:20px;padding:18px 16px;margin-top:10px;box-shadow:var(--shadow)}
 .q .sent{font-family:'Nunito',sans-serif;font-size:1.1rem;font-weight:800;text-align:center} .q .sent u{text-decoration:underline wavy var(--danger);text-underline-offset:4px}

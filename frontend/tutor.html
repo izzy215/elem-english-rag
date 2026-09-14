@@ -12,7 +12,7 @@
   <header class="topbar" id="topbar"></header>
   <main>
     <h1>내 문장 말해보기</h1>
-    <div class="task" id="task">오늘의 미션 · <b id="mission"></b><br><span id="hintWords" style="font-size:.78rem;color:var(--muted)"></span></div>
+    <div class="task" id="task"><div class="ic">🎯</div><div><div class="lb">오늘의 미션</div><div class="ms" id="mission"></div><div class="hints" id="hintWords"></div></div></div>
     <div class="tools"><button class="tool" id="recBtn" onclick="record()">🎙 말하기</button><button class="tool" id="typeBtn" onclick="toggleType()">⌨ 쓰기</button></div>
     <div id="typeBox" style="display:none;margin-top:8px"><textarea class="txt" id="typeInput" placeholder="영어로 써 보세요" rows="2" oninput="onType()"></textarea></div>
     <div class="heard" id="heard" style="display:none"><div class="lbl" id="heardLbl">들린 문장</div><div class="s" id="heardS"></div></div>
@@ -20,8 +20,8 @@
     <button class="btn" id="fixBtn" onclick="runFix()" disabled>고쳐줘 ✨</button>
     <div class="steps" id="steps" style="display:none">
       <div class="step" id="st1"><i>1</i>문장 받기</div>
-      <div class="step" id="st2"><i>2</i>RAG: 우리 규칙 조각에서 관련 규칙 찾기</div>
-      <div class="step" id="st3"><i>3</i>AI: 찾은 규칙을 근거로 고치고 설명</div>
+      <div class="step" id="st2"><i>2</i>검색: 닮은 실수 · 규칙 설명 · 교과서 표현 찾기</div>
+      <div class="step" id="st3"><i>3</i>AI: 후보 규칙 중 고르고 문장 고치기 · 설명은 규칙 문서 그대로</div>
     </div>
     <div class="diag" id="diag" style="display:none"></div>
     <div class="result" id="missionNote"></div>
