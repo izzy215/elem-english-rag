@@ -125,6 +125,8 @@ function renderAll() {   // 이전 회차는 흐린 카드(버튼 없음)로 위
   $$('.diag button[data-drill]').forEach(b => b.addEventListener('click', () => { S.set({ nbOpen: b.dataset.drill }); go('notebook.html'); }));   // 🙋 타일 → 오답노트가 그 규칙 카드를 펼친 채로 열림
 }
 window.addEventListener('devview', () => { if (rounds.length) renderAll(); });
+// 🙋 를 고쳐줘 전에 눌러도 챗이 지금 입력한 문장을 알게 (context.text). 고쳐줘 뒤에는 더 물어보기 칩이 rule_id·log_id 를 넘긴다
+window.chatExtra = () => (text ? { text, source } : {});
 // 타일 자료 보충 (서버 /fix 가 아직 안 주는 것만): 교과서 검색(관리자 API 재사용) · 같은 규칙의 틀린 예문 1개(/drill). 실패해도 카드는 그린다
 async function enrich(r) {
   if (r.ok || !r.rule || r.rule.id === 'OTHER') return r;
