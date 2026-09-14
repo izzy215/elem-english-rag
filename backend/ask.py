@@ -73,14 +73,6 @@ def _content_words(text: str) -> list[str]:
     return [w for w in _norm_words(text) if w not in _GENERIC_WORDS]
 
 
-_STOPWORDS_FOR_SUBSTRING = {
-    "the", "a", "an", "is", "am", "are", "was", "were", "to", "in", "on", "at",
-    "of", "it", "he", "she", "we", "they", "you", "and", "or", "do", "does",
-}   # "weather" 안에 "the"가 우연히 들어있어 무관한 단어끼리 부분 문자열로 겹치던 문제(2026-09-14,
-    # "i go to the bus" 질문이 날씨 FAQ에 오매칭됨) — 이런 흔한 짧은 단어는 완전히 같을 때만
-    # 인정하고, 부분 문자열 겹침 판정에서는 빼서 우연한 겹침을 막는다.
-
-
 def _best_match(question: str, items: list[dict], candidates_of) -> tuple[dict | None, float]:
     """단어 겹침 기반 매칭. frontend/js/common.js 의 faqMatch()와 같은 알고리즘 —
     서버가 먼저 이걸로 찾아보고, 못 찾을 때만 Gemini 로 넘어간다(할당량 절약, 응답도 빠름)."""
@@ -91,12 +83,12 @@ def _best_match(question: str, items: list[dict], candidates_of) -> tuple[dict |
             cs = _content_words(cand)
             if not cs:
                 continue
-            # 부분 문자열 겹침은 두 단어 다 3글자 이상이고 스톱워드가 아닐 때만 인정 — 2글자는 "an"이
-            # "elephant"의 부분 문자열이라 무관한 단어끼리 겹치는 경우가 있음(2026-09-10). 완전히 같은
-            # 단어는 길이·스톱워드 여부 상관없이 인정.
+            # 부분 문자열 겹침은 두 단어 다 3글자 이상이고 길이 차가 2 이하일 때만 인정 — 2글자는 "an"이
+            # "elephant"의 부분 문자열이라 무관한 단어끼리 겹치는 경우가 있고(2026-09-10), 길이 차가
+            # 크면 "the"가 "weather" 안에, "get"이 "budget"이 안에 우연히 들어있는 것처럼 무관한 단어끼리
+            # 겹치는 경우가 있음(2026-09-14). 완전히 같은 단어는 길이 상관없이 인정.
             hit = sum(1 for w in cs if any(
-                w == x or (len(w) >= 3 and len(x) >= 3 and w not in _STOPWORDS_FOR_SUBSTRING
-                           and x not in _STOPWORDS_FOR_SUBSTRING and (w in x or x in w))
+                w == x or (len(w) >= 3 and len(x) >= 3 and abs(len(w) - len(x)) <= 2 and (w in x or x in w))
                 for x in qs
             ))
             if len(cs) >= 2 and hit < 2:
