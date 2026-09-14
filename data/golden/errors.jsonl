@@ -132,7 +132,7 @@
 {"id": "E-0132", "unit": "Unit20", "rule_id": "R-33", "error": "There are four room in the house.", "correct": "There are four rooms in the house.", "target": "room", "fix": "rooms", "distractors": ["roomes", "room's", "—"]}
 {"id": "E-0133", "unit": "Unit02", "rule_id": "R-34", "error": "I have a ancestor.", "correct": "I have an ancestor.", "target": "a", "fix": "an", "distractors": ["the", "some", "—"]}
 {"id": "E-0134", "unit": "Unit03", "rule_id": "R-34", "error": "I have a education.", "correct": "I have an education.", "target": "a", "fix": "an", "distractors": ["the", "some", "—"]}
-{"id": "E-0135", "unit": "Unit04", "rule_id": "R-34", "error": "I have a ecosystem.", "correct": "I have an ecosystem.", "target": "a", "fix": "an", "distractors": ["the", "some", "—"]}
+{"id": "E-0135", "unit": "Unit04", "rule_id": "R-34", "error": "The forest is a ecosystem.", "correct": "The forest is an ecosystem.", "target": "a", "fix": "an", "distractors": ["the", "some", "—"]}
 {"id": "E-0136", "unit": "Unit05", "rule_id": "R-34", "error": "I have a apple.", "correct": "I have an apple.", "target": "a", "fix": "an", "distractors": ["the", "some", "—"]}
 {"id": "E-0137", "unit": "Unit01", "rule_id": "R-35", "error": "She is greet her classmates now.", "correct": "She is greeting her classmates now.", "target": "greet", "fix": "greeting", "distractors": ["greeted", "greets", "to greet"]}
 {"id": "E-0138", "unit": "Unit05", "rule_id": "R-35", "error": "He is eat a snack now.", "correct": "He is eating a snack now.", "target": "eat", "fix": "eating", "distractors": ["ate", "eats", "to eat"]}
@@ -149,7 +149,7 @@
 {"id": "E-0149", "unit": "Unit01", "rule_id": "R-38", "error": "It was an farewell.", "correct": "It was a warm farewell.", "target": "an", "fix": "a", "distractors": ["the", "some", "—"]}
 {"id": "E-0150", "unit": "Unit02", "rule_id": "R-38", "error": "I have an family.", "correct": "I have a family.", "target": "an", "fix": "a", "distractors": ["the", "some", "—"]}
 {"id": "E-0151", "unit": "Unit03", "rule_id": "R-38", "error": "I have an teacher.", "correct": "I have a teacher.", "target": "an", "fix": "a", "distractors": ["the", "some", "—"]}
-{"id": "E-0152", "unit": "Unit04", "rule_id": "R-38", "error": "I have an species.", "correct": "I have a species.", "target": "an", "fix": "a", "distractors": ["the", "some", "—"]}
+{"id": "E-0152", "unit": "Unit04", "rule_id": "R-38", "error": "The lion is an predator.", "correct": "The lion is a predator.", "target": "an", "fix": "a", "distractors": ["the", "some", "—"]}
 {"id": "E-0153", "unit": "Unit01", "rule_id": "R-39", "error": "How you are these days?", "correct": "How are you these days?", "target": "How you are", "fix": "How are you", "distractors": ["You are how", "How is you", "How you're"]}
 {"id": "E-0154", "unit": "Unit01", "rule_id": "R-39", "error": "How you are this morning?", "correct": "How are you this morning?", "target": "How you are", "fix": "How are you", "distractors": ["You are how", "How is you", "How you're"]}
 {"id": "E-0155", "unit": "Unit01", "rule_id": "R-39", "error": "How you are today?", "correct": "How are you today?", "target": "How you are", "fix": "How are you", "distractors": ["You are how", "How is you", "How you're"]}

@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 import time
 from datetime import datetime
@@ -189,8 +190,18 @@ def search_textbook(text: str, level: int = 3, k_pattern: int = 3, k_word: int =
 
 
 def known_words(level: int) -> set[str]:
-    """학년 이하 교과서 단어 (소문자). 고친 문장에 학년 밖 단어가 있는지 표시하는 후검사용."""
-    return {w["word"].strip().lower() for w in golden._read("words.csv") if int(w.get("level") or 0) <= int(level)}  # noqa: SLF001
+    """학년 이하 교과서에 나온 말 (소문자): 단어장 표제어 + 단어장 예문·패턴 문장에 쓰인 낱말. 고친 문장에 교과서 밖 단어가 있는지 표시하는 후검사용.
+    표제어만 보면 "We saw a lion at the zoo."(3학년 예문)의 saw 도 새 단어로 찍혀서, 예문·패턴 문장의 낱말까지 넣는다."""
+    lv = int(level)
+    out: set[str] = set()
+    for w in golden._read("words.csv"):  # noqa: SLF001
+        if int(w.get("level") or 0) <= lv:
+            out.add(w["word"].strip().lower())
+            out.update(re.findall(r"[a-z']+", (w.get("example") or "").lower()))
+    for p in golden._read("patterns.csv"):  # noqa: SLF001
+        if int(p.get("level") or 0) <= lv:
+            out.update(re.findall(r"[a-z']+", (p.get("text") or "").lower()))
+    return {t.strip("'") for t in out if t.strip("'")}
 
 
 # ── ② 틀린 예문 → 규칙 후보 ──────────────────────────────────────────────
