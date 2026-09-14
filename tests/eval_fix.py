@@ -98,6 +98,7 @@ def build_prompt(text: str, rules: list[dict], level: int = 3, unit: str = "") -
         mission=unit_row.get("mission") or "(미션 없음 — 미션 확인은 ok=true 로)",
         hint_words=", ".join(unit_row.get("hint_words") or []) or "(없음)",
         all_rules=tutor._rules_block(list(rules) + [tutor.SPELLING_RULE, tutor.OTHER_RULE]),
+        textbook="(없음)",
         sentence=text,
     )
 

@@ -27,11 +27,11 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 # (파일, 화면 설명, 검색 색인에 들어가는지)
 FILES = [
     ("rules.jsonl", "문법 규칙 설명 조각 — RAG 검색 대상 (교재)", True),
-    ("faq.jsonl", "더 물어보기 FAQ — 챗봇 답변 근거", False),
+    ("faq.jsonl", "더 물어보기 FAQ — 챗봇 답변 근거 (검색 faq)", "faq"),
     ("units.csv", "유닛 · 미션 · 힌트 단어 · 유닛별 규칙 id", False),
-    ("words.csv", "단어 · 뜻 · 예문", False),
-    ("patterns.csv", "문장 패턴 · 뜻 · 규칙 id", False),
-    ("errors.jsonl", "오류 문장 예시 — 연습 문제·평가용", False),
+    ("words.csv", "단어 · 뜻 · 예문 (검색 textbook · 학년 밖 단어 후검사)", "textbook"),
+    ("patterns.csv", "문장 패턴 · 뜻 · 규칙 id (검색 textbook · 교과서 표현 힌트)", "textbook"),
+    ("errors.jsonl", "오류 문장 예시 — 연습 문제 + 틀린 예문 검색(examples → 규칙 후보)", "examples"),
     ("eval.csv", "시험지: 문장 → 정답 규칙", False),
 ]
 
@@ -49,7 +49,18 @@ def _count(path) -> int | None:
 @router.get("/golden")
 def golden_status():
     d = golden.SAMPLE if golden.using_sample() else golden.GOLDEN
-    files = [{"file": n, "desc": desc, "indexed": idx, "count": _count(d / n)} for n, desc, idx in FILES]
+    # 색인 네 가지: rules(규칙 설명문, RAG 담당 indexing.py) + textbook·examples·faq(backend/textbook.py). 파일마다 어느 색인에 들어가는지 표시
+    indexes: dict[str, dict | None] = {}
+    try:
+        from backend import textbook as _tb
+        for kind in ("textbook", "examples", "faq"):
+            m = _tb.load_manifest(kind) or {}
+            indexes[kind] = {"count": m.get("count"), "model": m.get("model"), "generated_at": m.get("generated_at"),
+                             "patterns": m.get("patterns"), "words": m.get("words"), "faqs": m.get("faqs")} if m.get("count") else None
+    except Exception:
+        indexes = {"textbook": None, "examples": None, "faq": None}
+    files = [{"file": n, "desc": desc, "indexed": (True if idx is True else bool(idx and indexes.get(idx))), "index": ("rules" if idx is True else idx or None),
+              "count": _count(d / n)} for n, desc, idx in FILES]
     index = None
     try:                                                   # 색인 manifest (RAG 담당 indexing.py). 없거나 깨져도 화면은 살린다
         from backend import indexing
@@ -64,6 +75,7 @@ def golden_status():
         "using_sample": golden.using_sample(),
         "files": files,
         "index": index,
+        "indexes": indexes,
         "index_stale": bool(index and rules_n is not None and index["count"] != rules_n),
     }
 

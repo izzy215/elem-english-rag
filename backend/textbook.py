@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 import time
 from datetime import datetime
@@ -189,8 +190,18 @@ def search_textbook(text: str, level: int = 3, k_pattern: int = 3, k_word: int =
 
 
 def known_words(level: int) -> set[str]:
-    """학년 이하 교과서 단어 (소문자). 고친 문장에 학년 밖 단어가 있는지 표시하는 후검사용."""
-    return {w["word"].strip().lower() for w in golden._read("words.csv") if int(w.get("level") or 0) <= int(level)}  # noqa: SLF001
+    """학년 이하 교과서에 나온 말 (소문자): 단어장 표제어 + 단어장 예문·패턴 문장에 쓰인 낱말. 고친 문장에 교과서 밖 단어가 있는지 표시하는 후검사용.
+    표제어만 보면 "We saw a lion at the zoo."(3학년 예문)의 saw 도 새 단어로 찍혀서, 예문·패턴 문장의 낱말까지 넣는다."""
+    lv = int(level)
+    out: set[str] = set()
+    for w in golden._read("words.csv"):  # noqa: SLF001
+        if int(w.get("level") or 0) <= lv:
+            out.add(w["word"].strip().lower())
+            out.update(re.findall(r"[a-z']+", (w.get("example") or "").lower()))
+    for p in golden._read("patterns.csv"):  # noqa: SLF001
+        if int(p.get("level") or 0) <= lv:
+            out.update(re.findall(r"[a-z']+", (p.get("text") or "").lower()))
+    return {t.strip("'") for t in out if t.strip("'")}
 
 
 # ── ② 틀린 예문 → 규칙 후보 ──────────────────────────────────────────────
@@ -216,6 +227,24 @@ def search_examples(text: str, level: int | None = None, k: int = 5, qvec: list[
         return []
 
 
+def similar_examples(text: str, rule_id: str, k: int = 3, qvec: list[float] | None = None, exclude_text: str = "") -> list[dict]:
+    """한 규칙의 틀린 예문 중 학생 문장과 닮은 순 (errors.jsonl 행 우선, 규칙의 wrong_example 은 뒤로, 학생 문장과 같은 예문 제외).
+    /fix 의 peer_example(화면 🙋 타일 · 오답노트 연습 문제)용. 반환 [{example_id, example, fix, correct, score}]."""
+    try:
+        q = qvec or embedding.embed_query(text)
+        norm = lambda t: " ".join(str(t or "").lower().replace(".", "").replace("!", "").replace("?", "").split())
+        out = []
+        for id_, doc, meta, score in _query("examples", q, max(k * 3, 6), {"rule_id": rule_id}):
+            if norm(doc) == norm(exclude_text):
+                continue
+            out.append({"example_id": id_, "example": doc, "fix": meta.get("fix", ""), "correct": meta.get("correct", ""), "score": score,
+                        "_rank": (0 if meta.get("source") == "errors" else 1, -score)})
+        out.sort(key=lambda x: x["_rank"])
+        return [{k2: v for k2, v in o.items() if k2 != "_rank"} for o in out[:k]]
+    except Exception:  # noqa: BLE001
+        return []
+
+
 def merge_candidates(by_examples: list[dict], by_rules: list[dict], k: int = 5) -> list[dict]:
     """예문 후보와 규칙 설명문 후보를 번갈아 합친다 (예문1, 규칙1, 예문2, 규칙2 …, 같은 규칙은 한 번). /fix 가 프롬프트 후보 5개를 만들 때.
     각 항목에 from: 'examples' | 'rules' 를 붙인다 — 실측(9/14, 300문장): 설명문만 hit@3 78% → 합침 91%."""
@@ -232,8 +261,12 @@ def search_faq(question: str, k: int = 3, rule_id: str | None = None, qvec: list
     """학생 질문과 닮은 FAQ (질문+변형 중 가장 닮은 문장 기준, FAQ 하나에 한 줄). 직전 규칙(rule_id)과 관련된 FAQ 는 +0.03 가산.
     반환 [{id: "F-012", question, answer, rule_ids: [...], unit, example, score, matched: "닮은 질문 변형"}]. 색인 없으면 []."""
     try:
+        import re as _re
         q = qvec or embedding.embed_query(question)
         faqs = {f["id"]: f for f in golden.faqs()}
+        # 영어 낱말(can, s, will, the …)은 임베딩이 뭉개기 쉬워서, 질문의 영어 토큰이 FAQ 질문·변형에 그대로 있으면 토큰당 +0.02 (동점 깨기용, 최대 +0.06)
+        # 9/14 "can 뒤에 s 를 쓸 수 있어?" → 임베딩만으론 will(0.862)·one(0.860)·can(0.859) 순으로 평평했음
+        eng = {t.lower() for t in _re.findall(r"[A-Za-z][A-Za-z']*", question) if len(t) >= 1}
         best: dict[str, tuple[float, str]] = {}
         for id_, doc, meta, score in _query("faq", q, max(k * 4, 15)):
             fid = meta.get("faq_id")
@@ -241,6 +274,9 @@ def search_faq(question: str, k: int = 3, rule_id: str | None = None, qvec: list
                 continue
             if rule_id and rule_id in (meta.get("rule_ids") or "").split(","):
                 score = round(score + 0.03, 4)
+            if eng:
+                qtoks = {t.lower() for t in _re.findall(r"[A-Za-z][A-Za-z']*", meta.get("q") or doc)}
+                score = round(score + min(0.06, 0.02 * len(eng & qtoks)), 4)
             if fid not in best or score > best[fid][0]:
                 best[fid] = (score, meta.get("q") or doc)
         out = []
@@ -251,6 +287,12 @@ def search_faq(question: str, k: int = 3, rule_id: str | None = None, qvec: list
         return out
     except Exception:  # noqa: BLE001
         return []
+
+
+def faq_hit(scores: list[float], top: float = 0.85) -> bool:
+    """FAQ 는 질문 형식이 다 비슷해 점수 분포가 늘 촘촘하다(정답이 있어도 1위−3위 0.01). 그래서 FAQ 만은 1위 절대 점수로 판정:
+    9/14 실측 — 정답 있음: "can 뒤에 s" 0.899 · "will 뒤에 ing" 0.937 · "형용사 앞에" 0.878 / 엉뚱한 "점심 뭐 먹지" 0.804. 기준 0.85 (RAG 담당이 시험지로 조정)."""
+    return bool(scores) and scores[0] >= top
 
 
 def sharp(scores: list[float], gap: float = 0.06, top: float = 0.85) -> bool:

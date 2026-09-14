@@ -8,9 +8,9 @@ Thanks Tom.,R-02,인사말 뒤 쉼표·느낌표 · 새 문장 (E-0007 대응),,
 This is Tom pencil.,R-03,정제본 교체(라벨과 다른 오류 유형),,교체
 She is niece.,R-03,정제본 교체(이중 오류→단일 오류로),,교체
 He is uncle.,R-03,정제본 교체(라벨과 다른 오류 유형),,교체
-This is my daughters.,R-04,"한 명 This is, 여럿 These are · 새 문장 (E-0014 대응)",T6(This/These),원본 유지
-This is my relatives.,R-04,"한 명 This is, 여럿 These are · 새 문장 (E-0015 대응)",T6(This/These),원본 유지
-This is my sons.,R-04,"한 명 This is, 여럿 These are · 새 문장 (E-0013 대응)",T6(This/These),원본 유지
+This are my daughter.,R-04,"한 명 This is, 여럿 These are · 새 문장 (E-0014 대응)",T6(This/These),원본 유지
+These is my relatives.,R-04,"한 명 This is, 여럿 These are · 새 문장 (E-0015 대응)",T6(This/These),원본 유지
+These are my son.,R-04,"한 명 This is, 여럿 These are · 새 문장 (E-0013 대응)",T6(This/These),원본 유지
 There are a book on the desk.,R-05,정제본 교체(문장 성립 불가/의미 붕괴),,교체
 There are a chair in the room.,R-05,정제본 교체(문장 성립 불가/의미 붕괴),,교체
 There are a teacher in the classroom.,R-05,정제본 교체(이중 오류→단일 오류로),,교체

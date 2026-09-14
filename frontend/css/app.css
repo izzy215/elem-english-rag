@@ -108,7 +108,7 @@ body.busy button{cursor:wait}
 .diag .tiles{display:grid;gap:8px;margin-top:12px}
 .diag .tile{display:flex;gap:10px;align-items:flex-start;border-radius:14px;padding:10px 12px}
 .diag .tile.book{background:var(--sky)} .diag .tile.peer{background:var(--accent-soft)} .diag .tile.new{background:var(--primary-soft)}
-.diag .ti{font-size:1.45rem;line-height:1;margin-top:2px;flex:0 0 auto} .diag .tile>div{min-width:0;flex:1}
+.diag .ti{font-size:1.45rem;line-height:1;margin-top:2px;flex:0 0 auto} .diag .tile>div:not(.ti){min-width:0;flex:1}   /* :not(.ti) — 아이콘 칸까지 flex:1 을 먹어 글이 오른쪽으로 밀리던 버그 */
 .diag .tl{font-size:.7rem;font-weight:800;color:var(--muted);letter-spacing:.02em}
 .diag .tv{font-family:'Nunito','Noto Sans KR',sans-serif;font-size:1rem;font-weight:800;margin-top:2px;line-height:1.35;overflow-wrap:anywhere} .diag .tv s{color:var(--danger);opacity:.8;margin-right:3px} .diag .tv b{color:var(--primary-2)} .diag .tv u{text-decoration:underline wavy var(--danger);text-underline-offset:4px}
 .diag .ts{font-size:.76rem;color:var(--muted);margin-top:2px}
