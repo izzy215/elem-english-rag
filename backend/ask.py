@@ -469,6 +469,17 @@ def _answer(body: AskIn) -> dict:
     if not all_faqs and not all_rules:
         return {"answer": "", "source": [], "offtopic": True, "error": "faq.jsonl/rules.jsonl 이 없음"}
 
+    # "왜때 틀렸어"처럼 구체적 규칙 언급 없이 막연하게 자기 오답을 묻는데 오답노트가 실제로 비어
+    # 있으면, LLM이 프롬프트 어딘가의 예문("I read friend." 등)을 "이 학생 개인 기록"으로 착각해
+    # 지어내 답하는 문제가 있었음(2026-09-14 재현 — 프롬프트 지침으론 못 막아서 코드로 차단).
+    # 질문에 규칙 이름 같은 구체적 내용어가 있으면(예: "This/These 단수복수는 왜 틀렸어?") 그건
+    # 진짜 규칙 설명 요청이니 여기 안 걸리게 내용어 3개 이하일 때만 "막연한 질문"으로 본다.
+    if re.search(r"틀렸|오답|자주\s*틀리|실수", question) and len(_content_words(question)) <= 3:
+        from backend.student import notebook_text
+        if notebook_text(body.student) == "아직 오답노트가 비어 있음.":
+            return {"answer": "아직 오답노트에 기록된 게 없어요! 문제를 몇 개 풀어보면 그때 자주 틀리는 것도 알려줄 수 있어요.",
+                    "source": [], "offtopic": False, "suggested": []}
+
     # "비슷한 거 있어?" 류는 LLM 자체 탐색이 신뢰도 낮아서(2026-09-10), 방금 답의 근거 규칙으로
     # 결정적으로 찾아본다 — 찾으면 즉시 반환, 못 찾으면(근거 규칙 없음 등) 아래 로컬 매칭으로 폴백
     similar = _similar_match(question, body.student, all_faqs)
