@@ -741,3 +741,129 @@ def _answer(body: AskIn) -> dict:
         "suggested": [q for q in (out.get("suggested") or []) if isinstance(q, str)][:2],
         "llm": llm_info,
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 검색 기반 답변 (비교 전용, 2026-09-14) — docs/2026.09.14 검색 함수 계약 (textbook·examples·faq).md
+# ask()/_answer() 는 아직 이 경로를 안 부른다. search_faq/search_textbook 이 먼저 후보를 좁히고
+# sharp() 로 "뚜렷한 게 있는지" 판정한 뒤, 있으면 그 안에서만 LLM 이 답을 짓는다(없으면 위
+# faq_block 통째로 넣는 방식과 이 부분이 다름). 기존 정규식 기반 로직과 나란히 비교해보고
+# 전환 여부를 정할 예정 — 스크래치패드 비교 스크립트 참고.
+# ─────────────────────────────────────────────────────────────────────────────
+
+RETRIEVAL_PROMPT = """너는 초등학교 3~4학년에게 영어를 가르치는 다정한 선생님이다.
+아래 "검색된 자료"만 근거로 학생 질문에 답한다. 자료에 없는 내용은 답하지 않는다.
+
+## 검색된 자료 (이 안에서만 답을 짓는다)
+{candidates_block}
+{log_block}
+## 이 학생의 오답노트 (톤 참고용 — 답 근거로는 쓰지 않는다)
+{notebook_block}
+
+## 방금 나눈 대화
+{history_block}
+
+## 학생 질문
+{question}
+
+## 출력 JSON
+{{
+  "answer": "답변 2~3문장, 한국어, 초등학생이 이해할 수 있게",
+  "used_id": "실제로 답에 쓴 자료의 id (예: p-0282, w-0282, R-01). 여러 개 썼으면 가장 중요한 것 하나",
+  "offtopic": true 또는 false
+}}"""
+
+
+def _candidates_block(patterns: list[dict], words: list[dict], rule: dict | None) -> str:
+    lines = [f"- [{p['id']}] (교과서 문장) {p['text']} — {p['meaning']}" for p in patterns]
+    lines += [f"- [{w['id']}] (단어) {w['word']} — {w['meaning']} (예: {w['example']})" for w in words]
+    if rule:
+        lines.append(f"- [{rule['id']}] (문법 규칙) {rule['type']}: {rule['text']}")
+    return "\n".join(lines) if lines else "(없음)"
+
+
+def _retrieval_answer(question: str, body: AskIn) -> dict:
+    """계약 문서 2-1절: search_faq + search_textbook 이 먼저 후보를 좁히고, sharp() 로 뚜렷한 게
+    있을 때만 그 안에서 답을 짓는다. 셋 다(FAQ·패턴·규칙) 안 뚜렷하면 "이 유닛 내용이 아니다"로
+    거절한다. 단일 후보인 규칙 힌트는 sharp() 판정(1위-5위 비교) 대상이 아니라 보조 컨텍스트로만
+    쓴다 — 후보가 1개면 항상 gap=0이 나와 sharp()가 의미가 없어짐."""
+    # "비슷한 거 있어?/다른 건 없어?" 류는 검색 없이 기존 로직 그대로 — 방금 답의 근거 규칙으로
+    # 결정적으로 찾는 게 이미 검증돼 있고 검색보다 안전하다(2026-09-14).
+    all_faqs = golden.faqs()
+    similar = _similar_match(question, body.student, all_faqs)
+    if similar is not None:
+        return similar
+
+    from backend import embedding, textbook
+
+    try:
+        qvec = embedding.embed_query(question)
+    except Exception as e:
+        return {"answer": "", "source": [], "offtopic": True, "error": f"임베딩 실패: {e}"}
+
+    ctx = body.context
+    rule_id = ctx.rule_id
+    if not rule_id:
+        last = next((t for t in reversed(_recent_chat_turns(body.student, max_turns=5)) if t.get("rule_ids")), None)
+        if last:
+            rule_id = last["rule_ids"][0]
+
+    faq_hits = textbook.search_faq(question, k=3, rule_id=rule_id, qvec=qvec)
+    if textbook.sharp([f["score"] for f in faq_hits]):
+        f = faq_hits[0]
+        source = [{"chunk_id": rid} for rid in f["rule_ids"]] + [{"chunk_id": f["id"]}]
+        suggested = _followup_questions(f["rule_ids"], all_faqs, exclude_id=f["id"])
+        return {"answer": f["answer"], "source": source, "offtopic": False, "suggested": suggested}
+
+    tb = textbook.search_textbook(question, level=3, k_pattern=3, k_word=3, qvec=qvec)
+    pattern_sharp = textbook.sharp([p["score"] for p in tb["patterns"]])
+    word_sharp = textbook.sharp([w["score"] for w in tb["words"]])
+    if pattern_sharp or word_sharp:
+        hint_id, hint_score = _rag_hint_rule_id(question)
+        rule = golden.find_rule(hint_id) if hint_id and hint_score >= 0.5 else None
+
+        # 입구별 상태 — 계약 문서 2-1절 표: "더 물어보기"는 방금 고친 결과(또는 고쳐주기 전
+        # 입력 문장), "오답노트"는 오답노트 요약을 검색 결과와 별도로 대화 상태로 얹는다.
+        log = _log_entry(ctx.log_id) if ctx.log_id else None
+        log_block = ""
+        if log:
+            log_block = (
+                "\n## 방금 학생이 만든 문장\n"
+                f'원래 문장: {log.get("text", "")}\n'
+                f'고친 문장: {log.get("fixed", "")}\n'
+                "(둘이 같으면 원래 문장이 맞았다는 뜻)\n"
+            )
+        elif ctx.text:
+            log_block = f"\n## 학생이 방금 입력했지만 아직 고쳐주기 전인 문장\n{ctx.text}\n"
+
+        try:
+            from backend.student import notebook_text
+            notebook_block = notebook_text(body.student)
+        except Exception:
+            notebook_block = "(모름)"
+
+        prompt = RETRIEVAL_PROMPT.format(
+            candidates_block=_candidates_block(tb["patterns"], tb["words"], rule),
+            log_block=log_block, notebook_block=notebook_block,
+            history_block=_history_block(body.student), question=question,
+        )
+        try:
+            out = llm.generate_json(prompt)
+        except llm.LLMError as e:
+            return {"answer": "", "source": [], "offtopic": True, "error": str(e)}
+        used_id = out.get("used_id")
+        fallback_id = tb["patterns"][0]["id"] if pattern_sharp else tb["words"][0]["id"]
+        suggested = _followup_questions([rule["id"]], all_faqs) if rule else []
+        return {"answer": out.get("answer") or "", "source": [{"chunk_id": used_id or fallback_id}],
+                "offtopic": bool(out.get("offtopic")), "suggested": suggested}
+
+    # sharp() 기준(1위 0.85 이상 + 5위와 격차)엔 못 미쳐도, 1위 점수가 어느 정도(0.8) 있으면
+    # "완전 무관"은 아니라고 보고 그 유닛을 알려준다 — 진짜 엉뚱한 질문(예: "오늘 날씨 어때?")까지
+    # 아무 유닛이나 갖다 붙이지 않기 위한 최소선(임시값, sharp()의 top/gap처럼 실측 조정 필요).
+    top_pattern = tb["patterns"][0] if tb["patterns"] else None
+    top_word = tb["words"][0] if tb["words"] else None
+    best = max([x for x in (top_pattern, top_word) if x], key=lambda x: x["score"], default=None)
+    unit_hint = best["unit"] if best and best["score"] >= 0.8 else None
+    reject = (f"그건 지금 배우는 내용이 아니라 {unit_hint}에서 배워요. 선생님께 물어볼까?" if unit_hint
+              else "그건 이 유닛에서 배우는 내용이 아니에요. 선생님께 물어볼까?")
+    return {"answer": reject, "source": [], "offtopic": True, "suggested": []}
