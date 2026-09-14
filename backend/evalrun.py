@@ -113,6 +113,7 @@ def options() -> dict:
     return {"backends": ["gemini", "local", "remote"], "models": _env_models(), "rerankers": RERANKERS,
             "remote_url": os.environ.get("EMBEDDING_REMOTE_URL", "http://192.168.1.147:8002"),
             "default": {"backend": backend, "model": model.strip()},
+            "corpora": [{"id": "rules", "label": "규칙 설명문 (지금 서비스)"}, {"id": "errors", "label": "틀린 예문 → 규칙"}, {"id": "both", "label": "예문 + 설명문 합침"}],
             "note": {"gemini": "무료 한도 하루 1,000회 — 시험지 문장 수 + 규칙 100 만큼 소모",
                      "local": "이 PC 의 CPU 로 계산 (sentence-transformers 설치 필요, 첫 실행은 모델 내려받기)",
                      "remote": "강의실 GPU 서버 (LAN 안에서만)"}}
@@ -122,9 +123,10 @@ def job_status() -> dict:
     return _status("embed")
 
 
-def start_job(backend: str, model: str | None, rerank: str | None, topn: int) -> dict:
-    label = (model or "gemini-embedding-001") + (f" + 재랭킹({rerank})" if rerank else "")
-    cmd = [sys.executable, "-m", "tests.eval_embed", "--backend", backend]
+def start_job(backend: str, model: str | None, rerank: str | None, topn: int, corpus: str = "rules") -> dict:
+    corpus_kr = {"rules": "규칙 설명문", "errors": "틀린 예문", "both": "예문+설명문"}.get(corpus, corpus)
+    label = (model or "gemini-embedding-001") + (f" · {corpus_kr}" if corpus != "rules" else "") + (f" + 재랭킹({rerank})" if rerank else "")
+    cmd = [sys.executable, "-m", "tests.eval_embed", "--backend", backend, "--corpus", corpus]
     if model and backend != "gemini":
         cmd += ["--model", model]
     if rerank:
@@ -137,13 +139,15 @@ def fix_job_status() -> dict:
     return _status("fix")
 
 
-def start_fix_job(backend: str, no_rag: bool, label: str = "", limit: int = 0, per_rule: int = 0, normal: int = -1) -> dict:
+def start_fix_job(backend: str, no_rag: bool, label: str = "", limit: int = 0, per_rule: int = 0, normal: int = -1, textbook: bool = True) -> dict:
     """tests/eval_fix.py --backend <b> [--no-rag] [--label] [--limit] [--per-rule n --normal n].
     per_rule=1, normal=20 이면 규칙당 1문장 + 정상 20 = 120문장 (전체 360 의 1/3 시간). label 은 파일명에 붙는 실행 이름."""
     clean = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in (label or "").strip())
     cmd = [sys.executable, "-m", "tests.eval_fix", "--backend", backend]
     if no_rag:
         cmd.append("--no-rag")
+    if not textbook:
+        cmd.append("--no-textbook")
     if clean:
         cmd += ["--label", clean]
     if per_rule:
@@ -153,7 +157,7 @@ def start_fix_job(backend: str, no_rag: bool, label: str = "", limit: int = 0, p
     if limit:
         cmd += ["--limit", str(limit)]
     size = f"규칙당 {per_rule}" + (f" + 정상 {normal}" if normal >= 0 else "") if per_rule else "전체"
-    return _start("fix", f"{backend}" + (" · 검색 없음" if no_rag else " · RAG") + f" · {size}" + (f" · {clean}" if clean else ""), cmd)
+    return _start("fix", f"{backend}" + (" · 검색 없음" if no_rag else " · RAG") + ("" if textbook else " · 교과서 검색 없음") + f" · {size}" + (f" · {clean}" if clean else ""), cmd)
 
 
 def fix_history() -> dict:
@@ -184,9 +188,15 @@ def fix_history() -> dict:
             false_fix = sum(1 for j in judge if j.startswith("✗ 오교정"))
             fail = sum(1 for j in judge if j.startswith("!"))
             ms = [j.get("ms") for j in js if j.get("ms") and not j.get("error")]
+            # 교과서 범위 지표 (eval_fix 가 used_pattern·outside_words 를 기록한 실행만): 고친 문장 중 교과서 패턴을 쓴 비율 · 학년 밖 단어가 든 비율
+            fixed_js = [j for e, j in zip(res, js) if not e["is_normal"] and not j.get("error") and j.get("ok") is False]
+            has_tb = any("used_pattern" in j for j in fixed_js)
+            used_pattern = round(sum(1 for j in fixed_js if j.get("used_pattern")) / len(fixed_js), 4) if has_tb and fixed_js else None
+            outside = round(sum(1 for j in fixed_js if j.get("outside_words")) / len(fixed_js), 4) if has_tb and fixed_js else None
             s = (d.get("summary") or {}).get(b) or {}
             runs.append({"file": path.name, "ran_at": d.get("ran_at"), "label": d.get("label") or "", "backend": b, "model": s.get("model"),
-                         "no_rag": bool(d.get("no_rag")), "condition": d.get("condition"), "embedding": (d.get("index") or {}).get("model"),
+                         "no_rag": bool(d.get("no_rag")), "no_textbook": bool(d.get("no_textbook")), "condition": d.get("condition"), "embedding": (d.get("index") or {}).get("model"),
+                         "used_pattern": used_pattern, "outside_words": outside,
                          "n": len(res), "n_err": n_err, "n_norm": n_norm,
                          "rule_acc": round(hit / n_err, 4) if n_err else None, "hit": hit, "missed": missed, "wrong_rule": wrong,
                          "normal_kept": round(kept / n_norm, 4) if n_norm else None, "false_fix": false_fix, "failures": fail,

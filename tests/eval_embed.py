@@ -74,6 +74,8 @@ def main() -> None:
     ap.add_argument("--topn", type=int, default=10, help="재랭킹에 넣을 검색 상위 개수")
     ap.add_argument("--sleep", type=float, default=None, help="질의 사이 대기 초 (gemini 기본 0.8, 그 외 0)")
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--corpus", default="rules", choices=["rules", "errors", "both"],
+                    help="검색 대상: rules=규칙 설명문(지금 서비스) · errors=틀린 예문(errors.jsonl + 규칙 wrong_example → rule_id) · both=둘을 번갈아 합침")
     args = ap.parse_args()
 
     # backend/embedding.py 는 import 시점에 환경변수를 읽으므로, import 전에 덮어쓴다 (.env 파일은 안 바뀜)
@@ -86,25 +88,63 @@ def main() -> None:
     from backend.admin import eval_sheet_hash                             # noqa: E402
 
     rules = golden.rules()
+    # 검색 대상 문서: rules = 규칙 설명문 100 / errors = 틀린 예문(errors 400 + wrong_example 100, 문서마다 rule_id) / both = 두 색인을 따로 만들어 번갈아 합침
+    err_docs = []
+    if args.corpus in ("errors", "both"):
+        for e in golden.errors():
+            if e.get("error") and e.get("rule_id"):
+                err_docs.append({"id": e["id"], "text": e["error"], "rule_id": e["rule_id"]})
+        for r in rules:
+            if r.get("wrong_example"):
+                err_docs.append({"id": r["id"] + ":wrong", "text": r["wrong_example"], "rule_id": r["id"]})
     rows = golden.eval_set()
     if args.limit:
         rows = rows[: args.limit]
     sleep = args.sleep if args.sleep is not None else (0.8 if args.backend == "gemini" else 0.0)
     rerank_url = args.url or os.environ.get("EMBEDDING_REMOTE_URL", "http://192.168.1.147:8002")
-    label = f"{embedding.EMBEDDING_MODEL}" + (f" + 재랭킹({args.rerank})" if args.rerank else "")
+    corpus_kr = {"rules": "규칙 설명문", "errors": "틀린 예문", "both": "예문+설명문"}[args.corpus]
+    label = f"{embedding.EMBEDDING_MODEL}" + (f" · {corpus_kr}" if args.corpus != "rules" else "") + (f" + 재랭킹({args.rerank})" if args.rerank else "")
     print(f"[eval_embed] {args.backend}:{embedding.EMBEDDING_MODEL} · 규칙 {len(rules)} · 시험 문장 {len(rows)}" + (f" · 재랭킹 {args.rerank} (상위 {args.topn})" if args.rerank else ""), flush=True)
 
-    # 1) 규칙 본문 임베딩 (색인이 쓰는 것과 같은 text 필드, 50개씩)
-    doc_vecs: list[list[float]] = []
-    for i in range(0, len(rules), 50):
-        chunk = [r["text"] for r in rules[i:i + 50]]
-        doc_vecs += _retry(lambda: embedding.embed_documents(chunk), "규칙 임베딩")
-        if sleep:
-            time.sleep(sleep)
-    if len(doc_vecs) != len(rules):
-        raise SystemExit(f"[eval_embed] 규칙 임베딩 수 불일치 {len(doc_vecs)} vs {len(rules)}")
-    dim = len(doc_vecs[0])
-    print(f"[eval_embed] 규칙 임베딩 완료 (dim {dim})", flush=True)
+    # 1) 문서 임베딩 (규칙 본문 = 색인이 쓰는 것과 같은 text 필드 / 틀린 예문), 50개씩
+    def _embed_all(texts: list[str], what: str) -> list[list[float]]:
+        out: list[list[float]] = []
+        for i in range(0, len(texts), 50):
+            chunk = texts[i:i + 50]
+            out += _retry(lambda: embedding.embed_documents(chunk), what)
+            if sleep:
+                time.sleep(sleep)
+        if len(out) != len(texts):
+            raise SystemExit(f"[eval_embed] {what} 임베딩 수 불일치 {len(out)} vs {len(texts)}")
+        return out
+    doc_vecs = _embed_all([r["text"] for r in rules], "규칙 임베딩") if args.corpus in ("rules", "both") else []
+    err_vecs = _embed_all([d["text"] for d in err_docs], "예문 임베딩") if err_docs else []
+    dim = len((doc_vecs or err_vecs)[0])
+    print(f"[eval_embed] 문서 임베딩 완료 (규칙 {len(doc_vecs)} · 예문 {len(err_vecs)} · dim {dim})", flush=True)
+    rule_by_id = {r["id"]: r for r in rules}
+
+    def rank_rules(q: list[float]) -> list[dict]:
+        """질의 벡터 → 규칙 후보 (id·type·text·unit·score). corpus 에 따라 규칙 설명문 / 틀린 예문(→rule_id, 규칙당 최고점) / 둘을 번갈아."""
+        by_rules = sorted(((_cos(q, v), r) for v, r in zip(doc_vecs, rules)), key=lambda x: -x[0]) if doc_vecs else []
+        by_err: list[tuple[float, dict]] = []
+        if err_vecs:
+            best: dict[str, float] = {}
+            for v, d in zip(err_vecs, err_docs):
+                s = _cos(q, v)
+                if s > best.get(d["rule_id"], -1):
+                    best[d["rule_id"]] = s
+            by_err = sorted(((s, rule_by_id[rid]) for rid, s in best.items() if rid in rule_by_id), key=lambda x: -x[0])
+        if args.corpus == "rules":
+            ranked = by_rules
+        elif args.corpus == "errors":
+            ranked = by_err
+        else:                                   # both: 예문1, 규칙1, 예문2, 규칙2 … (같은 규칙은 한 번만)
+            ranked, seen = [], set()
+            for pair in zip(by_err, by_rules):
+                for s, r in pair:
+                    if r["id"] not in seen:
+                        seen.add(r["id"]); ranked.append((s, r))
+        return [{"id": r["id"], "type": r["type"], "text": r["text"], "unit": r.get("unit", ""), "score": round(s, 4)} for s, r in ranked]
 
     # 2) 문장마다 질의 임베딩 → 코사인 순위 → (재랭킹) → 채점
     detail, fails = [], 0
@@ -119,8 +159,7 @@ def main() -> None:
             time.sleep(sleep)
         try:
             q = _retry(lambda: embedding.embed_query(text), f"{i}/{total}")
-            scored = sorted(((_cos(q, v), r) for v, r in zip(doc_vecs, rules)), key=lambda x: -x[0])
-            cands = [{"id": r["id"], "type": r["type"], "text": r["text"], "unit": r.get("unit", ""), "score": round(s, 4)} for s, r in scored[: max(args.topn, 5)]]
+            cands = rank_rules(q)[: max(args.topn, 5)]
             if args.rerank:
                 cands = _rerank(rerank_url, args.rerank, text, cands[: args.topn])
             ids = [c["id"] for c in cands]
@@ -149,6 +188,7 @@ def main() -> None:
         "index": {"active_collection": None, "provider": embedding.EMBEDDING_PROVIDER, "model": embedding.EMBEDDING_MODEL,
                   "dim": dim, "distance": "cosine", "text_version": indexing.TEXT_VERSION, "mode": "in-memory (tests/eval_embed.py)"},
         "reranker": args.rerank, "rerank_topn": args.topn if args.rerank else None,
+        "corpus": args.corpus, "corpus_label": corpus_kr, "corpus_docs": {"rules": len(doc_vecs), "errors": len(err_vecs)},
         "data_hash": indexing._data_hash(rules),  # noqa: SLF001 — 색인과 같은 규칙 지문
         "evaluation_hash": eval_sheet_hash(),
         "evaluated_at": datetime.now().isoformat(timespec="seconds"),

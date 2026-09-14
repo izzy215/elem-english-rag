@@ -114,7 +114,11 @@ def run_pipeline(text: str, backend: str) -> dict:
         return {"backend": backend, "model": info.get("model"), "ms": info.get("ms", int((time.time() - t0) * 1000)),
                 "ok": bool(r["ok"]), "rule_id": rule_id, "fixed": r["fixed"], "full_fixed": r["full_fixed"],
                 "more_errors": r["more_errors"], "error": None, "fallback_from": None,
-                "mode": r["mode"], "rank": (r["rule"] or {}).get("rank"), "spelling": r.get("spelling") or []}
+                "mode": r["mode"], "rank": (r["rule"] or {}).get("rank"), "spelling": r.get("spelling") or [],
+                # 교과서 범위 지표 (서버가 주기 시작하면 채워짐): 고친 문장이 교과서 패턴을 썼나 · 학년 밖 단어
+                "used_pattern": (r.get("textbook") or {}).get("used_pattern") if r.get("textbook") is not None else None,
+                "outside_words": r.get("outside_words") if r.get("outside_words") is not None else None,
+                "grounded": r.get("grounded")}
     except HTTPException as e:
         return {"backend": backend, "model": None, "ms": int((time.time() - t0) * 1000), "ok": None, "rule_id": None,
                 "fixed": None, "full_fixed": None, "more_errors": None, "error": f"{e.status_code}: {str(e.detail)[:160]}", "fallback_from": None}
@@ -163,9 +167,13 @@ def main() -> None:
     ap.add_argument("--out", default=None, help="저장 파일명 (기본: data/rag_eval/fix_compare_<시각>[_label].json + _latest 복사본)")
     ap.add_argument("--label", default="", help="실행 이름 (예: gemini-embedding). 파일명과 표 제목에 붙는다")
     ap.add_argument("--no-rag", action="store_true", help="검색 없이 규칙 전부를 프롬프트에 (RAG 없을 때 기준선)")
+    ap.add_argument("--no-textbook", action="store_true", help="교과서 검색(패턴 힌트) 없이 — tutor 가 FIX_TEXTBOOK=0 을 읽을 때 유효 (교과서 범위 효과 비교)")
     ap.add_argument("--sentences", default=None, help="eval.csv 대신 이 파일의 문장 (한 줄 한 문장, # 주석). 정답 없음 → 결과 종류만 표시")
     ap.add_argument("--sleep", type=float, default=None, help="문장 사이 대기 초 (기본: gemini 5, 그 외 0)")
     args = ap.parse_args()
+    if args.no_textbook:
+        import os
+        os.environ["FIX_TEXTBOOK"] = "0"
     demo = args.sentences is not None
     label = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in args.label.strip())
 
@@ -237,7 +245,7 @@ def main() -> None:
     stamp = datetime.now().strftime("%Y%m%d-%H%M") + (f"_{label}" if label else "")
     if args.out is None:
         args.out = str(OUT_DIR / f"fix_compare_{stamp}.json")
-    out = {"ran_at": datetime.now().isoformat(timespec="seconds"), "label": label, "condition": cond, "no_rag": args.no_rag,
+    out = {"ran_at": datetime.now().isoformat(timespec="seconds"), "label": label, "condition": cond, "no_rag": args.no_rag, "no_textbook": args.no_textbook,
            "sentences": str(Path(args.sentences)) if demo else None,
            "index": index, "prompt_file": tutor.PROMPT_FILE.name, "rules_n": len(rules),
            "backends": backends, "summary": summary, "results": results}
