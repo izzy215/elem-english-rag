@@ -17,11 +17,16 @@ async function loadGolden(health) {
   }
   $('#dataStatus').innerHTML = (g.using_sample ? '<span class="pill warn">임시 샘플</span> 데이터팀 납품 전' : '<span class="pill ok">골든 데이터</span>') + ` <code>${esc(g.dir)}/</code>`;
   $('#dataTable').innerHTML = `<tr><th>파일</th><th>내용</th><th style="text-align:right">개수</th></tr>` + g.files.map(f => `
-    <tr><td class="f">${esc(f.file)}${f.indexed ? ' <span class="pill idx">색인</span>' : ''}</td><td>${esc(f.desc)}</td>
+    <tr><td class="f">${esc(f.file)}${f.indexed ? ` <span class="pill idx" title="이 파일이 들어간 검색 색인">색인${f.index && f.index !== 'rules' ? ' · ' + esc(f.index) : ''}</span>` : (f.index ? ` <span class="pill warn" title="색인이 아직 없음 — python -m backend.textbook --rebuild">색인 없음</span>` : '')}</td><td>${esc(f.desc)}</td>
       <td class="n">${f.count == null ? '<span class="pill warn">없음</span>' : (f.indexed ? `<b>${f.count}</b>` : f.count)}</td></tr>`).join('');
   if (!g.index) { $('#indexStatus').innerHTML = '<span class="tag">색인 없음</span> RAG 담당: <code>python -m backend.indexing --rebuild</code>'; return; }
-  $('#indexStatus').innerHTML = `검색 색인: 규칙 <b>${g.index.count}</b>개 · 임베딩 ${esc(g.index.model || '')} · ${esc(when(g.index.generated_at))} 생성`
-    + (g.index_stale ? ' · <span class="pill warn">rules.jsonl 과 개수가 달라요 — --rebuild 필요</span>' : '');
+  const ix = g.indexes || {};   // 검색 색인 네 가지 (rules 는 RAG 담당 indexing.py · textbook·examples·faq 는 backend/textbook.py)
+  const extra = [ix.textbook ? `교과서 <b>${ix.textbook.count}</b>(패턴 ${ix.textbook.patterns} · 단어 ${ix.textbook.words})` : '교과서 <span class="pill warn">없음</span>',
+                 ix.examples ? `틀린 예문 <b>${ix.examples.count}</b>` : '틀린 예문 <span class="pill warn">없음</span>',
+                 ix.faq ? `FAQ <b>${ix.faq.count}</b>(질문+변형, ${ix.faq.faqs}개)` : 'FAQ <span class="pill warn">없음</span>'].join(' · ');
+  $('#indexStatus').innerHTML = `검색 색인: 규칙 <b>${g.index.count}</b>개 · ${extra} · 임베딩 ${esc(g.index.model || '')} · 규칙 색인 ${esc(when(g.index.generated_at))} 생성`
+    + (g.index_stale ? ' · <span class="pill warn">rules.jsonl 과 개수가 달라요 — --rebuild 필요</span>' : '')
+    + ((!ix.textbook || !ix.examples || !ix.faq) ? ' · <code>python -m backend.textbook --rebuild</code>' : '');
 }
 
 // ---------- RAG 정확도 ----------

@@ -25,6 +25,7 @@ threshold 는 아직 미설정 (RAG 담당 실측: 정상 문장이 오류 문�
 from __future__ import annotations
 
 import json
+import os
 import re
 import threading
 import time
@@ -36,6 +37,16 @@ from pydantic import BaseModel
 
 from backend import golden, llm
 from backend.config import settings
+# 학년 밖 단어 후검사에서 빼는 문법어·기능어 (교재 단어표엔 없지만 규칙이 만들어 내는 말: 관사·조동사·전치사·수량사·축약형)
+_OUTSIDE_STOP = set("""a an the this that these those it its i you he she we they me him her us them my your his our their
+am is are was were be been being do does did don't doesn't didn't isn't aren't wasn't weren't can can't could will won't would should must may
+to of in on at by for with from about over under into and or but not no so too very much many some any a lot lots there here than more most
+what when where who why how which whose i'm you're he's she's it's we're they're let's going""".split())
+try:                                                       # 검색 v2 (2026-09-14, docs/2026.09.14 검색 함수 계약): 틀린 예문·교과서 패턴 색인. 없어도 /fix 는 기존대로 돈다
+    from backend import textbook
+except Exception as _e:  # noqa: BLE001
+    print(f"[fix] textbook 모듈 없음 → 예문·교과서 검색 생략: {_e}", flush=True)
+    textbook = None
 
 ROOT = Path(__file__).resolve().parent.parent          # project/
 STUDENT_DIR = ROOT / "data" / "student"
@@ -535,20 +546,40 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
     #    + 가짜 규칙 SPELL·OTHER. 검색 실패면 규칙 전부 (폴백)
     t_start = time.perf_counter()
     cands, mode, fallback_reason = _search_candidates(text, k=len(all_rules))
+    # 1-1) 검색 v2: 틀린 예문 검색(search_examples)으로 찾은 규칙 후보를 설명문 후보와 번갈아 합쳐 상위 5개로 (실측 hit@3 78% → 91%),
+    #      교과서 패턴 힌트(search_textbook, 분포가 뾰족할 때만 프롬프트에). 임베딩은 한 번만(qvec 공유). 실패하면 기존 동작 그대로.
+    qvec, ex_cands, tb = None, [], None
+    if textbook is not None and mode == "rag":
+        try:
+            from backend import embedding as _emb
+            qvec = _emb.embed_query(text)
+        except Exception as e:  # noqa: BLE001
+            print(f"[fix] 보조 임베딩 실패 → 예문·교과서 검색 생략: {type(e).__name__}: {e}", flush=True)
+        if qvec is not None:
+            ex_cands = textbook.search_examples(text, k=RAG_TOP_K, qvec=qvec)
+            if os.environ.get("FIX_TEXTBOOK", "1") != "0":                 # FIX_TEXTBOOK=0: 교과서 힌트 없이 (비교 실험용, tests/eval_fix.py --no-textbook)
+                tb = textbook.search_textbook(text, level=level, k_pattern=3, k_word=0, qvec=qvec)
+                if tb.get("error"):
+                    tb = None
+    tb_hint = bool(tb and tb.get("patterns") and textbook.sharp([p["score"] for p in tb["patterns"]]))
     timing = {"search_ms": int((time.perf_counter() - t_start) * 1000), "llm_ms": 0, "llm_calls": 0, "total_ms": 0}   # 단계별 시간 (로그·관리자용)
+    top_cands: list[dict] = []                               # 프롬프트 상위 후보 (예문+설명문 합침). 폴백이면 빈 목록 (아래 top=cands[0] 와 다른 변수)
     if mode == "rag":
         if len(cands) != len(all_rules):                    # 색인이 rules.jsonl 과 다름 (데이터 갱신 뒤 --rebuild 안 함)
             print(f"[fix] 경고: 색인 {len(cands)}개 ≠ rules.jsonl {len(all_rules)}개 → python -m backend.indexing --rebuild 필요", flush=True)
         unit_ids = set(unit_row.get("rule_ids") or [])
         all_ids = {r["id"] for r in all_rules if r.get("unit") == "ALL"}
         extra_ids = unit_ids | all_ids
-        prompt_rules = cands[:RAG_TOP_K] + [c for c in cands[RAG_TOP_K:] if c["id"] in extra_ids]
+        top_cands = (textbook.merge_candidates(ex_cands, cands[:RAG_TOP_K], k=RAG_TOP_K) if ex_cands
+                     else [{**c, "from": "rules"} for c in cands[:RAG_TOP_K]])
+        top_ids = {c["id"] for c in top_cands}
+        prompt_rules = list(top_cands) + [c for c in cands if c["id"] in extra_ids and c["id"] not in top_ids]
         seen = {r["id"] for r in prompt_rules}              # 색인에 없는 Unit·공통 규칙은 rules.jsonl 에서 보충
         prompt_rules += [r for r in all_rules if r["id"] in extra_ids and r["id"] not in seen]
-        # 발표용 근거 박스: 검색 5위 밖에서 유닛·공통 규칙으로 들어온 후보를 출처와 함께 (모델이 고른 게 검색 밖이면 여기서 보임)
+        # 발표용 근거 박스: 상위 후보 밖에서 유닛·공통 규칙으로 들어온 후보를 출처와 함께 (모델이 고른 게 검색 밖이면 여기서 보임)
         extra_rules = [{"id": r["id"], "name": r["type"], "from": "unit" if r["id"] in unit_ids else "all",
                         "rank": next((i + 1 for i, c in enumerate(cands) if c["id"] == r["id"]), None)}
-                       for r in prompt_rules[RAG_TOP_K:]]
+                       for r in prompt_rules[len(top_cands):]]
     else:
         prompt_rules = all_rules
         extra_rules = []
@@ -560,10 +591,13 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         mission=unit_row.get("mission") or "(미션 없음 — 미션 확인은 ok=true 로)",
         hint_words=", ".join(unit_row.get("hint_words") or []) or "(없음)",
         all_rules=_rules_block(prompt_rules),
+        textbook="\n".join(f"- [{p['id']}] {p['text']}" + (f" ({p['meaning']})" if p.get("meaning") else "") for p in tb["patterns"]) if tb_hint else "(없음)",
         sentence=text,
     )
-    shown = [(c["id"], round(c["score"], 3)) for c in cands[:RAG_TOP_K]] if cands else [r["id"] for r in all_rules]
-    extra = [r["id"] for r in prompt_rules[RAG_TOP_K:] if r["id"] not in (SPELLING_RULE["id"], OTHER_RULE["id"])] if cands else []
+    shown = [(c["id"], round(c["score"], 3), c.get("from", "rules")[:2]) for c in top_cands] if cands else [r["id"] for r in all_rules]
+    extra = [r["id"] for r in prompt_rules[len(top_cands):] if r["id"] not in (SPELLING_RULE["id"], OTHER_RULE["id"])] if cands else []
+    if tb is not None:
+        print(f"[fix] 교과서 검색: 패턴 {[(p['id'], p['score']) for p in tb['patterns']]} → {'힌트 넣음' if tb_hint else '힌트 없음(분포 평평)'}", flush=True)
     print(f"[fix] student={student} unit={unit} mode={mode}{' (' + fallback_reason + ')' if fallback_reason else ''} candidates={shown} +추가규칙={extra} text={text!r}", flush=True)
 
     # 2) 생성 → 3) 검증. 검증에 걸리면 이유를 덧붙여 한 번 더 생성, 그래도 안 되면 full_fixed 가 학생 단어뿐일 때 규칙 밖(OTHER)으로 살리고 아니면 502
@@ -582,7 +616,10 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
 
         ok = bool(out.get("ok"))
         _n = lambda x: re.sub(r"[.!?\s]+$", "", str(x or "")).strip().lower()
-        nochange = not ok and ((out.get("wrong") or "").strip() == (out.get("fix") or "").strip() or _n(out.get("fixed")) == _n(text))
+        _rid = (out.get("rule_id") or "").strip()
+        _pair_same = (out.get("wrong") or "").strip() == (out.get("fix") or "").strip()
+        # OTHER 답은 wrong·fix 가 null 인 게 정상(프롬프트 1-2) — 문장이 실제로 바뀌었으면 '고친 게 없음' 으로 보지 않는다 (9/14: 'i go bus'→'I go by bus', 'went to went' 가 ok 로 새던 원인)
+        nochange = not ok and (_n(out.get("fixed")) == _n(text) or (_pair_same and _rid != OTHER_RULE["id"]))
         if nochange and attempt == 1:                        # 고친 게 없는 답(hate→hate). 한 번은 다시 시킨다 — 'I drew zoo yesterday' 처럼 진짜 틀린 곳을 놓친 걸 수도
             first_nochange = True
             problem = ("wrong 과 fix 가 같아서 고친 게 없음. 참고 규칙을 하나씩 문장에 대조해 보라 — 특히 관사(a/an 빠짐), 복수형(-s), 시제, be동사. "
@@ -681,6 +718,33 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         rule_field, source = None, None
     runner_up = {"id": second["id"], "name": second["type"], "score": round(second["score"], 4), "rank": cands.index(second) + 1} if (rule and second and mode == "rag") else None   # 모델이 고른 것 외 최고 후보 (rank 는 검색 순위 — 모델이 22위를 골랐으면 이게 1위일 수 있음). ok 면 null
 
+    # 교과서 범위 후검사 (v2): 고친 문장이 교과서 패턴을 그대로 썼나(모델 말 대신 코드가 대조), 학년 밖 단어(표시만), 닮은 실수(예문 검색 1위 — 화면 🙋 타일·오답노트 연습)
+    _nz = lambda s: " ".join(re.sub(r"[^a-z' ]+", " ", str(s or "").lower()).split())
+    used_pattern = None
+    if tb and tb.get("patterns") and not ok:
+        fx_all = _nz(full_fixed or fixed)
+        for p in tb["patterns"]:
+            pt = _nz(p["text"])
+            if pt and (pt == _nz(fixed) or pt == fx_all or (len(pt.split()) >= 3 and pt in fx_all)):
+                used_pattern = p["id"]
+                break
+    outside_words: list[str] = []
+    if not ok and textbook is not None:
+        try:
+            known = textbook.known_words(level) | {w.lower() for w in _func_words()} | _OUTSIDE_STOP   # 기능어·문법어는 학년 밖 단어로 안 봄
+            in_orig = set(re.findall(r"[a-z']+", orig.lower()))
+            outside_words = sorted({w for w in re.findall(r"[a-z']+", str(full_fixed or fixed).lower())
+                                    if w not in in_orig and w.strip("'") not in known and len(w) > 1 and not w.startswith("'")})
+        except Exception:  # noqa: BLE001
+            outside_words = []
+    peer = None
+    if textbook is not None and qvec is not None and rule:      # 모델이 고른 규칙의 닮은 틀린 예문 (errors.jsonl 행 우선 — 오답노트 연습 문제와 같은 행)
+        sims = textbook.similar_examples(text, rule["id"], k=1, qvec=qvec, exclude_text=orig)
+        if sims:
+            pc = sims[0]
+            tgt = next((e.get("target") for e in golden.errors() if e.get("id") == pc.get("example_id")), None)
+            peer = {"text": pc.get("example"), "target": tgt, "fix": pc.get("fix"), "correct": pc.get("correct"), "error_id": pc.get("example_id"), "rule_id": rule["id"], "score": pc.get("score")}
+
     # 설명은 검색된 규칙 문서에서 (RAG 의 "답 내용이 검색 문서에서 나온다" 조건). 모델의 why 는 규칙 문서가 없는 경우(OTHER·철자·맞는 문장)에만 쓰고,
     # 규칙을 골랐을 때는 model_why 로만 남긴다 (DEV 화면·비교용). grounded = 설명이 문서에서 나왔는가 — 관리자 지표
     doc = golden.find_rule(rule["id"]) if (rule and not other) else None
@@ -708,7 +772,11 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         "log_id": log_id,
         "mode": mode,
         "fallback_reason": fallback_reason,                    # "search_error" | "no_results" | None
-        "candidates": [{"id": c["id"], "name": c["type"], "score": round(c["score"], 4)} for c in cands[:RAG_TOP_K]],   # 검색 상위 RAG_TOP_K (관리자·실험용)
+        "candidates": [{"id": c["id"], "name": c["type"], "score": round(c["score"], 4), "from": c.get("from", "rules")} for c in top_cands],   # 프롬프트 상위 후보 (예문+설명문 합침, from: examples|rules)
+        "textbook": ({"patterns": [{k: p[k] for k in ("id", "text", "meaning", "unit", "level", "score")} for p in tb["patterns"]], "words": [],
+                      "hint": tb_hint, "used_pattern": used_pattern, "query_ms": tb.get("query_ms")} if tb is not None else None),   # 교과서 패턴 검색 (힌트로 넣었나 · 고친 문장이 그 표현을 썼나)
+        "peer_example": peer,                                  # 모델이 고른 규칙의 닮은 틀린 예문 (errors.jsonl 행 = 오답노트 연습 문제) — 화면 🙋 타일
+        "outside_words": outside_words,                        # 고친 문장에 새로 들어간 학년 밖 단어 (표시만, 막지 않음)
         "extra_rules": extra_rules,                            # 검색 5위 밖에서 유닛(unit)·공통(all) 규칙으로 후보에 들어온 것 [{id,name,from,rank}]
         "embedding": _embedding_info(),                        # 검색(임베딩) 모델 {"provider","model"} — 발표용 근거 박스 "검색 모델 · 답변 모델"
         "llm": llm_info,                                       # {"backend","model","ms","fallback_from"} — 비교 실험·관리자용
@@ -721,6 +789,7 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
             "level": level, "unit": unit, "text": orig, "source": source_kind,
             "spelled": text if pre_spelling else None,        # 사전검사로 철자 고친 뒤 실제로 진단한 문장
             "rule_id": rule["id"] if rule else None, "ok": ok, "fixed": result["fixed"], "grounded": result["grounded"],
+            "used_pattern": used_pattern, "outside_words": outside_words, "cand_from": [c.get("from", "rules") for c in top_cands],
             "mission_ok": result["mission"]["ok"], "mode": mode, "fallback_reason": fallback_reason,
             "top_score": round(top["score"], 4) if top else None,
             "llm": llm_info.get("backend"), "llm_ms": llm_info.get("ms"),
