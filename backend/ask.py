@@ -448,7 +448,12 @@ def _answer(body: AskIn) -> dict:
     # "내가 뭘 틀렸나요?"처럼 판정할 영어 문장이 질문 안에 없는 메타 질문은 이 패턴에 걸려도
     # _check_correctness가 답할 게 없어 "" 가 맞아요 처럼 빈 답을 냄(2026-09-11 오답노트 화면에서
     # 재현) — 질문에 영어 알파벳이 실제로 있을 때만(판정 대상 문장이 있다는 뜻) 이 경로로 보낸다.
-    if _CORRECTNESS_PATTERN.search(question) and re.search(r"[A-Za-z]", question):
+    # "This/These 단수복수는 왜 틀렸어?"처럼 규칙 이름에 영어가 섞여 있을 뿐 "왜/어떻게"로 이유를
+    # 묻는 메타 질문도 있어서(2026-09-14 재현 — _check_correctness가 판정할 문장이 없으니 질문을
+    # 그대로 "fixed"로 착각해 "~"가 맞아요 처럼 의미 없는 답을 냄), "왜"/"어떻게"가 있으면 문장
+    # 판정이 아니라 이유 질문으로 보고 이 경로를 건너뛴다.
+    if (_CORRECTNESS_PATTERN.search(question) and re.search(r"[A-Za-z]", question)
+            and not re.search(r"왜|어떻게", question)):
         if not settings.has_api_key:
             return {"answer": "", "source": [], "offtopic": True, "error": "GEMINI_API_KEY 미설정"}
         try:
