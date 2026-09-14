@@ -539,6 +539,38 @@ def ask(body: AskIn):
     return result
 
 
+_NOTEBOOK_TRIGGER = re.compile(r"틀렸|틀린|틀리는|오답|자주\s*틀리|실수")
+_TRAILING_PARTICLE = re.compile(r"(는|은|이|가|을|를|도|만|의|랑|와|과|에서|에게|에)$")
+
+
+def _notebook_rule_answer(question: str, student: str) -> dict | None:
+    """"내가 관사를 틀렸었나?"처럼 오답노트 질문에 구체적 문법 주제가 있으면, notebook_text() 전체
+    요약을 LLM에 던져 텍스트 생김새로 아무 줄이나 고르게 하는 대신(2026-09-14 재현 — "관사"를
+    물었는데 실제 관사 규칙(R-38, "I saw a dog") 대신, 우연히 "a"가 붙어 있는 다른 규칙(R-08)의
+    예문을 잘못 골라 답함), 그 학생 오답노트에서 이름이 실제로 일치하는 규칙 하나를 찾아
+    결정적으로 답한다. 일치하는 게 없으면 None(기존 경로로 폴백)."""
+    if not _NOTEBOOK_TRIGGER.search(question):
+        return None
+    topic_words = [_TRAILING_PARTICLE.sub("", w) for w in _content_words(question)]
+    topic_words = [w for w in topic_words if len(w) >= 2 and not _NOTEBOOK_TRIGGER.search(w)]
+    if not topic_words:
+        return None
+    from backend.student import notebook_summary
+    book = notebook_summary(student, max_examples=1)
+    for it in book["active"] + book["overcome"]:
+        # "인사말이야?"처럼 조사가 아니라 서술격 어미("-이야")가 붙으면 위 particle-strip으로 못
+        # 떼지는데, 규칙 이름("인사말 문장부호")을 단어 단위로 쪼개 양방향 부분일치로 잡는다.
+        name_words = [nw for nw in re.split(r"[\s()·]+", it["name"]) if len(nw) >= 2]
+        if not any(w in nw or nw in w for w in topic_words for nw in name_words):
+            continue
+        ex = it["examples"][0] if it.get("examples") else None
+        answer = f"네, {it['name']}({it['rule_id']}) 부분을 {it['count']}번 틀렸어요."
+        if ex:
+            answer += f" 예를 들어 '{ex['text']}'는 '{ex['fixed']}'로 고쳐야 해요."
+        return {"answer": answer, "source": [{"chunk_id": it["rule_id"]}], "offtopic": False, "suggested": []}
+    return None
+
+
 def _answer(body: AskIn) -> dict:
     question = body.question.strip()
     if not question:
@@ -564,6 +596,13 @@ def _answer(body: AskIn) -> dict:
     all_rules = golden.rules()
     if not all_faqs and not all_rules:
         return {"answer": "", "source": [], "offtopic": True, "error": "faq.jsonl/rules.jsonl 이 없음"}
+
+    # "내가 관사를 틀렸었나?"처럼 구체적 문법 주제를 콕 집어 물으면, 그 학생 오답노트에서 이름이
+    # 실제로 일치하는 규칙을 찾아 결정적으로 답한다 (LLM이 텍스트 생김새로 엉뚱한 규칙 예문을
+    # 고르는 걸 방지, 2026-09-14).
+    notebook_rule = _notebook_rule_answer(question, body.student)
+    if notebook_rule is not None:
+        return notebook_rule
 
     # "왜때 틀렸어"처럼 구체적 규칙 언급 없이 막연하게 자기 오답을 묻는데 오답노트가 실제로 비어
     # 있으면, LLM이 프롬프트 어딘가의 예문("I read friend." 등)을 "이 학생 개인 기록"으로 착각해
