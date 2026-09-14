@@ -8,17 +8,17 @@ w-0006,4,Unit01,goodbye,잘 가,"Goodbye, Mom!"
 w-0007,4,Unit01,thanks,고마워,Thanks a lot!
 w-0008,4,Unit01,sorry,미안해,I am sorry.
 w-0009,4,Unit01,please,부탁해요,Please help me.
-w-0010,4,Unit01,welcome,환영하다,Welcome to my house.
-w-0011,5,Unit01,greet,인사하다,I greet my teacher every morning.
-w-0012,5,Unit01,introduce,소개하다,Let me introduce my friend.
-w-0013,5,Unit01,apologize,사과하다,I want to apologize to you.
-w-0014,5,Unit01,thank,감사하다,I thank my parents every day.
+w-0010,4,Unit01,welcome,환영하다,You're welcome.
+w-0011,5,Unit01,greet,인사하다,I always greet my teacher.
+w-0012,5,Unit01,introduce,소개하다,Let's introduce ourselves.
+w-0013,5,Unit01,apologize,사과하다,I am so sorry. I apologize.
+w-0014,5,Unit01,thank,감사하다,"How are you? I'm fine, thank you."
 w-0015,5,Unit01,invite,초대하다,I will invite my friends to the party.
-w-0016,6,Unit01,appreciate,감사히 여기다,I really appreciate your help.
+w-0016,6,Unit01,appreciate,감사히 여기다,Do you appreciate your friends?
 w-0017,6,Unit01,farewell,작별,We said our farewell at the airport.
 w-0018,6,Unit01,greeting,인사(말),A smile is a warm greeting.
 w-0019,6,Unit01,polite,예의바른,She is very polite to everyone.
-w-0020,6,Unit01,formal,격식있는,He wrote a formal letter to the school.
+w-0020,6,Unit01,formal,격식있는,This letter is too formal.
 w-0021,3,Unit02,mom,엄마,I love my mom.
 w-0022,3,Unit02,dad,아빠,My dad is tall.
 w-0023,3,Unit02,sister,언니/누나/여동생,My sister is kind.
@@ -31,9 +31,9 @@ w-0029,4,Unit02,uncle,삼촌,My uncle drives a truck.
 w-0030,4,Unit02,cousin,사촌,My cousin visits us every summer.
 w-0031,5,Unit02,parents,부모님,My parents work hard every day.
 w-0032,5,Unit02,family,가족,I love my family.
-w-0033,5,Unit02,son,아들,He is their only son.
-w-0034,5,Unit02,daughter,딸,She is their youngest daughter.
-w-0035,5,Unit02,relative,친척,Many relatives came to the wedding.
+w-0033,5,Unit02,son,아들,This is their son.
+w-0034,5,Unit02,daughter,딸,These are my daughters.
+w-0035,5,Unit02,relative,친척,"I have an aunt, an uncle, and many relatives."
 w-0036,6,Unit02,grandchild,손주,She is my grandmother's first grandchild.
 w-0037,6,Unit02,sibling,형제자매,I have two siblings.
 w-0038,6,Unit02,generation,세대,Three generations live in this house.
@@ -46,23 +46,23 @@ w-0044,3,Unit03,chair,의자,Sit on the chair.
 w-0045,3,Unit03,teacher,선생님,My teacher is kind.
 w-0046,4,Unit03,classroom,교실,Our classroom is bright and clean.
 w-0047,4,Unit03,student,학생,She is a good student.
-w-0048,4,Unit03,notebook,공책,I write in my notebook.
-w-0049,4,Unit03,eraser,지우개,May I borrow your eraser?
+w-0048,4,Unit03,notebook,공책,I open my notebook.
+w-0049,4,Unit03,eraser,지우개,Whose eraser is this?
 w-0050,4,Unit03,bag,가방,My bag is heavy.
-w-0051,5,Unit03,homework,숙제,I finish my homework after school.
-w-0052,5,Unit03,test,시험,We have a test tomorrow.
-w-0053,5,Unit03,subject,과목,Math is my favorite subject.
-w-0054,5,Unit03,lesson,수업,Today's lesson is about animals.
-w-0055,5,Unit03,library,도서관,I borrow books from the library.
+w-0051,5,Unit03,homework,숙제,I do my homework after school.
+w-0052,5,Unit03,test,시험,We will have a test tomorrow.
+w-0053,5,Unit03,subject,과목,Which subject do you like?
+w-0054,5,Unit03,lesson,수업,We read the lesson together.
+w-0055,5,Unit03,library,도서관,The library is between the gym and the office.
 w-0056,6,Unit03,principal,교장 선생님,The principal spoke at the assembly.
-w-0057,6,Unit03,education,교육,Education is important for children.
+w-0057,6,Unit03,education,교육,Don't stop your education.
 w-0058,6,Unit03,schedule,시간표,Check your class schedule.
-w-0059,6,Unit03,grade,학년/성적,She got a good grade on the test.
+w-0059,6,Unit03,grade,학년/성적,Whose grade is this?
 w-0060,6,Unit03,classmate,반 친구,My classmate sits next to me.
 w-0061,3,Unit04,dog,개,My dog can run fast.
 w-0062,3,Unit04,cat,고양이,The cat is sleeping.
 w-0063,3,Unit04,bird,새,A bird is singing.
-w-0064,3,Unit04,fish,물고기,Fish live in water.
+w-0064,3,Unit04,fish,물고기,These fish are small.
 w-0065,3,Unit04,rabbit,토끼,The rabbit can jump.
 w-0066,4,Unit04,lion,사자,The lion is big and strong.
 w-0067,4,Unit04,elephant,코끼리,An elephant has a long nose.
@@ -73,49 +73,49 @@ w-0071,5,Unit04,wildlife,야생동물,We saw a lot of wildlife in the forest.
 w-0072,5,Unit04,insect,곤충,A bee is a small insect.
 w-0073,5,Unit04,reptile,파충류,A snake is a reptile.
 w-0074,5,Unit04,mammal,포유류,A whale is a mammal.
-w-0075,5,Unit04,creature,생물,The ocean is full of strange creatures.
+w-0075,5,Unit04,creature,생물,This creature is bigger than a cat.
 w-0076,6,Unit04,endangered,멸종위기의,The panda is an endangered animal.
-w-0077,6,Unit04,species,종(種),This is a rare species of bird.
-w-0078,6,Unit04,habitat,서식지,We must protect the animals' habitat.
+w-0077,6,Unit04,species,종(種),This species can't fly.
+w-0078,6,Unit04,habitat,서식지,There isn't a habitat for pandas here.
 w-0079,6,Unit04,predator,포식자,The eagle is a fierce predator.
-w-0080,6,Unit04,ecosystem,생태계,The forest ecosystem needs clean water.
+w-0080,6,Unit04,ecosystem,생태계,These ecosystems need clean water.
 w-0081,3,Unit05,apple,사과,I eat an apple every day.
-w-0082,3,Unit05,milk,우유,Milk is good for you.
+w-0082,3,Unit05,milk,우유,I want some milk.
 w-0083,3,Unit05,bread,빵,She likes bread and milk.
-w-0084,3,Unit05,rice,밥,We eat rice for lunch.
+w-0084,3,Unit05,rice,밥,Do you have any rice?
 w-0085,3,Unit05,egg,달걀,I want an egg.
-w-0086,4,Unit05,pizza,피자,We ordered a pizza for dinner.
-w-0087,4,Unit05,banana,바나나,The monkey likes bananas.
-w-0088,4,Unit05,cheese,치즈,I put cheese on my sandwich.
+w-0086,4,Unit05,pizza,피자,I would like a piece of pizza.
+w-0087,4,Unit05,banana,바나나,Bananas are yellow and sweet.
+w-0088,4,Unit05,cheese,치즈,I have some cheese.
 w-0089,4,Unit05,soup,수프,The soup is hot.
-w-0090,4,Unit05,noodle,면,I like noodle soup.
-w-0091,5,Unit05,vegetable,채소,Carrots are a healthy vegetable.
-w-0092,5,Unit05,fruit,과일,I eat fruit every morning.
-w-0093,5,Unit05,dessert,디저트,Ice cream is my favorite dessert.
+w-0090,4,Unit05,noodle,면,I want noodles.
+w-0091,5,Unit05,vegetable,채소,I would like some vegetables.
+w-0092,5,Unit05,fruit,과일,I eat much fruit.
+w-0093,5,Unit05,dessert,디저트,I would like some dessert.
 w-0094,5,Unit05,snack,간식,I have a snack after school.
 w-0095,5,Unit05,meal,식사,Breakfast is an important meal.
-w-0096,6,Unit05,nutrition,영양,Good nutrition keeps you healthy.
-w-0097,6,Unit05,ingredient,재료,Flour is the main ingredient in bread.
+w-0096,6,Unit05,nutrition,영양,Milk has much nutrition.
+w-0097,6,Unit05,ingredient,재료,Which ingredient do you need?
 w-0098,6,Unit05,recipe,조리법,My mom follows a recipe for cookies.
-w-0099,6,Unit05,appetite,식욕,Exercise gives me a big appetite.
-w-0100,6,Unit05,diet,식단,A balanced diet is important for kids.
-w-0101,3,Unit06,red,빨강,I like the color red.
+w-0099,6,Unit05,appetite,식욕,I have a big appetite.
+w-0100,6,Unit05,diet,식단,I would like a healthy diet.
+w-0101,3,Unit06,red,빨강,I like red roses.
 w-0102,3,Unit06,blue,파랑,The sky is blue.
 w-0103,3,Unit06,yellow,노랑,The sun is yellow.
 w-0104,3,Unit06,green,초록,The grass is green.
 w-0105,3,Unit06,white,흰색,Snow is white.
 w-0106,4,Unit06,black,검정,My cat is black.
 w-0107,4,Unit06,pink,분홍,She wears a pink dress.
-w-0108,4,Unit06,purple,보라,I painted the flower purple.
+w-0108,4,Unit06,purple,보라,"Which color do you like, purple or pink?"
 w-0109,4,Unit06,orange,주황,The orange is orange.
 w-0110,4,Unit06,brown,갈색,The bear has brown fur.
-w-0111,5,Unit06,gray,회색,The sky turned gray before the rain.
+w-0111,5,Unit06,gray,회색,I see gray clouds.
 w-0112,5,Unit06,gold,금색,She wore a gold necklace.
 w-0113,5,Unit06,silver,은색,He has a silver watch.
-w-0114,5,Unit06,colorful,알록달록한,The garden is full of colorful flowers.
+w-0114,5,Unit06,colorful,알록달록한,Which one is more colorful?
 w-0115,5,Unit06,bright,밝은,She likes bright colors.
-w-0116,6,Unit06,shade,색조,Choose a lighter shade of blue.
-w-0117,6,Unit06,tone,색조/톤,I like the warm tone of this photo.
+w-0116,6,Unit06,shade,색조,Which shade do you like?
+w-0117,6,Unit06,tone,색조/톤,"This tone is warm, and that tone is cold."
 w-0118,6,Unit06,pale,옅은,Her face looked pale.
 w-0119,6,Unit06,vivid,선명한,The painting has vivid colors.
 w-0120,6,Unit06,dye,염색하다,We dyed the shirt red.
@@ -130,12 +130,12 @@ w-0128,4,Unit07,eight,여덟,The spider has eight legs.
 w-0129,4,Unit07,nine,아홉,There are nine players on a team.
 w-0130,4,Unit07,ten,열,I can count to ten.
 w-0131,5,Unit07,hundred,백,There are a hundred students in our grade.
-w-0132,5,Unit07,thousand,천,The stadium holds a thousand people.
-w-0133,5,Unit07,dozen,다스(12개),I bought a dozen eggs.
+w-0132,5,Unit07,thousand,천,There are thousands of people in the stadium.
+w-0133,5,Unit07,dozen,다스(12개),How many eggs are there? A dozen.
 w-0134,5,Unit07,first,첫 번째,She was the first to finish.
-w-0135,5,Unit07,second,두 번째,He came in second place.
-w-0136,6,Unit07,million,백만,The city has a million people.
-w-0137,6,Unit07,quarter,사분의 일,I ate a quarter of the pizza.
+w-0135,5,Unit07,second,두 번째,He is the second in line.
+w-0136,6,Unit07,million,백만,There are millions of stars.
+w-0137,6,Unit07,quarter,사분의 일,It's the first quarter of the game.
 w-0138,6,Unit07,half,절반,Give me half of the apple.
 w-0139,6,Unit07,double,두 배,The price is double now.
 w-0140,6,Unit07,triple,세 배,The team scored triple the points.
@@ -147,25 +147,25 @@ w-0145,3,Unit08,cold,추운,It is cold in winter.
 w-0146,4,Unit08,windy,바람 부는,It is windy today.
 w-0147,4,Unit08,snowy,눈 오는,It is snowy in December.
 w-0148,4,Unit08,warm,따뜻한,The weather is warm today.
-w-0149,4,Unit08,cool,시원한,The breeze feels cool.
+w-0149,4,Unit08,cool,시원한,It is getting cool.
 w-0150,4,Unit08,weather,날씨,How is the weather today?
-w-0151,5,Unit08,temperature,기온,The temperature dropped last night.
+w-0151,5,Unit08,temperature,기온,The temperature is getting low.
 w-0152,5,Unit08,forecast,예보,The forecast says it will rain.
 w-0153,5,Unit08,storm,폭풍,A big storm is coming.
 w-0154,5,Unit08,humid,습한,It is humid in summer.
 w-0155,5,Unit08,foggy,안개 낀,The morning was foggy.
 w-0156,6,Unit08,climate,기후,The climate is changing.
-w-0157,6,Unit08,drought,가뭄,The drought damaged the crops.
-w-0158,6,Unit08,thunder,천둥,We heard thunder last night.
+w-0157,6,Unit08,drought,가뭄,The plants are dry because there is a drought.
+w-0158,6,Unit08,thunder,천둥,I stay home because I hear thunder.
 w-0159,6,Unit08,lightning,번개,Lightning flashed across the sky.
-w-0160,6,Unit08,hurricane,허리케인,A hurricane hit the coast.
+w-0160,6,Unit08,hurricane,허리케인,What's the weather like? A hurricane is coming.
 w-0161,3,Unit09,spring,봄,Flowers bloom in spring.
 w-0162,3,Unit09,summer,여름,We swim in summer.
 w-0163,3,Unit09,fall,가을,Leaves fall in fall.
 w-0164,3,Unit09,winter,겨울,We build snowmen in winter.
-w-0165,3,Unit09,season,계절,My favorite season is fall.
+w-0165,3,Unit09,season,계절,We stay inside during the rainy season.
 w-0166,4,Unit09,leaf,나뭇잎,The leaf turned red.
-w-0167,4,Unit09,flower,꽃,The flower smells nice.
+w-0167,4,Unit09,flower,꽃,I water the flowers during summer.
 w-0168,4,Unit09,snowman,눈사람,We made a snowman together.
 w-0169,4,Unit09,vacation,방학,Summer vacation starts next week.
 w-0170,4,Unit09,holiday,휴일,Today is a holiday.
@@ -173,12 +173,12 @@ w-0171,5,Unit09,harvest,수확,Farmers harvest rice in fall.
 w-0172,5,Unit09,blossom,꽃이 피다,The cherry trees blossom in April.
 w-0173,5,Unit09,migrate,이동하다(철새),Birds migrate south in winter.
 w-0174,5,Unit09,hibernate,겨울잠 자다,Bears hibernate in winter.
-w-0175,5,Unit09,seasonal,계절적인,Strawberries are a seasonal fruit.
-w-0176,6,Unit09,equinox,춘분/추분,The equinox marks the start of spring.
+w-0175,5,Unit09,seasonal,계절적인,Do you like seasonal fruit?
+w-0176,6,Unit09,equinox,춘분/추분,The equinox comes in March.
 w-0177,6,Unit09,solstice,하지/동지,The summer solstice is the longest day.
-w-0178,6,Unit09,annual,매년의,This is our annual school trip.
+w-0178,6,Unit09,annual,매년의,Our annual trip is in May.
 w-0179,6,Unit09,temperate,온화한,Korea has a temperate climate.
-w-0180,6,Unit09,transition,변화,The transition from summer to fall is quick.
+w-0180,6,Unit09,transition,변화,The transition doesn't take long.
 w-0181,3,Unit10,shirt,셔츠,I am wearing a white shirt.
 w-0182,3,Unit10,pants,바지,These pants are too long.
 w-0183,3,Unit10,shoes,신발,My shoes are new.
@@ -186,19 +186,19 @@ w-0184,3,Unit10,hat,모자,He wears a blue hat.
 w-0185,3,Unit10,socks,양말,My socks are warm.
 w-0186,4,Unit10,jacket,재킷,"Put on your jacket, it's cold."
 w-0187,4,Unit10,skirt,치마,She wears a red skirt.
-w-0188,4,Unit10,dress,원피스,She wore a pretty dress.
+w-0188,4,Unit10,dress,원피스,She is wearing a pretty dress.
 w-0189,4,Unit10,coat,코트,He wears a heavy coat in winter.
 w-0190,4,Unit10,glove,장갑,"Wear your gloves, it's cold outside."
-w-0191,5,Unit10,uniform,교복/유니폼,Students wear a school uniform.
+w-0191,5,Unit10,uniform,교복/유니폼,I am wearing my school uniform.
 w-0192,5,Unit10,scarf,목도리,She wrapped a scarf around her neck.
-w-0193,5,Unit10,button,단추,One button on my shirt is missing.
-w-0194,5,Unit10,zipper,지퍼,The zipper on my jacket is stuck.
-w-0195,5,Unit10,fabric,옷감,This shirt is made of soft fabric.
+w-0193,5,Unit10,button,단추,This button is too small.
+w-0194,5,Unit10,zipper,지퍼,The zipper doesn't work.
+w-0195,5,Unit10,fabric,옷감,That fabric looks nice on you.
 w-0196,6,Unit10,fashion,패션,She is interested in fashion.
-w-0197,6,Unit10,style,스타일,He has his own style.
+w-0197,6,Unit10,style,스타일,You look good in that style.
 w-0198,6,Unit10,accessory,액세서리,A necklace is a nice accessory.
-w-0199,6,Unit10,wardrobe,옷장,My wardrobe is full of clothes.
-w-0200,6,Unit10,textile,직물,Cotton is a common textile.
+w-0199,6,Unit10,wardrobe,옷장,There isn't a coat in my wardrobe.
+w-0200,6,Unit10,textile,직물,This textile is softer than that one.
 w-0201,3,Unit11,head,머리,My head hurts a little.
 w-0202,3,Unit11,hand,손,Wash your hands.
 w-0203,3,Unit11,foot,발,My foot is cold.
@@ -214,129 +214,129 @@ w-0212,5,Unit11,elbow,팔꿈치,I hit my elbow on the door.
 w-0213,5,Unit11,knee,무릎,He fell and hurt his knee.
 w-0214,5,Unit11,stomach,배,My stomach hurts.
 w-0215,5,Unit11,chest,가슴,He put his hand on his chest.
-w-0216,6,Unit11,skeleton,골격,We studied the human skeleton in class.
+w-0216,6,Unit11,skeleton,골격,A skeleton has two feet and many teeth.
 w-0217,6,Unit11,muscle,근육,Exercise makes your muscles strong.
 w-0218,6,Unit11,organ,장기,The heart is an important organ.
 w-0219,6,Unit11,brain,뇌,The brain controls the body.
 w-0220,6,Unit11,nerve,신경,Nerves send signals to the brain.
 w-0221,3,Unit12,run,달리다,I like to run in the park.
 w-0222,3,Unit12,jump,뛰다,The rabbit can jump high.
-w-0223,3,Unit12,swim,수영하다,We swim in the pool.
+w-0223,3,Unit12,swim,수영하다,Let's swim in the pool.
 w-0224,3,Unit12,ball,공,Throw me the ball.
 w-0225,3,Unit12,soccer,축구,We play soccer after school.
 w-0226,4,Unit12,baseball,야구,He plays baseball on Saturdays.
-w-0227,4,Unit12,basketball,농구,She is good at basketball.
+w-0227,4,Unit12,basketball,농구,She is good at playing basketball.
 w-0228,4,Unit12,badminton,배드민턴,We played badminton in the park.
-w-0229,4,Unit12,race,경주,He won the race.
+w-0229,4,Unit12,race,경주,He is good at running races.
 w-0230,4,Unit12,team,팀,Our team won the game.
 w-0231,5,Unit12,athlete,운동선수,The athlete trains every day.
 w-0232,5,Unit12,coach,코치,Our coach teaches us new skills.
-w-0233,5,Unit12,exercise,운동하다,I exercise every morning.
+w-0233,5,Unit12,exercise,운동하다,How often do you exercise?
 w-0234,5,Unit12,stadium,경기장,The stadium was full of fans.
 w-0235,5,Unit12,referee,심판,The referee blew the whistle.
-w-0236,6,Unit12,champion,챔피언,She became the school champion.
+w-0236,6,Unit12,champion,챔피언,"She is the champion, and she is so happy!"
 w-0237,6,Unit12,tournament,대회,The team joined a big tournament.
-w-0238,6,Unit12,endurance,지구력,Running builds endurance.
-w-0239,6,Unit12,strategy,전략,The coach explained a new strategy.
+w-0238,6,Unit12,endurance,지구력,I spend time building endurance.
+w-0239,6,Unit12,strategy,전략,This strategy makes the team strong.
 w-0240,6,Unit12,competition,경쟁/대회,The competition was very close.
 w-0241,3,Unit13,draw,그리다,I like to draw pictures.
 w-0242,3,Unit13,sing,노래하다,She loves to sing.
-w-0243,3,Unit13,dance,춤추다,We dance at the festival.
-w-0244,3,Unit13,read,읽다,I read books every night.
-w-0245,3,Unit13,play,놀다,Children play in the park.
+w-0243,3,Unit13,dance,춤추다,I enjoy dancing at the festival.
+w-0244,3,Unit13,read,읽다,I enjoy reading books at night.
+w-0245,3,Unit13,play,놀다,Children enjoy playing in the park.
 w-0246,4,Unit13,paint,그림을 그리다,He likes to paint with watercolors.
 w-0247,4,Unit13,collect,수집하다,I collect stamps.
-w-0248,4,Unit13,camera,카메라,She took a photo with her camera.
-w-0249,4,Unit13,puzzle,퍼즐,We solved the puzzle together.
+w-0248,4,Unit13,camera,카메라,I am interested in cameras.
+w-0249,4,Unit13,puzzle,퍼즐,How often do you do puzzles?
 w-0250,4,Unit13,garden,정원을 가꾸다,My grandmother loves to garden.
 w-0251,5,Unit13,hobby,취미,My hobby is playing the piano.
 w-0252,5,Unit13,instrument,악기,She plays a musical instrument.
-w-0253,5,Unit13,photography,사진 촬영,Photography is his favorite hobby.
+w-0253,5,Unit13,photography,사진 촬영,I spend time learning photography.
 w-0254,5,Unit13,craft,공예,We made a craft with paper.
 w-0255,5,Unit13,collection,수집품,He has a large coin collection.
-w-0256,6,Unit13,creativity,창의력,Art class helps develop creativity.
-w-0257,6,Unit13,leisure,여가,Reading is a great leisure activity.
-w-0258,6,Unit13,talent,재능,She has a talent for music.
-w-0259,6,Unit13,skill,기술,Practice improves your skill.
-w-0260,6,Unit13,passion,열정,He has a passion for drawing.
+w-0256,6,Unit13,creativity,창의력,Creativity makes art fun.
+w-0257,6,Unit13,leisure,여가,I spend my leisure time reading.
+w-0258,6,Unit13,talent,재능,Does she have a talent for music?
+w-0259,6,Unit13,skill,기술,I enjoy learning new skills.
+w-0260,6,Unit13,passion,열정,His passion for drawing makes him happy.
 w-0261,3,Unit14,Monday,월요일,I have music class on Monday.
 w-0262,3,Unit14,Tuesday,화요일,We have a test on Tuesday.
 w-0263,3,Unit14,today,오늘,Today is a sunny day.
-w-0264,3,Unit14,tomorrow,내일,We have a trip tomorrow.
+w-0264,3,Unit14,tomorrow,내일,What time is the trip tomorrow?
 w-0265,3,Unit14,yesterday,어제,It rained yesterday.
 w-0266,4,Unit14,Wednesday,수요일,We have art class on Wednesday.
 w-0267,4,Unit14,Thursday,목요일,The library is closed on Thursday.
-w-0268,4,Unit14,Friday,금요일,I love Fridays.
+w-0268,4,Unit14,Friday,금요일,I always love Fridays.
 w-0269,4,Unit14,week,주(週),We have five classes this week.
 w-0270,4,Unit14,weekend,주말,I visit my grandparents on the weekend.
 w-0271,5,Unit14,Saturday,토요일,We go hiking on Saturday.
 w-0272,5,Unit14,Sunday,일요일,We rest on Sunday.
 w-0273,5,Unit14,month,달(月),This month is very busy.
 w-0274,5,Unit14,calendar,달력,Check the calendar for the date.
-w-0275,5,Unit14,planner,계획표,I write my plans in a planner.
-w-0276,6,Unit14,century,세기,This building is over a century old.
+w-0275,5,Unit14,planner,계획표,"First, I open my planner. Then, I write my plans."
+w-0276,6,Unit14,century,세기,"This building is a century old, and that one is new."
 w-0277,6,Unit14,decade,십 년,A decade is ten years.
-w-0278,6,Unit14,anniversary,기념일,Today is their wedding anniversary.
-w-0279,6,Unit14,deadline,마감일,The homework deadline is Friday.
+w-0278,6,Unit14,anniversary,기념일,What time is the anniversary party?
+w-0279,6,Unit14,deadline,마감일,"First, check the deadline. Then, start your homework."
 w-0280,6,Unit14,punctual,시간을 잘 지키는,She is always punctual.
 w-0281,3,Unit15,car,자동차,We go to school by car.
-w-0282,3,Unit15,bus,버스,I take the bus to school.
-w-0283,3,Unit15,bike,자전거,I ride my bike every day.
-w-0284,3,Unit15,train,기차,The train arrived on time.
-w-0285,3,Unit15,taxi,택시,We took a taxi home.
+w-0282,3,Unit15,bus,버스,I get on the bus at eight.
+w-0283,3,Unit15,bike,자전거,How do you go to school? By bike.
+w-0284,3,Unit15,train,기차,I get off the train at Seoul Station.
+w-0285,3,Unit15,taxi,택시,How long does it take by taxi?
 w-0286,4,Unit15,subway,지하철,The subway is fast and cheap.
 w-0287,4,Unit15,airplane,비행기,We flew home by airplane.
-w-0288,4,Unit15,ship,배,The ship sailed across the sea.
+w-0288,4,Unit15,ship,배,How long does it take by ship?
 w-0289,4,Unit15,truck,트럭,The truck carried a lot of boxes.
 w-0290,4,Unit15,motorcycle,오토바이,He rides a motorcycle to work.
 w-0291,5,Unit15,traffic,교통(량),There was heavy traffic this morning.
 w-0292,5,Unit15,passenger,승객,The bus was full of passengers.
 w-0293,5,Unit15,station,역,Meet me at the train station.
-w-0294,5,Unit15,ticket,표,I bought a ticket for the concert.
-w-0295,5,Unit15,highway,고속도로,We drove on the highway.
+w-0294,5,Unit15,ticket,표,"Can I have a ticket, please?"
+w-0295,5,Unit15,highway,고속도로,How do you go to the beach? We drive on the highway.
 w-0296,6,Unit15,vehicle,차량,Many vehicles were parked outside.
 w-0297,6,Unit15,transportation,교통수단,Public transportation is convenient.
 w-0298,6,Unit15,license,면허(증),My dad got his driver's license.
-w-0299,6,Unit15,pedestrian,보행자,Drivers must watch for pedestrians.
+w-0299,6,Unit15,pedestrian,보행자,There are a lot of pedestrians on this street.
 w-0300,6,Unit15,commute,통근하다,She commutes to work by subway.
-w-0301,3,Unit16,home,집,I feel happy at home.
-w-0302,3,Unit16,park,공원,We play in the park.
-w-0303,3,Unit16,store,가게,I bought bread at the store.
-w-0304,3,Unit16,playground,놀이터,Children play at the playground.
+w-0301,3,Unit16,home,집,Where is your home?
+w-0302,3,Unit16,park,공원,We go to the park on Sundays.
+w-0303,3,Unit16,store,가게,The store is next to the bank.
+w-0304,3,Unit16,playground,놀이터,The playground is behind the school.
 w-0305,3,Unit16,zoo,동물원,We saw a lion at the zoo.
 w-0306,4,Unit16,hospital,병원,My mom works at a hospital.
-w-0307,4,Unit16,market,시장,We buy vegetables at the market.
-w-0308,4,Unit16,bakery,빵집,The bakery smells wonderful.
+w-0307,4,Unit16,market,시장,We go to the market on Saturdays.
+w-0308,4,Unit16,bakery,빵집,The bakery is between the bank and the library.
 w-0309,4,Unit16,bank,은행,My dad went to the bank.
-w-0310,4,Unit16,restaurant,식당,We had dinner at a restaurant.
+w-0310,4,Unit16,restaurant,식당,Where is the restaurant?
 w-0311,5,Unit16,museum,박물관,We visited a science museum.
 w-0312,5,Unit16,downtown,시내,We went shopping downtown.
-w-0313,5,Unit16,neighborhood,동네,I know everyone in my neighborhood.
+w-0313,5,Unit16,neighborhood,동네,There are a lot of kids in my neighborhood.
 w-0314,5,Unit16,church,교회,They go to church on Sunday.
 w-0315,5,Unit16,theater,극장,We watched a movie at the theater.
-w-0316,6,Unit16,community,지역사회,The event brought the community together.
+w-0316,6,Unit16,community,지역사회,Does your community have a park?
 w-0317,6,Unit16,facility,시설,The school has a new sports facility.
 w-0318,6,Unit16,landmark,랜드마크,The tower is a famous landmark.
 w-0319,6,Unit16,urban,도시의,Seoul is a large urban area.
 w-0320,6,Unit16,suburb,교외,We moved to a quiet suburb.
-w-0321,3,Unit17,doctor,의사,The doctor helped my grandmother.
+w-0321,3,Unit17,doctor,의사,My aunt is a doctor.
 w-0322,3,Unit17,nurse,간호사,The nurse was very kind.
 w-0323,3,Unit17,farmer,농부,The farmer grows rice.
-w-0324,3,Unit17,cook,요리사,The cook made a delicious meal.
-w-0325,3,Unit17,police officer,경찰관,The police officer helped us cross the street.
-w-0326,4,Unit17,firefighter,소방관,The firefighter saved the cat.
-w-0327,4,Unit17,pilot,조종사,The pilot flew the plane safely.
-w-0328,4,Unit17,singer,가수,My favorite singer released a new song.
-w-0329,4,Unit17,dancer,무용수,The dancer moved gracefully.
+w-0324,3,Unit17,cook,요리사,He is a cook.
+w-0325,3,Unit17,police officer,경찰관,I want to be a police officer.
+w-0326,4,Unit17,firefighter,소방관,My uncle is a firefighter.
+w-0327,4,Unit17,pilot,조종사,She would like to be a pilot.
+w-0328,4,Unit17,singer,가수,What does your sister do? She is a singer.
+w-0329,4,Unit17,dancer,무용수,I want to be a dancer.
 w-0330,4,Unit17,artist,예술가,The artist painted a beautiful picture.
-w-0331,5,Unit17,engineer,엔지니어,The engineer designed a new bridge.
+w-0331,5,Unit17,engineer,엔지니어,What does your mom do? She is an engineer.
 w-0332,5,Unit17,scientist,과학자,The scientist studies stars.
 w-0333,5,Unit17,designer,디자이너,She wants to be a fashion designer.
 w-0334,5,Unit17,writer,작가,The writer finished a new book.
-w-0335,5,Unit17,photographer,사진작가,The photographer took amazing pictures.
-w-0336,6,Unit17,profession,직업,Teaching is a respected profession.
-w-0337,6,Unit17,career,경력,She built a career in medicine.
-w-0338,6,Unit17,occupation,직업,What is your father's occupation?
+w-0335,5,Unit17,photographer,사진작가,I would like to be a photographer.
+w-0336,6,Unit17,profession,직업,Do you like your profession?
+w-0337,6,Unit17,career,경력,His career makes him happy.
+w-0338,6,Unit17,occupation,직업,What does your father do? What is his occupation?
 w-0339,6,Unit17,employee,직원,He is a new employee at the company.
 w-0340,6,Unit17,entrepreneur,사업가,The entrepreneur started her own business.
 w-0341,3,Unit18,happy,행복한,I am happy today.
@@ -348,36 +348,36 @@ w-0346,4,Unit18,excited,신난,We are excited about the trip.
 w-0347,4,Unit18,scared,무서운,She was scared of the dark.
 w-0348,4,Unit18,surprised,놀란,I was surprised by the gift.
 w-0349,4,Unit18,bored,지루한,He looked bored during the class.
-w-0350,4,Unit18,nervous,긴장한,I felt nervous before the test.
+w-0350,4,Unit18,nervous,긴장한,Why are you nervous? Because I have a test.
 w-0351,5,Unit18,proud,자랑스러운,My parents are proud of me.
 w-0352,5,Unit18,worried,걱정하는,She was worried about the exam.
 w-0353,5,Unit18,jealous,질투하는,He felt jealous of his friend.
 w-0354,5,Unit18,confident,자신 있는,She felt confident about her speech.
 w-0355,5,Unit18,disappointed,실망한,He was disappointed with the result.
-w-0356,6,Unit18,emotion,감정,It is okay to show your emotions.
-w-0357,6,Unit18,anxious,불안한,She felt anxious before the interview.
+w-0356,6,Unit18,emotion,감정,Why do you hide your emotions?
+w-0357,6,Unit18,anxious,불안한,The interview makes her anxious.
 w-0358,6,Unit18,embarrassed,당황한,He was embarrassed by his mistake.
 w-0359,6,Unit18,grateful,감사하는,I am grateful for my friends.
 w-0360,6,Unit18,frustrated,좌절한,He felt frustrated with the puzzle.
-w-0361,3,Unit19,buy,사다,I want to buy a new toy.
+w-0361,3,Unit19,buy,사다,I bought a toy for my brother.
 w-0362,3,Unit19,sell,팔다,The store sells fresh fruit.
-w-0363,3,Unit19,money,돈,I saved my money.
+w-0363,3,Unit19,money,돈,How much money do you have?
 w-0364,3,Unit19,price,가격,The price is too high.
 w-0365,3,Unit19,shop,상점,We went to the shop together.
-w-0366,4,Unit19,cash,현금,I paid in cash.
-w-0367,4,Unit19,coin,동전,He dropped a coin on the floor.
-w-0368,4,Unit19,bill,지폐,She gave me a ten dollar bill.
+w-0366,4,Unit19,cash,현금,How much cash do you need?
+w-0367,4,Unit19,coin,동전,How many coins are there?
+w-0368,4,Unit19,bill,지폐,This bill is ten dollars.
 w-0369,4,Unit19,receipt,영수증,Keep your receipt for the return.
-w-0370,4,Unit19,discount,할인,The shirt is on discount today.
+w-0370,4,Unit19,discount,할인,It's five dollars with a discount.
 w-0371,5,Unit19,customer,고객,The customer asked for help.
-w-0372,5,Unit19,cashier,계산원,The cashier counted my change.
+w-0372,5,Unit19,cashier,계산원,The cashier works at the store.
 w-0373,5,Unit19,cart,카트,She pushed the cart down the aisle.
 w-0374,5,Unit19,mall,쇼핑몰,We spent the afternoon at the mall.
-w-0375,5,Unit19,bargain,흥정하다,He tried to bargain for a lower price.
+w-0375,5,Unit19,bargain,흥정하다,Let's bargain for a lower price.
 w-0376,6,Unit19,budget,예산,We made a budget for the trip.
 w-0377,6,Unit19,expense,지출,Food is our biggest expense.
-w-0378,6,Unit19,refund,환불,She asked for a refund.
-w-0379,6,Unit19,purchase,구매(하다),He made a purchase online.
+w-0378,6,Unit19,refund,환불,"Can I have a refund, please?"
+w-0379,6,Unit19,purchase,구매(하다),I bought a gift for my mom. It was a good purchase.
 w-0380,6,Unit19,consumer,소비자,Consumers want good quality products.
 w-0381,3,Unit20,house,집,I live in a small house.
 w-0382,3,Unit20,room,방,This is my room.
@@ -385,16 +385,16 @@ w-0383,3,Unit20,bed,침대,My bed is soft.
 w-0384,3,Unit20,table,탁자,The book is on the table.
 w-0385,3,Unit20,door,문,Please close the door.
 w-0386,4,Unit20,kitchen,부엌,My mom cooks in the kitchen.
-w-0387,4,Unit20,bathroom,욕실,The bathroom is upstairs.
+w-0387,4,Unit20,bathroom,욕실,My house has one bathroom.
 w-0388,4,Unit20,window,창문,"Open the window, please."
-w-0389,4,Unit20,sofa,소파,We sat on the sofa.
+w-0389,4,Unit20,sofa,소파,I read in the living room on the sofa.
 w-0390,4,Unit20,lamp,램프,Turn on the lamp.
 w-0391,5,Unit20,furniture,가구,We bought new furniture for the living room.
 w-0392,5,Unit20,garage,차고,The car is in the garage.
 w-0393,5,Unit20,roof,지붕,Snow covered the roof.
 w-0394,5,Unit20,hallway,복도,The pictures hang in the hallway.
-w-0395,5,Unit20,closet,옷장,I hung my coat in the closet.
-w-0396,6,Unit20,residence,거주지,This building is a private residence.
+w-0395,5,Unit20,closet,옷장,My room has two closets.
+w-0396,6,Unit20,residence,거주지,This residence has three rooms.
 w-0397,6,Unit20,architecture,건축,She studies architecture at university.
 w-0398,6,Unit20,structure,구조,The bridge has a strong structure.
 w-0399,6,Unit20,interior,실내,The interior of the house is bright.
