@@ -783,10 +783,11 @@ def _candidates_block(patterns: list[dict], words: list[dict], rule: dict | None
 
 
 def _retrieval_answer(question: str, body: AskIn) -> dict:
-    """계약 문서 2-1절: search_faq + search_textbook 이 먼저 후보를 좁히고, sharp() 로 뚜렷한 게
-    있을 때만 그 안에서 답을 짓는다. 셋 다(FAQ·패턴·규칙) 안 뚜렷하면 "이 유닛 내용이 아니다"로
-    거절한다. 단일 후보인 규칙 힌트는 sharp() 판정(1위-5위 비교) 대상이 아니라 보조 컨텍스트로만
-    쓴다 — 후보가 1개면 항상 gap=0이 나와 sharp()가 의미가 없어짐."""
+    """계약 문서 2-1절(2026-09-14 개정): search_faq + search_textbook 이 먼저 후보를 좁힌다.
+    FAQ는 질문 형식이 다 비슷해 점수가 늘 촘촘해서 sharp() 대신 절대 점수 기준인 faq_hit()로
+    판정. 패턴·단어는 sharp()(1위-5위 격차) 그대로. 규칙 힌트는 한국어 질문으로 rag.search_rules를
+    직접 돌리지 않고(신뢰 못 함, RAG 담당 실측) FAQ 검색 1위의 rule_ids를 재사용. 어디에도
+    없으면 "우리 교과서에 없다"로 거절(유닛 필터는 안 함 — 색인이 유닛별이 아님)."""
     # "비슷한 거 있어?/다른 건 없어?" 류는 검색 없이 기존 로직 그대로 — 방금 답의 근거 규칙으로
     # 결정적으로 찾는 게 이미 검증돼 있고 검색보다 안전하다(2026-09-14).
     all_faqs = golden.faqs()
@@ -808,8 +809,10 @@ def _retrieval_answer(question: str, body: AskIn) -> dict:
         if last:
             rule_id = last["rule_ids"][0]
 
+    # FAQ는 질문 형식이 다 비슷해 점수 분포가 늘 촘촘해서(_sharp의 격차 기준이 안 통함) 절대
+    # 점수로만 판정하는 faq_hit()를 쓴다(2026-09-14, RAG 담당 실측 — sharp() 대신).
     faq_hits = textbook.search_faq(question, k=3, rule_id=rule_id, qvec=qvec)
-    if textbook.sharp([f["score"] for f in faq_hits]):
+    if textbook.faq_hit([f["score"] for f in faq_hits]):
         f = faq_hits[0]
         source = [{"chunk_id": rid} for rid in f["rule_ids"]] + [{"chunk_id": f["id"]}]
         suggested = _followup_questions(f["rule_ids"], all_faqs, exclude_id=f["id"])
@@ -819,8 +822,11 @@ def _retrieval_answer(question: str, body: AskIn) -> dict:
     pattern_sharp = textbook.sharp([p["score"] for p in tb["patterns"]])
     word_sharp = textbook.sharp([w["score"] for w in tb["words"]])
     if pattern_sharp or word_sharp:
-        hint_id, hint_score = _rag_hint_rule_id(question)
-        rule = golden.find_rule(hint_id) if hint_id and hint_score >= 0.5 else None
+        # 규칙 힌트는 한국어 질문으로 rag.search_rules를 직접 돌리는 대신(2026-09-14, RAG 담당
+        # 실측 — "can" 질문에 R-15(will)가 1위로 잘못 나옴, 믿을 수 없음) FAQ 검색 1위의 rule_ids를
+        # 쓴다 — FAQ가 faq_hit()엔 못 미쳤어도 1위가 아예 무관하진 않을 때가 많다.
+        rule_ids = faq_hits[0]["rule_ids"] if faq_hits else []
+        rule = golden.find_rule(rule_ids[0]) if rule_ids else None
 
         # 입구별 상태 — 계약 문서 2-1절 표: "더 물어보기"는 방금 고친 결과(또는 고쳐주기 전
         # 입력 문장), "오답노트"는 오답노트 요약을 검색 결과와 별도로 대화 상태로 얹는다.
@@ -863,9 +869,12 @@ def _retrieval_answer(question: str, body: AskIn) -> dict:
     top_pattern = tb["patterns"][0] if tb["patterns"] else None
     top_word = tb["words"][0] if tb["words"] else None
     best = max([x for x in (top_pattern, top_word) if x], key=lambda x: x["score"], default=None)
+    # 거절 문구는 "이 유닛"이 아니라 "우리 교과서" 전체 기준(2026-09-14 계약 문서 개정 — 색인이
+    # 유닛별이 아니라 전체이므로, 지금 화면의 유닛 밖이라고 거절할 근거가 없다. 정말 교과서
+    # 어디에도 없을 때만 거절).
     unit_hint = best["unit"] if best and best["score"] >= 0.8 else None
     reject = (f"그건 지금 배우는 내용이 아니라 {unit_hint}에서 배워요. 선생님께 물어볼까?" if unit_hint
-              else "그건 이 유닛에서 배우는 내용이 아니에요. 선생님께 물어볼까?")
+              else "그건 우리 교과서에서 배우는 내용이 아니에요. 선생님께 물어볼까?")
     return {"answer": reject, "source": [], "offtopic": True, "suggested": []}
 
 
