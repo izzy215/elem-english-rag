@@ -85,6 +85,28 @@ def _content_words(text: str) -> list[str]:
     return [w for w in _norm_words(text) if w not in _GENERIC_WORDS]
 
 
+# "elephant는 a예요 an이에요?"류 질문 — LLM한테 맡겼더니 "elephant는 자음이라 a"처럼 기본
+# 문법을 틀리게 답한 사례가 있어서(2026-09-14), 교재 어휘 기준으로 결정적으로 답한다. 소리가
+# 철자와 다른 예외(uniform=자음 소리, hour=모음 소리)는 golden 어휘 전체를 훑어서 확인한 것만
+# 등록 — 이 밖의 예외는 모르니 답하지 않는다(아래 함수가 None 반환).
+_A_AN_EXCEPTIONS = {"uniform": "a", "hour": "an"}
+_A_AN_Q = re.compile(r"([A-Za-z]+)[가-힣]{0,3}\s*a\s*(예요|인가요|써요|이에요)?\s*an\s*(이에요|인가요|써요|예요)?")
+
+
+def _a_an_answer(question: str) -> dict | None:
+    m = _A_AN_Q.search(question)
+    if not m:
+        return None
+    word = m.group(1)
+    lw = word.lower()
+    if lw in ("a", "an"):
+        return None
+    article = _A_AN_EXCEPTIONS.get(lw, "an" if lw[:1] in "aeiou" else "a")
+    sound = "모음" if article == "an" else "자음"
+    return {"answer": f'{word}는 {sound} 소리로 시작해서 "{article} {word}"가 맞아요.',
+            "source": [{"chunk_id": "R-34"}], "offtopic": False, "suggested": []}
+
+
 def _best_match(question: str, items: list[dict], candidates_of) -> tuple[dict | None, float]:
     """단어 겹침 기반 매칭. frontend/js/common.js 의 faqMatch()와 같은 알고리즘 —
     서버가 먼저 이걸로 찾아보고, 못 찾을 때만 Gemini 로 넘어간다(할당량 절약, 응답도 빠름)."""
@@ -499,6 +521,13 @@ def _answer(body: AskIn) -> dict:
         if notebook_text(body.student) == "아직 오답노트가 비어 있음.":
             return {"answer": "아직 오답노트에 기록된 게 없어요! 문제를 몇 개 풀어보면 그때 자주 틀리는 것도 알려줄 수 있어요.",
                     "source": [], "offtopic": False, "suggested": []}
+
+    # "elephant는 a예요 an이에요?" — LLM에게 맡기면 가끔 기본 규칙 자체를 틀리게 답해서
+    # (2026-09-14, "첫 글자가 자음이라 a" — 실제로는 모음 소리라 an이 맞음) 교재 어휘 기준으로
+    # 결정적으로 답한다.
+    a_an = _a_an_answer(question)
+    if a_an is not None:
+        return a_an
 
     # "비슷한 거 있어?" 류는 LLM 자체 탐색이 신뢰도 낮아서(2026-09-10), 방금 답의 근거 규칙으로
     # 결정적으로 찾아본다 — 찾으면 즉시 반환, 못 찾으면(근거 규칙 없음 등) 아래 로컬 매칭으로 폴백
