@@ -211,7 +211,10 @@ def _local_match(question: str, faq_list: list[dict], rule_list: list[dict],
     rule, rule_score = _best_match(question, rule_list, lambda r: [r["type"], r.get("short", "")])
     if rule_score >= 0.5:
         _log_rag_disagreement([rule["id"]], rule["id"], rule_score)
-        return {"answer": rule.get("short") or rule["text"], "source": [{"chunk_id": rule["id"]}],
+        # rule["short"]는 UI 라벨용 압축 태그라("숫자 2 이상+복수형") 챗봇 답으로 그대로 쓰면
+        # 문장이 아니라 조각처럼 끝남(2026-09-14 재현, "형용사는 명사 앞에") — 완전한 설명
+        # 문장인 rule["text"]를 쓴다.
+        return {"answer": rule["text"], "source": [{"chunk_id": rule["id"]}],
                 "offtopic": False, "suggested": _followup_questions([rule["id"]], faq_list)}
 
     # 패턴(전체 문장) 매칭을 단어 매칭보다 먼저 본다 — "Good night!"가 그 안의 "night" 단어
