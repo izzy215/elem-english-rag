@@ -867,3 +867,69 @@ def _retrieval_answer(question: str, body: AskIn) -> dict:
     reject = (f"그건 지금 배우는 내용이 아니라 {unit_hint}에서 배워요. 선생님께 물어볼까?" if unit_hint
               else "그건 이 유닛에서 배우는 내용이 아니에요. 선생님께 물어볼까?")
     return {"answer": reject, "source": [], "offtopic": True, "suggested": []}
+
+
+def _hybrid_answer(body: AskIn) -> dict:
+    """비교/실험용(2026-09-14): 오늘 만든 결정적 예외처리(오답노트 규칙 라우팅·빈 노트 가드·
+    a/an·비슷한 거 더)는 이미 검증됐으니 그대로 먼저 쓰고, 전부 실패했을 때만 검색 기반
+    _retrieval_answer()로 넘긴다 — 기존 _answer()의 최종 폴백("FAQ 전체를 프롬프트에 통째로
+    넣고 LLM이 고르게 함")만 검색 기반으로 바꾼 버전.
+
+    주의: _answer()를 안 건드리기로 해서(비교 단계) 그 앞부분 로직을 그대로 복붙했다 — _answer()가
+    나중에 바뀌면 여기도 같이 손봐야 한다(또는 그때 공통 헬퍼로 리팩터). ask()/_answer()는 여전히
+    이 함수를 안 부른다."""
+    question = body.question.strip()
+    if not question:
+        return {"answer": "", "source": [], "offtopic": True}
+
+    if (_CORRECTNESS_PATTERN.search(question) and re.search(r"[A-Za-z]", question)
+            and not re.search(r"왜|어떻게", question)):
+        if not settings.has_api_key:
+            return {"answer": "", "source": [], "offtopic": True, "error": "GEMINI_API_KEY 미설정"}
+        try:
+            return _check_correctness(question)
+        except llm.LLMError:
+            return _CORRECTNESS_FALLBACK
+
+    if (_CORRECTNESS_PATTERN.search(question) and not re.search(r"[A-Za-z]", question)
+            and body.context.text and not re.search(r"왜|어떻게", question)):
+        if not settings.has_api_key:
+            return {"answer": "", "source": [], "offtopic": True, "error": "GEMINI_API_KEY 미설정"}
+        try:
+            return _check_correctness(body.context.text)
+        except llm.LLMError:
+            return _CORRECTNESS_FALLBACK
+
+    all_faqs = golden.faqs()
+    all_rules = golden.rules()
+    if not all_faqs and not all_rules:
+        return {"answer": "", "source": [], "offtopic": True, "error": "faq.jsonl/rules.jsonl 이 없음"}
+
+    notebook_rule = _notebook_rule_answer(question, body.student)
+    if notebook_rule is not None:
+        return notebook_rule
+
+    if re.search(r"틀렸|오답|자주\s*틀리|실수", question) and len(_content_words(question)) <= 3:
+        from backend.student import notebook_text
+        if notebook_text(body.student) == "아직 오답노트가 비어 있음.":
+            return {"answer": "아직 오답노트에 기록된 게 없어요! 문제를 몇 개 풀어보면 그때 자주 틀리는 것도 알려줄 수 있어요.",
+                    "source": [], "offtopic": False, "suggested": []}
+
+    a_an = _a_an_answer(question) or _a_an_followup_answer(question, body.student)
+    if a_an is not None:
+        return a_an
+
+    similar = _similar_match(question, body.student, all_faqs)
+    if similar is not None:
+        return similar
+
+    words_pool = {w["word"].lower(): w for w in golden.all_words()}
+    patterns_pool = golden.all_patterns()
+    if not _REFERENTIAL_PATTERN.search(question):
+        local = _local_match(question, all_faqs, all_rules, words_pool, patterns_pool)
+        if local is not None:
+            return local
+
+    # 여기까지 전부 실패해야만 검색 기반 경로로 — _retrieval_answer()가 자기 안에서 _similar_match를
+    # 한 번 더 부르지만(위에서 이미 실패한 걸 재확인) 싸구려 로컬 체크라 비용은 무시할 만하다.
+    return _retrieval_answer(question, body)
