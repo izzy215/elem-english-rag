@@ -41,6 +41,8 @@ class AskContext(BaseModel):
     unit: str | None = None
     rule_id: str | None = None
     log_id: str | None = None
+    text: str | None = None     # 고쳐줘 누르기 전 입력·들린 문장 (log_id 아직 없을 때, 2026-09-14 tutor.js)
+    source: str | None = None   # text 가 어디서 왔는지(타이핑/음성) — 지금은 참고용, 답에는 안 씀
 
 
 class AskIn(BaseModel):
@@ -592,6 +594,18 @@ def _answer(body: AskIn) -> dict:
         except llm.LLMError:
             return _CORRECTNESS_FALLBACK
 
+    # "이거 맞아?"처럼 고쳐줘 누르기 전 입력한 문장("이거")을 가리키는 판정 질문 — 질문 자체엔
+    # 영어가 없어서 위 경로로 안 새지만, context.text(2026-09-14 tutor.js가 고쳐줘 전에도 보내기
+    # 시작함)에 그 문장이 있으면 그걸 판정 대상으로 써서 같은 방식으로 답한다.
+    if (_CORRECTNESS_PATTERN.search(question) and not re.search(r"[A-Za-z]", question)
+            and body.context.text and not re.search(r"왜|어떻게", question)):
+        if not settings.has_api_key:
+            return {"answer": "", "source": [], "offtopic": True, "error": "GEMINI_API_KEY 미설정"}
+        try:
+            return _check_correctness(body.context.text)
+        except llm.LLMError:
+            return _CORRECTNESS_FALLBACK
+
     all_faqs = golden.faqs()
     all_rules = golden.rules()
     if not all_faqs and not all_rules:
@@ -667,6 +681,10 @@ def _answer(body: AskIn) -> dict:
             f'고친 문장: {log.get("fixed", "")}\n'
             "(둘이 같으면 원래 문장이 맞았다는 뜻)\n"
         )
+    elif ctx.text:
+        # 고쳐줘를 아직 안 눌러서 log_id가 없는 경우(2026-09-14) — 아직 채점 전인 문장이니
+        # "고친 문장"은 없고, "이거/이 문장"이 뭘 가리키는지만 알려준다.
+        log_block = f"\n## 학생이 방금 입력했지만 아직 고쳐주기 전인 문장\n{ctx.text}\n"
 
     try:
         from backend.student import notebook_text
