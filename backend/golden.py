@@ -68,13 +68,13 @@ def golden_files() -> list[str]:
     return sorted(p.name for p in _dir().glob("*.csv")) + sorted(p.name for p in _dir().glob("*.jsonl"))
 
 
-LEVEL_LABELS = {1: "Level 1 · 3~4학년", 2: "Level 2 · 5학년", 3: "Level 3 · 6학년"}
+LEVEL_LABELS = {3: "Level 3 · 3학년", 4: "Level 4 · 4학년", 5: "Level 5 · 5학년", 6: "Level 6 · 6학년"}   # 데이터의 level = 학년 (words/patterns/units.csv 3~6). 2026-09-14 units.csv 80줄(level 3~6) 확장에 맞춤
 
 
 def levels() -> list[dict]:
     units_ = _read("units.csv")
     out = []
-    for lv in sorted({int(u["level"]) for u in units_} | set(LEVEL_LABELS)):
+    for lv in sorted({int(u["level"]) for u in units_}):          # units.csv 에 있는 level 만 (라벨 사전으로 빈 level 을 만들지 않음)
         n = sum(1 for u in units_ if int(u["level"]) == lv)
         out.append({"level": lv, "label": LEVEL_LABELS.get(lv, f"Level {lv}"), "units": n})
     return out

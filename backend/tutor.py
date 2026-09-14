@@ -493,7 +493,7 @@ def _notebook_add(student: str, rule_id: str, log_id: str) -> None:
 # ─────────────────────────────────────────────
 class FixIn(BaseModel):
     student: str = "A"
-    level: int = 2
+    level: int = 3
     unit: str = ""
     text: str
     source: str = "typed"           # "stt" | "typed"
