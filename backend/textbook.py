@@ -34,13 +34,14 @@ from pathlib import Path
 from backend import embedding, golden, indexing
 
 ROOT = Path(__file__).resolve().parent.parent
-TEXT_VERSION = "textbook_v1|examples_v1|faq_v1"
+TEXT_VERSION = "textbook_v1|examples_v1|faq_v1|rulealias_v1"
 
 # 색인 종류별 컬렉션 접두사·manifest (규칙 색인 manifest.json 과 같은 폴더)
 _KINDS = {
     "textbook": {"prefix": "textbook_", "manifest": indexing.CHROMA_DIR / "textbook_manifest.json"},
     "examples": {"prefix": "examples_", "manifest": indexing.CHROMA_DIR / "examples_manifest.json"},
     "faq": {"prefix": "faq_", "manifest": indexing.CHROMA_DIR / "faq_manifest.json"},
+    "rulealias": {"prefix": "rulealias_", "manifest": indexing.CHROMA_DIR / "rulealias_manifest.json"},   # 규칙 이름·요약·"X가 뭐예요?" 별칭 → 규칙 (문서는 rules.jsonl 그대로, 찾는 열쇠만 늘림)
 }
 MANIFEST_PATH = _KINDS["textbook"]["manifest"]   # 하위 호환 (관리자 /admin/textbook 이 읽음)
 COLLECTION_PREFIX = _KINDS["textbook"]["prefix"]
@@ -86,7 +87,27 @@ def _docs_faq() -> list[dict]:
     return out
 
 
-_DOCS = {"textbook": _docs_textbook, "examples": _docs_examples, "faq": _docs_faq}
+def _rule_term(rule_type: str) -> str:
+    """규칙 이름에서 용어만: "과거시제(시간)" → "과거시제", "관사(a,an) 구별" → "관사 구별"."""
+    return re.sub(r"\s+", " ", re.sub(r"\([^)]*\)", " ", rule_type or "")).strip()
+
+
+def _docs_rulealias() -> list[dict]:
+    """규칙 별칭 색인 (2026-09-14 시험): 규칙마다 ① 이름(type) ② 요약(short) ③ "X가 뭐예요?" ④ "X 뜻" ⑤ 설명문 첫 문장 을 따로 색인.
+    "과거시제가 뭐예요?" 같은 용어 질문은 규칙 설명문(영어 예문 위주) 임베딩으로는 0.83 에 그쳐 문턱을 못 넘는데, 이름·요약은 질문과
+    같은 말이라 잘 맞는다. 답은 여기서 안 만들고 rules.jsonl 문서(text·examples)로 LLM 이 짓는다 — FAQ 줄을 늘리는 것과 다른 점.
+    RAG 담당의 rules 색인(설명문 본문)과는 별개 컬렉션(rulealias_*)."""
+    out = []
+    for r in golden.rules():
+        term = _rule_term(r.get("type", ""))
+        first = re.split(r"(?<=[.요다])\s", (r.get("text") or "").strip(), maxsplit=1)[0]
+        aliases = [r.get("type", ""), r.get("short", ""), f"{term}가 뭐예요?", f"{term} 뜻이 뭐예요?", first]
+        for i, a in enumerate(a for a in aliases if a and a.strip()):
+            out.append({"id": f"{r['id']}#{i}", "doc": a.strip(), "meta": {"rule_id": r["id"], "unit": r.get("unit", ""), "alias": a.strip()[:80]}})
+    return out
+
+
+_DOCS = {"textbook": _docs_textbook, "examples": _docs_examples, "faq": _docs_faq, "rulealias": _docs_rulealias}
 
 
 # ── 색인 만들기 / 읽기 (공통) ──────────────────────────────────────────────
@@ -137,6 +158,8 @@ def build_index(kind: str = "textbook", batch: int = 50, sleep: float = 0.0) -> 
         manifest["words"] = sum(1 for d in docs if d["meta"]["kind"] == "word")
     if kind == "faq":
         manifest["faqs"] = len({d["meta"]["faq_id"] for d in docs})
+    if kind == "rulealias":
+        manifest["rules"] = len({d["meta"]["rule_id"] for d in docs})
     mp = _KINDS[kind]["manifest"]
     tmp = mp.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -302,6 +325,34 @@ def sharp(scores: list[float], gap: float = 0.06, top: float = 0.85) -> bool:
     return scores[0] >= top and (scores[0] - scores[min(4, len(scores) - 1)]) >= gap
 
 
+# ── ⑤ 규칙 별칭 → 규칙 (문법 용어 질문) ─────────────────────────────────
+def search_rule_aliases(question: str, k: int = 3, qvec: list[float] | None = None) -> list[dict]:
+    """"과거시제가 뭐예요?" 류 질문 → 규칙 후보 (규칙마다 가장 닮은 별칭 하나, 점수 내림차순).
+    반환 [{id, type, short, text, examples, unit, score, matched}] — 답 재료는 text·examples (rules.jsonl 문서). 색인 없으면 []."""
+    try:
+        q = qvec or embedding.embed_query(question)
+        rules = {r["id"]: r for r in golden.rules()}
+        best: dict[str, tuple[float, str]] = {}
+        for id_, doc, meta, score in _query("rulealias", q, max(k * 5, 15)):
+            rid = meta.get("rule_id")
+            if rid in rules and (rid not in best or score > best[rid][0]):
+                best[rid] = (score, doc)
+        out = []
+        for rid, (score, doc) in sorted(best.items(), key=lambda x: -x[1][0])[:k]:
+            r = rules[rid]
+            out.append({"id": rid, "type": r.get("type", ""), "short": r.get("short", ""), "text": r.get("text", ""), "examples": r.get("examples") or [],
+                        "unit": r.get("unit", ""), "score": score, "matched": doc})
+        return out
+    except Exception as e:  # noqa: BLE001
+        print(f"[rulealias] 검색 실패: {type(e).__name__}: {e}", flush=True)
+        return []
+
+
+def rule_hit(scores: list[float], top: float = 0.86) -> bool:
+    """규칙 별칭 검색 "있다" 판정 (절대 점수). 2026-09-14 실측: 용어 질문 12개 중 11개가 0.864~0.927, 용어 아닌 질문 11개는 0.79~0.845 (관련 규칙이 진짜 있던 1개만 0.877)."""
+    return bool(scores) and scores[0] >= top
+
+
 # ── CLI ────────────────────────────────────────────────────────────────────
 def main() -> None:
     ap = argparse.ArgumentParser()
@@ -311,6 +362,7 @@ def main() -> None:
     ap.add_argument("--search", default=None, help="교과서 패턴·단어 검색")
     ap.add_argument("--examples", default=None, help="틀린 예문 → 규칙 후보")
     ap.add_argument("--faq", default=None, help="FAQ 검색")
+    ap.add_argument("--rule", default=None, help="규칙 별칭 검색 (문법 용어 질문)")
     ap.add_argument("--level", type=int, default=3)
     ap.add_argument("--sleep", type=float, default=0.0, help="배치 사이 대기 초 (gemini 한도용)")
     args = ap.parse_args()
@@ -336,6 +388,10 @@ def main() -> None:
         did = True
         for f in search_faq(args.faq, k=3):
             print(f"  FAQ {f['score']:.3f} {f['id']} | {f['question']} (닮은 변형: {f['matched']}) → {f['answer'][:60]}")
+    if args.rule:
+        did = True
+        for r in search_rule_aliases(args.rule, k=3):
+            print(f"  규칙 {r['score']:.3f} {r['id']} {r['type']} | 닮은 별칭: {r['matched']} | {r['short']}")
     if not did:
         ap.print_help()
 

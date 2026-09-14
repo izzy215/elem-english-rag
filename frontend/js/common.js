@@ -220,7 +220,7 @@ function injectChat(screen) {
   CHAT.screen = screen;
 }
 async function openChat({ rule_name = '', suggested = [], ...extra } = {}) {   // extra(rule_id·log_id) 는 /ask 의 context 로 감. rule_name·suggested 는 화면 표시용 (서버 /fix 응답 값)
-  const s = S.get(); CHAT.ctx = { screen: CHAT.screen, unit: s.unit?.unit, ...(typeof window.chatExtra === 'function' ? window.chatExtra() : {}), ...extra }; CHAT.turns = 0;   // chatExtra: 화면이 넘길 추가 문맥 (튜터: 고쳐줘 전이라도 입력한 문장)
+  const s = S.get(); CHAT.ctx = { screen: CHAT.screen, unit: s.unit?.unit, level: s.level?.level, ...(typeof window.chatExtra === 'function' ? window.chatExtra() : {}), ...extra }; CHAT.turns = 0;   // chatExtra: 화면이 넘길 추가 문맥 (튜터: 고쳐줘 전이라도 입력한 문장)
   const chips = []; if (s.unit) chips.push(`${s.unit.unit} ${s.unit.title}`); if (CHAT.ctx.rule_id) chips.push('방금: ' + (rule_name || CHAT.ctx.rule_id)); if (CHAT.screen === 'notebook') chips.push('오답노트'); if (CHAT.screen === 'shadow') chips.push('따라 말하기');
   $('#chatCtx').innerHTML = chips.map(c => `<span>📍 ${esc(c)}</span>`).join('');
   const sug = Array.isArray(suggested) ? suggested.filter(q => typeof q === 'string' && q) : [];   // 추천 칩은 서버(/fix suggested_questions · /ask suggested)가 준 것만. 화면 샘플 FAQ 로 만들지 않는다

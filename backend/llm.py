@@ -88,8 +88,9 @@ def _openai_compat(name: str, prompt: str, timeout: float) -> str:
         "temperature": 0.2,
         "response_format": {"type": "json_object"},   # Ollama ≥0.5 · vLLM · Groq · OpenRouter 지원. 미지원이면 위 system 지시에 기댄다
         "stream": False,
-        "keep_alive": "30m",   # Ollama 기본 5분이라 대화 간격이 뜨면 모델이 언로드돼 다음 호출이 콜드스타트(수 초~십수 초, 2026-09-10 실측)됨. 30분으로 늘려 완화
     }
+    if ":11434" in ep["url"] or "ollama" in ep["url"].lower():   # Ollama 전용 필드. Groq 등 다른 OpenAI 호환 서버는 모르는 필드에 400 ("property 'keep_alive' is unsupported", 2026-09-14)
+        body["keep_alive"] = "30m"   # Ollama 기본 5분이라 대화 간격이 뜨면 모델이 언로드돼 다음 호출이 콜드스타트(수 초~십수 초, 2026-09-10 실측)됨. 30분으로 늘려 완화
     headers = {"Content-Type": "application/json", "User-Agent": "elem-english-rag/0.1 (+FastAPI)"}   # 파이썬 기본 UA 는 Groq 앞단 Cloudflare 가 403(1010) 으로 막음
     if ep.get("key"):
         headers["Authorization"] = f"Bearer {ep['key']}"
@@ -98,7 +99,19 @@ def _openai_compat(name: str, prompt: str, timeout: float) -> str:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             data = json.loads(r.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
-        raise LLMError(f"{name} HTTP {e.code}: {e.read()[:200]!r}") from e
+        detail = e.read()[:300]
+        if e.code == 400 and b"validate JSON" in detail and "response_format" in body:   # Groq: 모델 출력이 JSON 형식을 못 지키면 400 (gpt-oss-20b, 2026-09-14 120문장 중 7건). 강제 모드 빼고 한 번 더 — 위 system 지시로 JSON 을 받고 _parse_json 이 코드펜스 등을 벗긴다
+            body.pop("response_format")
+            req2 = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), headers=headers, method="POST")
+            try:
+                with urllib.request.urlopen(req2, timeout=timeout) as r:
+                    data = json.loads(r.read().decode("utf-8"))
+            except urllib.error.HTTPError as e2:
+                raise LLMError(f"{name} HTTP {e2.code}: {e2.read()[:200]!r}") from e2
+            except (urllib.error.URLError, TimeoutError, OSError) as e2:
+                raise LLMError(f"{name} 연결 실패 ({url}): {e2}") from e2
+        else:
+            raise LLMError(f"{name} HTTP {e.code}: {detail[:200]!r}") from e
     except (urllib.error.URLError, TimeoutError, OSError) as e:
         raise LLMError(f"{name} 연결 실패 ({url}): {e}") from e
     try:

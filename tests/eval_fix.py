@@ -212,7 +212,7 @@ def main() -> None:
     for i, row in enumerate(rows, 1):
         entry = {"text": row["text"], "expected": row["expected_rule_id"], "is_normal": row["is_normal"], "note": row.get("note", ""), "by": {}}
         for b in backends:
-            wait = args.sleep if args.sleep is not None else (5.0 if b == "gemini" else 0.0)
+            wait = args.sleep if args.sleep is not None else (5.0 if b == "gemini" else 20.0 if "groq" in b else 0.0)   # groq 무료: 분당 8,000 토큰 → /fix 프롬프트(약 2천 토큰) 3~4개/분 (2026-09-14 실측 429)
             if b in called and wait:
                 time.sleep(wait)
             called.add(b)
