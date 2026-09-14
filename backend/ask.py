@@ -814,9 +814,21 @@ def _retrieval_answer(question: str, body: AskIn) -> dict:
     faq_hits = textbook.search_faq(question, k=3, rule_id=rule_id, qvec=qvec)
     if textbook.faq_hit([f["score"] for f in faq_hits]):
         f = faq_hits[0]
-        source = [{"chunk_id": rid} for rid in f["rule_ids"]] + [{"chunk_id": f["id"]}]
-        suggested = _followup_questions(f["rule_ids"], all_faqs, exclude_id=f["id"])
-        return {"answer": f["answer"], "source": source, "offtopic": False, "suggested": suggested}
+        # faq_hit()가 통과해도 임베딩이 표면적 낱말 하나(예: "pencil")만 보고 완전히 다른 주제의
+        # FAQ를 골라오는 경우가 있어서(2026-09-14 재현 — "pencil이 뭐예요?"가 "Whose는 어떻게
+        # 써요?"(F-76, 예문에 pencil이 있을 뿐)에 0.86으로 매칭됨) — 질문과 FAQ가 실제 내용어를
+        # 하나라도 공유하는지 확인한다. 단, 정확히 같은 문자열 비교(set 교집합)는 "many랑"/"many"처럼
+        # 조사가 어순에 따라 다르게 붙는 것도 놓쳐서(같은 질문의 순서만 바뀐 변형도 무겹침 처리됨),
+        # _best_match()가 이미 쓰는 부분일치(길이차 2 이내 + 서로 포함)로 비교한다.
+        qwords = _content_words(question)
+        fwords = _content_words(f["question"] + " " + f["matched"])
+        overlap = any(len(w) >= 3 and len(x) >= 3 and abs(len(w) - len(x)) <= 2 and (w in x or x in w)
+                      for w in qwords for x in fwords)
+        if overlap:
+            source = [{"chunk_id": rid} for rid in f["rule_ids"]] + [{"chunk_id": f["id"]}]
+            suggested = _followup_questions(f["rule_ids"], all_faqs, exclude_id=f["id"])
+            return {"answer": f["answer"], "source": source, "offtopic": False, "suggested": suggested}
+        print(f"[ask][진단] faq_hit={f['id']} 통과했는데 질문과 내용어 안 겹쳐 폐기: {f['matched']!r}", flush=True)
 
     tb = textbook.search_textbook(question, level=3, k_pattern=3, k_word=3, qvec=qvec)
     pattern_sharp = textbook.sharp([p["score"] for p in tb["patterns"]])
@@ -857,11 +869,35 @@ def _retrieval_answer(question: str, body: AskIn) -> dict:
             out = llm.generate_json(prompt)
         except llm.LLMError as e:
             return {"answer": "", "source": [], "offtopic": True, "error": str(e)}
+        answer = out.get("answer") or ""
         used_id = out.get("used_id")
         fallback_id = tb["patterns"][0]["id"] if pattern_sharp else tb["words"][0]["id"]
         suggested = _followup_questions([rule["id"]], all_faqs) if rule else []
-        return {"answer": out.get("answer") or "", "source": [{"chunk_id": used_id or fallback_id}],
-                "offtopic": bool(out.get("offtopic")), "suggested": suggested}
+
+        # LLM이 검색된 자료를 무시하고 완전히 무관한 답을 짓는 경우가 있어서(2026-09-14 재현 —
+        # "pencil이 뭐예요?"가 검색은 pencil을 맞게 찾았는데 답은 소유격 얘기를 함) — 답변이 검색된
+        # 후보(패턴·단어·규칙) 중 최소 하나와 실제로 내용이 겹치는지 확인한다. 기존 _answer()의
+        # faq_id 겹침 검증과 같은 방식. 안 겹치면 LLM 자유 답변을 버리고 1위 후보로 결정적으로
+        # 답한다 — 검색 자체(pattern_sharp/word_sharp)는 이미 신뢰할 만하다고 판정됐으니 버릴
+        # 필요 없다.
+        candidate_texts = [f'{p["text"]} {p["meaning"]}' for p in tb["patterns"]]
+        candidate_texts += [f'{w["word"]} {w["meaning"]}' for w in tb["words"]]
+        if rule:
+            candidate_texts.append(f'{rule["type"]} {rule["text"]}')
+        grounded = any(set(_content_words(answer)) & set(_content_words(t)) for t in candidate_texts)
+
+        if not grounded:
+            print(f"[ask][진단] 검색 후보와 답변 내용이 안 겹쳐 LLM 답 버리고 1위 후보로 답함: {answer!r}", flush=True)
+            if pattern_sharp:
+                top = tb["patterns"][0]
+                answer = f'{top["text"]} — {top["meaning"]}' if top["meaning"] else top["text"]
+            else:
+                top = tb["words"][0]
+                answer = f'{top["word"]}는 \'{top["meaning"]}\'라는 뜻이에요.' + (f' 예: {top["example"]}' if top.get("example") else "")
+            used_id = None
+
+        return {"answer": answer, "source": [{"chunk_id": used_id or fallback_id}],
+                "offtopic": bool(out.get("offtopic")) if grounded else False, "suggested": suggested}
 
     # sharp() 기준(1위 0.85 이상 + 5위와 격차)엔 못 미쳐도, 1위 점수가 어느 정도(0.8) 있으면
     # "완전 무관"은 아니라고 보고 그 유닛을 알려준다 — 진짜 엉뚱한 질문(예: "오늘 날씨 어때?")까지
