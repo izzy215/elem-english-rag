@@ -24,3 +24,6 @@ numpy>=1.26
 torch>=2.0
 silero-vad>=6.0
 openai-whisper>=20231117
+
+# TTS — 로컬 합성 (오프라인, API 키/quota 불필요), 보이스 모델(.onnx)은 별도 다운로드 필요
+piper-tts>=1.8

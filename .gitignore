@@ -14,6 +14,9 @@ data/rag_eval/
 __pycache__/
 *.pyc
 
+# Piper 보이스 모델 (수십 MB 바이너리, 각자 다운로드)
+piper_voices/
+
 # 도구 (settings.json 은 팀 공통이라 올린다)
 .vscode/*
 !.vscode/settings.json

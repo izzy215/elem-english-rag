@@ -26,8 +26,9 @@ load_dotenv(ENV_FILE)
 class Settings:
     gemini_api_key: str
     gemini_model: str
-    gemini_tts_model: str
-    gemini_tts_voice: str
+    piper_voice_name: str
+    piper_voice_dir: Path
+    piper_use_cuda: bool
     app_title: str
     learner_name: str
     audio_cache_dir: Path
@@ -64,8 +65,9 @@ def _endpoints() -> dict:
 settings = Settings(
     gemini_api_key=_get("GEMINI_API_KEY"),
     gemini_model=_get("GEMINI_MODEL", "gemini-3.6-flash"),
-    gemini_tts_model=_get("GEMINI_TTS_MODEL", "gemini-2.5-flash-preview-tts"),
-    gemini_tts_voice=_get("GEMINI_TTS_VOICE", "Kore"),
+    piper_voice_name=_get("PIPER_VOICE", "en_US-amy-medium"),
+    piper_voice_dir=ROOT / _get("PIPER_VOICE_DIR", "piper_voices"),
+    piper_use_cuda=_get("PIPER_USE_CUDA", "0") not in ("0", "false", "no", ""),
     app_title=_get("APP_TITLE", "에코"),
     learner_name=_get("LEARNER_NAME", "지수"),
     audio_cache_dir=ROOT / _get("AUDIO_CACHE_DIR", "audio_cache"),
@@ -83,7 +85,9 @@ if __name__ == "__main__":
     # python config.py 로 실행하면 설정이 제대로 읽히는지 확인
     print(f".env 파일: {'있음' if ENV_FILE.exists() else '없음 (.env.example을 복사하세요)'}")
     print(f"API 키:    {'설정됨 (' + settings.gemini_api_key[:6] + '...)' if settings.has_api_key else '없음'}")
-    print(f"모델:      {settings.gemini_model} / TTS {settings.gemini_tts_model} ({settings.gemini_tts_voice})")
+    piper_model_path = settings.piper_voice_dir / f"{settings.piper_voice_name}.onnx"
+    piper_status = "있음" if piper_model_path.exists() else "없음 (최초 TTS 호출 때 자동 다운로드됨)"
+    print(f"모델:      {settings.gemini_model} / TTS Piper {settings.piper_voice_name} ({piper_status})")
     print(f"앱 제목:   {settings.app_title} · 학습자 {settings.learner_name}")
     print(f"음원 캐시: {settings.audio_cache_dir}")
     print(f"LLM:       기본 {settings.llm_backend} · 엔드포인트 {sorted((settings.llm_endpoints or {}).keys())} · 폴백 {settings.llm_fallback}")

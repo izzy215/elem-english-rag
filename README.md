@@ -76,6 +76,10 @@ cp .env.example .env
 그다음 `.env` 를 열어 `GEMINI_API_KEY=` 뒤에 자기 키를 넣는다 (https://aistudio.google.com/apikey 에서 무료 발급).
 확인: `python backend/config.py` → "API 키: 설정됨" 이면 끝.
 
+TTS(`tts.py`)는 Piper(로컬 오프라인 합성, API 키 불필요)를 쓴다. 보이스 모델(`piper_voices/en_US-amy-medium.onnx`, 약 60MB)은
+Git에 안 올라가 있고, **첫 `/api/tts/{id}` 호출 때 자동으로 다운로드**되니 따로 받을 필요 없다 (인터넷 연결만 있으면 됨).
+미리 받아두고 싶으면: `python -m piper.download_voices en_US-amy-medium --download-dir piper_voices`
+
 | | Windows | Mac · Linux |
 |---|---|---|
 | 파이썬 명령 | `python` | `python3` (설치에 따라 `python` 도 됨) |
@@ -104,6 +108,7 @@ uvicorn backend.main:app --reload --port 8000
 | `uvicorn: command not found` | 가상환경이 안 켜짐 → activate 먼저 |
 | `ModuleNotFoundError: backend` | 저장소 폴더 밖에서 실행함 → `cd` 로 README 가 있는 폴더로 |
 | `GEMINI_API_KEY 없음` | `.env` 를 안 만들었거나 키를 안 넣음 |
+| TTS 500 (Piper 다운로드 실패) | 첫 호출 때 인터넷 연결이 없었음 → 연결 후 재시도, 또는 위 `piper.download_voices` 명령으로 미리 받기 |
 | VS Code 가 패키지를 못 찾음 | 오른쪽 아래 인터프리터를 `.venv` 것으로 선택 (Windows: `.venv\Scripts\python.exe`, Mac: `.venv/bin/python`) |
 | Mac에서 `python` 이 2.x | `python3` 사용 |
 
