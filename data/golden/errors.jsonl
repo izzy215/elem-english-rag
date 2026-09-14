@@ -9,11 +9,11 @@
 {"id": "E-0009", "unit": "Unit02", "rule_id": "R-03", "error": "She is aunt.", "correct": "She is my aunt.", "target": "aunt", "fix": "my aunt", "distractors": ["the aunt", "a aunt", "—"]}
 {"id": "E-0010", "unit": "Unit02", "rule_id": "R-03", "error": "She is grandfather.", "correct": "She is my grandfather.", "target": "grandfather", "fix": "my grandfather", "distractors": ["the grandfather", "a grandfather", "—"]}
 {"id": "E-0011", "unit": "Unit02", "rule_id": "R-03", "error": "She is grandmother.", "correct": "She is my grandmother.", "target": "grandmother", "fix": "my grandmother", "distractors": ["the grandmother", "a grandmother", "—"]}
-{"id": "E-0012", "unit": "Unit02", "rule_id": "R-03", "error": "She is uncle.", "correct": "She is my uncle.", "target": "uncle", "fix": "my uncle", "distractors": ["the uncle", "a uncle", "—"]}
-{"id": "E-0013", "unit": "Unit02", "rule_id": "R-04", "error": "This is my brothers.", "correct": "This is my brother.", "target": "brothers", "fix": "brother", "distractors": ["a brother", "the brother", "brother's"]}
-{"id": "E-0014", "unit": "Unit02", "rule_id": "R-04", "error": "This is my dads.", "correct": "This is my dad.", "target": "dads", "fix": "dad", "distractors": ["a dad", "the dad", "dad's"]}
-{"id": "E-0015", "unit": "Unit02", "rule_id": "R-04", "error": "This is my moms.", "correct": "This is my mom.", "target": "moms", "fix": "mom", "distractors": ["a mom", "the mom", "mom's"]}
-{"id": "E-0016", "unit": "Unit02", "rule_id": "R-04", "error": "This is my sisters.", "correct": "This is my sister.", "target": "sisters", "fix": "sister", "distractors": ["a sister", "the sister", "sister's"]}
+{"id": "E-0012", "unit": "Unit02", "rule_id": "R-03", "error": "He is uncle.", "correct": "He is my uncle.", "target": "uncle", "fix": "my uncle", "distractors": ["the uncle", "a uncle", "—"]}
+{"id": "E-0013", "unit": "Unit02", "rule_id": "R-04", "error": "This are my brother.", "correct": "This is my brother.", "target": "This are", "fix": "This is", "distractors": ["These is", "This am", "These are"]}
+{"id": "E-0014", "unit": "Unit02", "rule_id": "R-04", "error": "These is my parents.", "correct": "These are my parents.", "target": "These is", "fix": "These are", "distractors": ["This is", "This are", "These am"]}
+{"id": "E-0015", "unit": "Unit02", "rule_id": "R-04", "error": "This is my grandparents.", "correct": "These are my grandparents.", "target": "This is", "fix": "These are", "distractors": ["This are", "These is", "These am"]}
+{"id": "E-0016", "unit": "Unit02", "rule_id": "R-04", "error": "These are my sister.", "correct": "This is my sister.", "target": "These are", "fix": "This is", "distractors": ["These is", "This are", "This am"]}
 {"id": "E-0017", "unit": "Unit03", "rule_id": "R-05", "error": "There are book.", "correct": "There is a book on the desk.", "target": "book", "fix": "a book", "distractors": ["the book", "some book", "—"]}
 {"id": "E-0018", "unit": "Unit03", "rule_id": "R-05", "error": "There are chair.", "correct": "There is a chair by the window.", "target": "chair", "fix": "a chair", "distractors": ["the chair", "some chair", "—"]}
 {"id": "E-0019", "unit": "Unit03", "rule_id": "R-05", "error": "There are desk.", "correct": "There is a desk in the room.", "target": "desk", "fix": "a desk", "distractors": ["the desk", "some desk", "—"]}
