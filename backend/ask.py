@@ -819,10 +819,14 @@ def _retrieval_answer(question: str, body: AskIn) -> dict:
         # 써요?"(F-76, 예문에 pencil이 있을 뿐)에 0.86으로 매칭됨) — 질문과 FAQ가 실제 내용어를
         # 하나라도 공유하는지 확인한다. 단, 정확히 같은 문자열 비교(set 교집합)는 "many랑"/"many"처럼
         # 조사가 어순에 따라 다르게 붙는 것도 놓쳐서(같은 질문의 순서만 바뀐 변형도 무겹침 처리됨),
-        # _best_match()가 이미 쓰는 부분일치(길이차 2 이내 + 서로 포함)로 비교한다.
+        # _best_match()가 이미 쓰는 부분일치(길이차 2 이내 + 서로 포함) 방식을 쓰되, 길이 기준은
+        # 2로 낮춘다 — _best_match()의 3은 한국어 조사·어미 기준이라 "in"/"on"처럼 짧아도 이 도메인
+        # (전치사 FAQ)에서 핵심 내용어인 영어 단어까지 걸러버림(2026-09-14, "in이랑 on 차이" 재현 —
+        # faq_hit 0.876으로 정답을 찾고도 이 필터 때문에 거절됨). faq_hit()가 이미 임베딩 유사도
+        # 0.85를 걸러준 뒤라 길이를 낮춰도 무관한 매칭이 새어들 위험은 낮다.
         qwords = _content_words(question)
         fwords = _content_words(f["question"] + " " + f["matched"])
-        overlap = any(len(w) >= 3 and len(x) >= 3 and abs(len(w) - len(x)) <= 2 and (w in x or x in w)
+        overlap = any(len(w) >= 2 and len(x) >= 2 and abs(len(w) - len(x)) <= 2 and (w in x or x in w)
                       for w in qwords for x in fwords)
         if overlap:
             source = [{"chunk_id": rid} for rid in f["rule_ids"]] + [{"chunk_id": f["id"]}]
