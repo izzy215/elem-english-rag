@@ -70,6 +70,11 @@ _GENERIC_WORDS = {
     # 동사를 전부 제외.
     "어떻게", "때", "할", "써요", "와요", "해요", "돼요", "말해요", "붙여요",
     "쓰나요", "오나요", "써야", "와야", "되나요", "하나요", "뭐",
+    # "내가 뭘 자주 틀렸지?"류 — 주어/목적어 자리의 1인칭 대명사·의문대명사는 어느 질문에나
+    # 붙어서 내용어 개수만 부풀리고 주제 판별엔 안 쓰임(2026-09-14, 오답노트 비어있음 가드가
+    # "내가 뭘 자주 틀렸지?"는 내용어 4개로 세서 안 걸리고, LLM이 프롬프트 예시 문장을 학생의
+    # 진짜 기록인 것처럼 지어내 답한 사례로 재현).
+    "내가", "나는", "제가", "저는", "뭘",
 }
 
 # "answer 내용이 rule 내용과 실제로 겹치는지" 확인할 때 이 단어들만 겹친 건 무시 — 의미 있는
@@ -93,18 +98,39 @@ _A_AN_EXCEPTIONS = {"uniform": "a", "hour": "an"}
 _A_AN_Q = re.compile(r"([A-Za-z]+)[가-힣]{0,3}\s*a\s*(예요|인가요|써요|이에요)?\s*an\s*(이에요|인가요|써요|예요)?")
 
 
+def _a_an_word_answer(word: str) -> dict:
+    lw = word.lower()
+    article = _A_AN_EXCEPTIONS.get(lw, "an" if lw[:1] in "aeiou" else "a")
+    sound = "모음" if article == "an" else "자음"
+    return {"answer": f'{word}는 {sound} 소리로 시작해서 "{article} {word}"가 맞아요.',
+            "source": [{"chunk_id": "R-34"}], "offtopic": False, "suggested": []}
+
+
 def _a_an_answer(question: str) -> dict | None:
     m = _A_AN_Q.search(question)
     if not m:
         return None
     word = m.group(1)
-    lw = word.lower()
-    if lw in ("a", "an"):
+    if word.lower() in ("a", "an"):
         return None
-    article = _A_AN_EXCEPTIONS.get(lw, "an" if lw[:1] in "aeiou" else "a")
-    sound = "모음" if article == "an" else "자음"
-    return {"answer": f'{word}는 {sound} 소리로 시작해서 "{article} {word}"가 맞아요.',
-            "source": [{"chunk_id": "R-34"}], "offtopic": False, "suggested": []}
+    return _a_an_word_answer(word)
+
+
+# "elephant는 a예요 an이에요?" 다음에 "uniform은요?"처럼 단어만 바꿔 짧게 묻는 후속 질문 —
+# 그 자체로는 a/an 질문인지 알 수 없어서(2026-09-14, "uniform은요?"가 단어 뜻 설명으로,
+# "hour는요?"가 아예 offtopic으로 샌 것 확인), 직전 대화가 진짜 a/an 규칙(R-34)에 근거했을
+# 때만 같은 방식으로 이어서 답한다.
+_A_AN_FOLLOWUP_Q = re.compile(r"^([A-Za-z]+)[는은]\s*(요)?\s*\??$")
+
+
+def _a_an_followup_answer(question: str, student: str) -> dict | None:
+    m = _A_AN_FOLLOWUP_Q.match(question.strip())
+    if not m:
+        return None
+    last = next((t for t in reversed(_recent_chat_turns(student, max_turns=5)) if t.get("rule_ids")), None)
+    if not last or "R-34" not in last["rule_ids"]:
+        return None
+    return _a_an_word_answer(m.group(1))
 
 
 def _best_match(question: str, items: list[dict], candidates_of) -> tuple[dict | None, float]:
@@ -220,7 +246,7 @@ def _local_match(question: str, faq_list: list[dict], rule_list: list[dict],
             _rag_cache["v"] = _rag_hint_rule_id(question)
         rag_rule_id, rag_score = _rag_cache["v"]
         if rule_ids and rag_rule_id is not None and rag_score >= 0.5 and rag_rule_id not in rule_ids:
-            print(f"[ask][진단] 로컬 매칭 {match_id}(단어겹침 {match_score:.2f}) 이 RAG 힌트({rag_rule_id}, {rag_score:.2f})와 다름 — 답은 그대로 로컬 매칭 사용", flush=True)
+            print(f"[ask][진단] 로컬 매칭 {match_id}(단어겹침 {match_score:.2f}) 이 RAG 힌트({rag_rule_id}, {rag_score:.2f})와 다름 - 답은 그대로 로컬 매칭 사용", flush=True)
 
     faq, faq_score = _best_match(question, faq_list, lambda f: [f["question"]] + (f.get("variants") or []))
     if faq_score >= 0.5:
@@ -553,7 +579,7 @@ def _answer(body: AskIn) -> dict:
     # "elephant는 a예요 an이에요?" — LLM에게 맡기면 가끔 기본 규칙 자체를 틀리게 답해서
     # (2026-09-14, "첫 글자가 자음이라 a" — 실제로는 모음 소리라 an이 맞음) 교재 어휘 기준으로
     # 결정적으로 답한다.
-    a_an = _a_an_answer(question)
+    a_an = _a_an_answer(question) or _a_an_followup_answer(question, body.student)
     if a_an is not None:
         return a_an
 
