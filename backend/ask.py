@@ -65,6 +65,11 @@ _GENERIC_WORDS = {
     "뭐가", "달라요", "다른가요", "다르나요", "차이가", "차이는", "차이예요",
 }
 
+# "answer 내용이 rule 내용과 실제로 겹치는지" 확인할 때 이 단어들만 겹친 건 무시 — 의미 있는
+# 주제어가 아니라 어느 설명문에나 나오는 연결어라(2026-09-14, "He like pizza 이거 맞아?"가
+# 3인칭단수를 맞게 설명해놓고 "때" 한 단어만 겹쳐서 무관한 R-29(How much/many)가 근거로 붙음).
+_WEAK_OVERLAP_WORDS = {"때", "수", "것", "안", "예", "예:", "그", "이", "저"}
+
 
 def _content_words(text: str) -> list[str]:
     """"무슨 뜻이에요"류 범용 의문 표현만 뺀 단어 목록 — 이것만 겹쳐서 서로 다른 단어를
@@ -431,6 +436,14 @@ def _check_correctness(question: str) -> dict:
         answer = f'네, "{sentence}"는 맞는 문장이에요! 👍' if sentence else "네, 맞는 문장이에요!"
     else:
         answer = f'{(out.get("why") or "").strip()} "{out.get("fixed", "")}"가 맞아요.'.strip()
+    # LLM이 "why" 설명은 맞게 쓰고 rule_id 필드만 무관한 걸 골라서 answer 근거로 엉뚱한 규칙이
+    # 딸려 나오는 경우가 있었음(2026-09-14, "He like pizza 이거 맞아?"가 3인칭단수를 제대로
+    # 설명해놓고 rule_id는 R-29(How much/many 의문문)로 잘못 채워서 suggested가 엉뚱하게 나옴) —
+    # answer 내용이 그 규칙의 실제 내용과 겹치는지 확인하고, 안 겹치면 근거로 안 붙인다(source
+    # 경로의 Fix C와 같은 방식).
+    overlap = (set(_content_words(answer)) & set(_content_words(rule["type"] + " " + rule["text"]))) - _WEAK_OVERLAP_WORDS if rule else set()
+    if rule and not overlap:
+        rule = None   # "때/수/것"처럼 의미 없는 연결어 하나만 겹쳐도 통과되던 문제 방지
     suggested = _followup_questions([rule["id"]], golden.faqs()) if rule else []
     return {"answer": answer, "source": [{"chunk_id": rule["id"]}] if rule else [], "offtopic": False,
             "suggested": suggested, "llm": llm_info}
