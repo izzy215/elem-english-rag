@@ -38,7 +38,8 @@ from pydantic import BaseModel
 from backend import golden, llm
 from backend.config import settings
 # 학년 밖 단어 후검사에서 빼는 문법어·기능어 (교재 단어표엔 없지만 규칙이 만들어 내는 말: 관사·조동사·전치사·수량사·축약형)
-RECHECK_EXAMPLE_SCORE = float(os.environ.get("FIX_RECHECK_SCORE", "0.85"))   # 닮은 실수 재확인 문턱 (예문 검색 1위 코사인). 0 이면 항상, 2 면 끔
+RECHECK_EXAMPLE_SCORE = float(os.environ.get("FIX_RECHECK_SCORE", "0.85"))       # 닮은 실수 재확인 문턱 (예문 검색 1위 코사인). 0 이면 항상, 2 면 끔
+OTHER_RESCUE_SCORE = float(os.environ.get("FIX_OTHER_RESCUE_SCORE", "0.80"))    # OTHER 구제 문턱 (예문 검색 1위 코사인). 2 면 끔
 _OUTSIDE_STOP = set("""a an the this that these those it its i you he she we they me him her us them my your his our their
 am is are was were be been being do does did don't doesn't didn't isn't aren't wasn't weren't can can't could will won't would should must may
 to of in on at by for with from about over under into and or but not no so too very much many some any a lot lots there here than more most
@@ -55,7 +56,7 @@ PROMPT_FILE = Path(__file__).parent / "prompts" / "fix_fallback.txt"
 
 router = APIRouter(tags=["tutor"])
 _lock = threading.Lock()
-RAG_TOP_K = 5          # 규칙이 많을 때 프롬프트에 넣는 검색 후보 수 겸 응답 candidates·로그의 표시 개수. 어순 규칙이 4~5위로 나와 5 로 둔다
+RAG_TOP_K = int(os.environ.get("FIX_TOP_K", "8"))   # 프롬프트에 넣는 검색 후보 수 겸 응답 candidates·로그의 표시 개수. 9/15 Ollama 32b 360문장: 5 → 8 로 82.0 → 84.0, 정상 55 → 58 (검색이 놓치던 12건 중 7건이 6~8위). FIX_TOP_K 로 조정
 # 프롬프트에만 끼워 넣는 '철자' 규칙 (rules.jsonl·색인·평가에는 없음). 모델이 철자 실수를 문법 규칙으로 억지로 맞추지 않게 출구를 준다
 # ('i hate vegetibals' 에서 hate→am 같은 답). 모델이 이 id 를 고르고 (wrong,fix) 가 한 단어 쌍이면 서버가 ok=true + 철자 안내로 바꾼다 (아니면 502).
 SPELLING_RULE = {"id": "SPELL", "type": "철자", "unit": "ALL",
@@ -173,6 +174,28 @@ _TIME_WORDS = {"yesterday", "today", "tomorrow", "now", "ago", "last", "next", "
 
 def _tokens(t: str) -> list[str]:
     return re.findall(r"[a-z']+", (t or "").lower())
+
+
+def _edit(a: str, b: str) -> tuple[list[str], list[str]]:
+    """a → b 로 고칠 때 빠진 낱말들과 새로 들어온 낱말들 (소문자, 구두점 제거, 순서 유지). "I want to a cup" → "I want a cup" = (['to'], [])."""
+    sa, sb = _tokens(a), _tokens(b)
+    return [t for t in sa if t not in sb], [t for t in sb if t not in sa]
+
+
+def _same_edit(e1: tuple[list[str], list[str]], e2: tuple[list[str], list[str]]) -> bool:
+    """두 고침이 같은 종류인가. ① 빠진 낱말·새 낱말이 똑같음 (둘 다 'to' 삭제)  ② 한 낱말 교체이고 같은 쌍이거나 같은 어미 변화(year→years 와 year→years, snack→snacks 와 coat→coats).
+    OTHER 구제용 — 모델이 "규칙 밖"이라 해도 검색이 찾은 닮은 실수와 고침 종류가 같으면 그 규칙으로 본다 (9/15 새 시험지 300문장에서 OTHER 15건 전부 정답 규칙이 후보 1위였음)."""
+    (r1, a1), (r2, a2) = e1, e2
+    if not (r1 or a1) or not (r2 or a2):
+        return False
+    if r1 == r2 and a1 == a2:
+        return True
+    if len(r1) == len(a1) == len(r2) == len(a2) == 1:
+        if (r1[0], a1[0]) == (r2[0], a2[0]):
+            return True
+        suffix = lambda w, v: v[len(w):] if v.startswith(w) else None       # year→years 는 "s", coat→coats 도 "s"
+        return suffix(r1[0], a1[0]) is not None and suffix(r1[0], a1[0]) == suffix(r2[0], a2[0])
+    return False
 
 
 def _related_base(a: str, b: str) -> bool:
@@ -702,6 +725,21 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         elif rule_id == SPELLING_RULE["id"]:                 # 철자 규칙인데 한 단어 쌍이 아니면 답으로 못 씀
             _log_failure(orig, student, level, unit, source_kind, f"철자 규칙인데 단어 쌍 아님 {out.get('wrong')!r}→{out.get('fix')!r}", record, llm_info)
             raise HTTPException(502, f"모델이 철자 규칙을 골랐지만 단어 쌍이 아님 ({out.get('wrong')!r}→{out.get('fix')!r}). 다시 [고쳐줘]를 눌러 주세요.")
+    # OTHER 구제 (9/15): 모델이 "규칙 밖"이라 했지만 고침이 예문 검색 1위(점수 ≥ OTHER_RESCUE_SCORE)의 닮은 실수와 같은 종류면 그 규칙으로 라벨.
+    # 모델 말이 아니라 검색 증거로 판정 — "I want to a dessert → I want a dessert" 는 'to' 삭제, 예문 "I want to a cup → I want a cup" 도 'to' 삭제 → R-10.
+    # 모델이 OTHER 로 도망가는 이유: 프롬프트 4번이 wrong→fix "교체" 꼴을 요구해서 낱말을 빼는 고침을 그 꼴로 못 쓴다고 여김.
+    if not ok and other and ex_cands and ex_cands[0].get("example") and ex_cands[0].get("score", 0) >= OTHER_RESCUE_SCORE:
+        e0 = ex_cands[0]
+        my_edit = _edit(text, out.get("full_fixed") or out.get("fixed") or "")
+        ex_edit = _edit(e0["example"], e0.get("correct") or "")
+        if e0["id"] in allowed_ids and _same_edit(my_edit, ex_edit):
+            print(f"[fix] OTHER 구제: 고침 {my_edit} 이 닮은 실수 {e0['id']} {e0['example']!r}→{e0.get('correct')!r} 의 고침 {ex_edit} 과 같은 종류 → 규칙 {e0['id']} 로 라벨", flush=True)
+            rule_id, other = e0["id"], False
+            out["wrong"] = " ".join(my_edit[0]) or None          # 화면 표시용 쌍: 빠진 낱말 → 새 낱말 (삭제면 fix 가 비어 있어도 됨)
+            out["fix"] = " ".join(my_edit[1]) or None
+            out["rescued_from_other"] = True
+        else:
+            print(f"[fix] OTHER 유지: 고침 {my_edit} vs 닮은 실수 {e0['id']} 고침 {ex_edit} — 종류 다름", flush=True)
     if not ok and not other:                                 # 기능어 한 개 바꾼 답(is→are, a→an)은 한 번 더 확인 — 맞는 문장을 뒤집는 오교정 방지
         wt, ft = _tokens(out.get("wrong") or ""), _tokens(out.get("fix") or "")
         if len(wt) == 1 and len(ft) == 1 and wt[0] in _swap_words() and ft[0] in _swap_words():

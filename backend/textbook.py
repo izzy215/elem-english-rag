@@ -326,6 +326,24 @@ def sharp(scores: list[float], gap: float = 0.06, top: float = 0.85) -> bool:
     return scores[0] >= top and (scores[0] - scores[min(4, len(scores) - 1)]) >= gap
 
 
+# ── ⑦ 쌍둥이 규칙 (rules.jsonl 의 related 열) ─────────────────────────────
+def rule_family(rule_id: str) -> set[str]:
+    """규칙 id 와 그 짝(rules.jsonl 의 `related` 열, 없으면 빈 목록)을 한 묶음으로. 교과서가 같은 문법을 단원마다 다른 이름으로 부르는 일이 있어
+    (명사복수형 R-33 ↔ 숫자+복수명사 R-12) 짝은 결함이 아니라 데이터에 적어 두는 사실 (2026-09-15 팀장 결정). 채점은 짝 중 어느 쪽이든 정답,
+    화면·/ask 는 "비슷한 규칙" 안내에 쓴다. 양방향으로 본다 (한쪽에만 적혀 있어도 됨)."""
+    rid = (rule_id or "").strip()
+    if not rid:
+        return set()
+    fam = {rid}
+    for r in golden.rules():
+        rel = [x.strip() for x in (r.get("related") or []) if x and x.strip()]
+        if r["id"] == rid:
+            fam.update(rel)
+        elif rid in rel:
+            fam.add(r["id"])
+    return fam
+
+
 # ── ⑥ 단어장 표 조회 (임베딩 없음) ──────────────────────────────────────
 _WORD_BY_EN: dict[str, list[dict]] = {}      # "bus" → [단어장 행, …]
 _WORD_BY_KO: dict[str, list[dict]] = {}      # "형" → [단어장 행, …]  (뜻 열 "형/오빠/남동생" 을 슬래시로 나눠 각각 열쇠)

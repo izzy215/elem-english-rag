@@ -165,7 +165,7 @@ def gen_gaps_run(body: GenIn):
 def eval_history():
     """tests/eval_rag.py 가 남긴 평가 파일을 전부 읽어 실행별 결과와 '모델(+재랭커)별 최신' 목록을 준다.
     파일에 reranker 정보가 있으면(index.reranker 또는 최상위 reranker) 라벨에 ' + 재랭킹' 을 붙인다 — RAG 담당이 재랭킹을 평가에 넣으면 자동 반영.
-    비교는 같은 시험지끼리만 뜻이 있어서, 지금 eval.csv 와 짝이 맞는 실행(문장 수 같고, 해시가 있으면 해시도 같음)만 latest 에 넣고
+    비교는 같은 시험지끼리만 뜻이 있어서, 지금 eval.csv 와 짝이 맞는 실행(total_n 같고 evaluation_hash 도 같음 — 해시 없는 옛 파일은 제외)만 latest 에 넣고
     나머지(옛 시험지 65문장, --step 으로 일부만 돌린 실험 등)는 runs 에 same_sheet=False 로만 남긴다 — 화면 표에는 안 나옴."""
     out_dir = golden.ROOT / "data" / "rag_eval"
     eval_n, eval_hash = len(golden.eval_set()), eval_sheet_hash()
@@ -186,14 +186,21 @@ def eval_history():
                      "n": d.get("n"), "total_n": d.get("total_n"), "k": d.get("k"),
                      "hit_at_1": d.get("hit_at_1"), "hit_at_3": d.get("hit_at_3"), "hit_at_5": d.get("hit_at_5"),
                      "search_failures": d.get("search_failures"), "data_hash": d.get("data_hash"),
-                     "same_sheet": (d.get("total_n") or d.get("n")) == eval_n and (d.get("evaluation_hash") or eval_hash) == eval_hash})
+                     # 같은 시험지 = 문장 수(total_n)와 시험지 해시가 모두 지금 eval.csv 와 같을 때만. 해시가 없는 옛 파일은 다른 시험지로 본다
+                     # (9/15: 해시 없는 9/11 파일이 "지금 시험지"로 통과해 비교표 latest 에 끼던 문제 — 골든 데이터 세션 보고)
+                     "same_sheet": d.get("total_n") == eval_n and d.get("evaluation_hash") == eval_hash})
     latest: dict[str, dict] = {}
     for r in runs:                                           # 라벨별 가장 최근 실행 (파일명이 시각순) — 지금 시험지와 짝이 맞는 것만
         if r["same_sheet"]:
             latest[r["label"]] = r
     hidden = len({r["label"] for r in runs if not r["same_sheet"]})
+    try:
+        from backend import embedding as _emb
+        service_model = _emb.EMBEDDING_MODEL                 # 화면 머리글은 "지금 시험지 × 서비스 임베딩 모델 × 예문+설명문" 실행을 보여 준다 (retrieval_eval_latest.json 은 eval_rag 만 갱신해 9/11 에 멈춰 있던 문제)
+    except Exception:  # noqa: BLE001
+        service_model = None
     return {"runs": runs, "latest": sorted(latest.values(), key=lambda r: -(r["hit_at_3"] or 0)),
-            "sheet": {"n": eval_n, "hash": eval_hash, "hidden_labels": hidden}}
+            "sheet": {"n": eval_n, "hash": eval_hash, "hidden_labels": hidden, "service_model": service_model}}
 
 
 # ── 검색 평가 실행 (임베딩 모델·재랭킹 선택 → tests/eval_embed.py 서브프로세스, backend/evalrun.py) ──
@@ -294,4 +301,7 @@ def textbook_search(q: str = "", level: int = 3, k: int = 5, min_score: float = 
 
 def eval_sheet_hash() -> str:
     """지금 eval.csv 의 지문. 평가 파일의 evaluation_hash 와 대조해 '같은 시험지' 판정 (tests/rerank_compare.py 도 이 값을 기록)."""
-    return "sha256:" + hashlib.sha256(json.dumps(golden.eval_set(), ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]
+    # 시험 내용(text·정답 규칙)만으로 지문을 만든다 — note·twin_group·status 같은 메모 열을 고쳐도 같은 시험지로 본다
+    # (9/15: status 열만 달라진 시험지에서 해시가 바뀌어 같은 문장으로 돌린 실행이 전부 "다른 시험지"로 숨던 문제)
+    rows = [(r.get("text", "").strip(), (r.get("expected_rule_id") or "").strip()) for r in golden.eval_set()]
+    return "sha256:" + hashlib.sha256(json.dumps(rows, ensure_ascii=False).encode("utf-8")).hexdigest()[:16]

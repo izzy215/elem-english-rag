@@ -156,7 +156,24 @@ def judge(row: dict, res: dict) -> str:
         return "✓ 정상 유지" if res["ok"] else f"✗ 오교정 {res['rule_id']}"
     if res["ok"]:
         return "✗ 놓침 (ok)"
-    return "✓" if res["rule_id"] == row["expected_rule_id"] else f"✗ {res['rule_id']}"
+    if res["rule_id"] == row["expected_rule_id"]:
+        return "✓"
+    if res["rule_id"] in _family(row["expected_rule_id"]):        # 쌍둥이 규칙(rules.jsonl related) — 정답으로 인정하되 표에서는 구분
+        return f"✓≈ {res['rule_id']}"
+    return f"✗ {res['rule_id']}"
+
+
+_FAM: dict[str, set[str]] = {}
+
+
+def _family(rule_id: str) -> set[str]:
+    if rule_id not in _FAM:
+        try:
+            from backend import textbook
+            _FAM[rule_id] = textbook.rule_family(rule_id)
+        except Exception:  # noqa: BLE001
+            _FAM[rule_id] = {rule_id}
+    return _FAM[rule_id]
 
 
 def main() -> None:
@@ -235,7 +252,7 @@ def main() -> None:
             continue
         n_err = sum(1 for e in results if not e["is_normal"])
         n_norm = sum(1 for e in results if e["is_normal"])
-        hit = sum(1 for e in results if not e["is_normal"] and e["by"][b]["judge"] == "✓")
+        hit = sum(1 for e in results if not e["is_normal"] and e["by"][b]["judge"].startswith("✓"))   # "✓≈"(쌍둥이 규칙) 포함
         keep = sum(1 for e in results if e["is_normal"] and e["by"][b]["judge"].startswith("✓"))
         fail = sum(1 for e in results if e["by"][b]["error"])
         ms = [e["by"][b]["ms"] for e in results if not e["by"][b]["error"]]

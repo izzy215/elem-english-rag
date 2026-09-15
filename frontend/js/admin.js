@@ -44,9 +44,17 @@ async function loadEval() {
   let hist = null;                                          // 모델(+재랭킹)별 최신 실행 — 서버 재시작 전(404)이면 null → 예전 runs 방식으로 폴백
   try { hist = await api('/api/admin/eval_history'); } catch (_) { hist = null; }
   renderRuns(hist, r.runs || []);
-  const extra = [r.hit_at_5 != null ? `hit@5 ${pct(r.hit_at_5)} (/fix 가 받는 검색 후보 안 — tutor.py RAG_TOP_K=5 와 같이 바꿀 것)` : '', r.evaluated_at ? `${when(r.evaluated_at)} 측정` : '', r.index?.model ? esc(r.index.model) : ''].filter(Boolean).join(' · ');
-  const stale = (r.stale && r.evaluation_hash) ? ' · <span class="pill warn">색인·시험지가 평가 뒤에 바뀜 — eval_rag 다시 돌려야 함</span>' : '';   // evaluation_hash 는 eval_rag 가 아직 안 써서(RAG 담당) 그 전엔 stale 이 항상 true → 값이 생긴 뒤에만 표시
-  $('#evalHint').innerHTML = (r.hit_at_3 >= .8 ? '목표(80%) 달성' : '목표 80%까지 ' + Math.round((.8 - r.hit_at_3) * 100) + '%p 남음') + (extra ? ' · ' + extra : '') + stale;
+  // 머리글 숫자는 "지금 시험지 × 서비스 임베딩 모델 × 예문+설명문(/fix 가 쓰는 검색)" 의 가장 최근 실행으로. /api/rag/eval 이 읽는 retrieval_eval_latest.json 은
+  // eval_rag 만 갱신해서(RAG 담당 스크립트) eval_embed 로 돌린 실행이 있어도 9/11 에 멈춰 있었음(2026-09-15). 그런 실행이 없으면 예전처럼 /api/rag/eval 값
+  const svc = hist?.sheet?.service_model;
+  const cur = (hist?.latest || []).filter(x => (!svc || x.model === svc) && !x.reranker).sort((a, b) => (b.corpus === 'both') - (a.corpus === 'both') || String(b.file).localeCompare(String(a.file)))[0] || null;
+  const h = cur || r;
+  $('#hit3').textContent = pct(h.hit_at_3); $('#hit3').className = 'num' + (h.hit_at_3 >= .8 ? '' : ' na');
+  $('#hit1').textContent = pct(h.hit_at_1); $('#hit1').className = 'num';
+  $('#evalN').textContent = h.n; $('#evalN').className = 'num';
+  const extra = [h.hit_at_5 != null ? `hit@5 ${pct(h.hit_at_5)} (/fix 가 받는 검색 후보 안 — tutor.py RAG_TOP_K=5 와 같이 바꿀 것)` : '', h.evaluated_at ? `${when(h.evaluated_at)} 측정` : '', cur ? `${esc(cur.model)} · ${esc(cur.corpus_label || '')} · 지금 시험지` : (r.index?.model ? esc(r.index.model) : '')].filter(Boolean).join(' · ');
+  const stale = cur ? '' : ((r.stale && r.evaluation_hash) ? ' · <span class="pill warn">색인·시험지가 평가 뒤에 바뀜 — 지금 시험지로 평가를 다시 돌려야 함</span>' : ' · <span class="pill warn">지금 시험지로 돌린 서비스 모델 실행이 없음</span>');
+  $('#evalHint').innerHTML = (h.hit_at_3 >= .8 ? '목표(80%) 달성' : '목표 80%까지 ' + Math.round((.8 - h.hit_at_3) * 100) + '%p 남음') + (extra ? ' · ' + extra : '') + stale;
   renderMiss(r.rows || []);
 }
 const day = iso => iso ? iso.slice(5, 10) : '–';   // "09-14" — 비교 표(renderRuns)·튜터 표(renderFix) 공용

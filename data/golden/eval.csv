@@ -7,11 +7,11 @@ Good night Amy.,R-02,정제본 교체(문장 성립 불가/의미 붕괴),,교�
 Thanks Tom.,R-02,인사말 뒤 쉼표·느낌표 · 새 문장 (E-0007 대응),,원본 유지
 This is Tom pencil.,R-03,정제본 교체(라벨과 다른 오류 유형),,교체
 She is niece.,R-03,정제본 교체(이중 오류→단일 오류로),,교체
-He is uncle.,R-03,정제본 교체(라벨과 다른 오류 유형),,교체
+The boy with the ball is brother.,R-03,정제본 교체(라벨과 다른 오류 유형) · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 This are my daughter.,R-04,"한 명 This is, 여럿 These are · 새 문장 (E-0014 대응)",T6(This/These),원본 유지
 These is my relatives.,R-04,"한 명 This is, 여럿 These are · 새 문장 (E-0015 대응)",T6(This/These),원본 유지
 These are my son.,R-04,"한 명 This is, 여럿 These are · 새 문장 (E-0013 대응)",T6(This/These),원본 유지
-There are a book on the desk.,R-05,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+Look! There are a cat under the chair.,R-05,정제본 교체(문장 성립 불가/의미 붕괴) · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 There are a chair in the room.,R-05,정제본 교체(문장 성립 불가/의미 붕괴),,교체
 There are a teacher in the classroom.,R-05,정제본 교체(이중 오류→단일 오류로),,교체
 She a grade has every day.,R-06,주어+동사+목적어 순서 · 새 문장 (E-0022 대응),,원본 유지
@@ -20,12 +20,12 @@ He his lunch eats every day.,R-06,정제본 교체(문장 성립 불가/의미 �
 The bird can runs fast.,R-07,can 뒤엔 동사원형 · 새 문장 (E-0027 대응),,원본 유지
 The cat can jumps high.,R-07,정제본 교체(문장 성립 불가/의미 붕괴),,교체
 The eagle can flies high.,R-07,정제본 교체(문장 성립 불가/의미 붕괴),,교체
-This birds are amazing.,R-08,"This+단수, These+복수 · 새 문장 (E-0029 대응)",T6(This/These),원본 유지
+"Wow, this monkeys are so funny!",R-08,"This+단수, These+복수 · 새 문장 (E-0029 대응) · 규칙·예문과 겹쳐 재작성 (09.15)",T6(This/These),교체(9/15 errors 겹침 제거)
 This fishes are amazing.,R-08,"This+단수, These+복수 · 새 문장 (E-0030 대응)",T6(This/These),원본 유지
 This rabbits are amazing.,R-08,"This+단수, These+복수 · 새 문장 (E-0031 대응)",T6(This/These),원본 유지
 I have many soup.,R-09,셀 수 없으면 much/some · 새 문장 (E-0033 대응),,원본 유지
 I need many sugar.,R-09,정제본 교체(문장 성립 불가/의미 붕괴),,교체
-She drinks many milk every day.,R-09,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+Please give me many rice for dinner.,R-09,정제본 교체(문장 성립 불가/의미 붕괴) · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 I want to a dessert.,R-10,want 뒤엔 명사 바로 · 새 문장 (E-0037 대응),,원본 유지
 I want to a meal.,R-10,want 뒤엔 명사 바로 · 새 문장 (E-0039 대응),,원본 유지
 I want to a snack.,R-10,want 뒤엔 명사 바로 · 새 문장 (E-0038 대응),,원본 유지
@@ -42,11 +42,11 @@ This is cold today.,R-14,날씨는 It is ~ · 새 문장 (E-0053 대응),,원본
 This is snowy today.,R-14,날씨는 It is ~ · 새 문장 (E-0055 대응),,원본 유지
 This is windy today.,R-14,날씨는 It is ~ · 새 문장 (E-0054 대응),,원본 유지
 A storm will hits the coast.,R-15,정제본 교체(문장 성립 불가/의미 붕괴),,교체
-The news says it will rains.,R-15,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+I think it will snows a lot this weekend.,R-15,정제본 교체(문장 성립 불가/의미 붕괴) · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 My mom says it will rains.,R-15,정제본 교체(문장 성립 불가/의미 붕괴),,교체
 Trees bloom on spring.,R-16,정제본 교체(문장 성립 불가/의미 붕괴),,교체
 We enjoy outdoor activities on fall.,R-16,정제본 교체(문장 성립 불가/의미 붕괴),,교체
-We swim on summer.,R-16,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+The leaves turn red on fall.,R-16,정제본 교체(문장 성립 불가/의미 붕괴) · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 He wear a blue coat now.,R-17,정제본 교체(문장 성립 불가/의미 붕괴),T3(진행형),교체
 She wear a pretty skirt now.,R-17,정제본 교체(문장 성립 불가/의미 붕괴),T3(진행형),교체
 She wear a red hat now.,R-17,정제본 교체(문장 성립 불가/의미 붕괴),T3(진행형),교체
@@ -176,7 +176,7 @@ She has four triple the money now.,R-58,"두 배=double, 세 배=triple · 새 �
 There are hundred of bikes on the highway.,R-59,아주 많음=hundreds/thousands of · 새 문장 (E-0233 대응),,원본 유지
 There are hundred of books in the library.,R-59,"아주 많음=hundreds/thousands of · 새 문장 (E-0234 대응, 수동 보완)",,원본 유지
 There are thousand of stars in the sky.,R-59,"아주 많음=hundreds/thousands of · 새 문장 (E-0235 대응, 수동 보완)",,원본 유지
-How's the weather like today?,R-60,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+"Mom, how's the weather like at the beach?",R-60,정제본 교체(문장 성립 불가/의미 붕괴) · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 How's the lightning like tomorrow?,R-60,날씨 묻기=What's the weather like? · 새 문장 (E-0239 대응),,원본 유지
 How's the thunder like tomorrow?,R-60,날씨 묻기=What's the weather like? · 새 문장 (E-0238 대응),,원본 유지
 It is getting warmly these days.,R-61,정제본 교체(문장 성립 불가/의미 붕괴),,교체
@@ -188,9 +188,9 @@ He carries an umbrella because windy.,R-62,이유=because+문장 · 새 문장 (
 She goes to skate every December.,R-63,정제본 교체(문장 성립 불가/의미 붕괴),,교체
 He goes to swim every summer.,R-63,정제본 교체(문장 성립 불가/의미 붕괴),,교체
 They go to fish in spring.,R-63,정제본 교체(문장 성립 불가/의미 붕괴),,교체
-Fall is coolest season of all.,R-64,정제본 교체(문장 성립 불가/의미 붕괴),,교체
-Spring is nicest season of all.,R-64,정제본 교체(문장 성립 불가/의미 붕괴),,교체
-Summer is hottest season of all.,R-64,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+Today was coldest day of this year.,R-64,정제본 교체(문장 성립 불가/의미 붕괴) · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
+My cat is fattest cat in town.,R-64,정제본 교체(문장 성립 불가/의미 붕괴) · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
+August is hottest month here.,R-64,정제본 교체(문장 성립 불가/의미 붕괴) · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 She travels while August every year.,R-65,정제본 교체(문장 성립 불가/의미 붕괴),,교체
 He reads while breakfast every morning.,R-65,정제본 교체(문장 성립 불가/의미 붕괴),,교체
 They ski while vacation every winter.,R-65,정제본 교체(문장 성립 불가/의미 붕괴),,교체
@@ -212,8 +212,8 @@ They wash face in the morning.,R-70,"wash/brush+소유격+신체부위 · 새 �
 He has white tooths.,R-71,"foot→feet, tooth→teeth · 새 문장 (E-0283 대응)",,원본 유지
 His foots are cold.,R-71,정제본 교체(라벨과 다른 오류 유형),,교체
 She has small foots.,R-71,정제본 교체(정답 문장에 오답 라벨),,교체
-He plays a baseball after school.,R-72,"구기=play+무관사, 악기=play the · 새 문장 (E-0285 대응)",,원본 유지
-He plays a soccer after school.,R-72,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+My friends play a badminton at the park.,R-72,"구기=play+무관사, 악기=play the · 새 문장 (E-0285 대응) · 규칙·예문과 겹쳐 재작성 (09.15)",,교체(9/15 errors 겹침 제거)
+Do you play a basketball on weekends?,R-72,정제본 교체(문장 성립 불가/의미 붕괴) · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 She plays a badminton after school.,R-72,정제본 교체(문장 성립 불가/의미 붕괴),,교체
 Let's biking around the park.,R-73,"제안=Let's+동사원형 · 새 문장 (E-0291 대응, 수동 보완)",,원본 유지
 Let's dancing at the party.,R-73,"제안=Let's+동사원형 · 새 문장 (E-0289 대응, 수동 보완)",,원본 유지
@@ -227,10 +227,10 @@ She spends time to dance every day.,R-75,정제본 교체(문장 성립 불가/�
 How many often do you paint at home?,R-76,정제본 교체(문장 성립 불가/의미 붕괴),,교체
 How many often do you study at home?,R-76,정제본 교체(문장 성립 불가/의미 붕괴),,교체
 How many often do you swim?,R-76,정제본 교체(문장 성립 불가/의미 붕괴),,교체
-He is interested at drawing these days.,R-77,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+My little sister is interested at space.,R-77,정제본 교체(문장 성립 불가/의미 붕괴) · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 She is interested at dancing these days.,R-77,정제본 교체(문장 성립 불가/의미 붕괴),,교체
 They are interested at soccer these days.,R-77,정제본 교체(문장 성립 불가/의미 붕괴),,교체
-What time it is now?,R-78,정제본 교체(간접화법 래퍼로 오류가 소멸),,교체
+"Sorry, what time it is in Korea?",R-78,정제본 교체(간접화법 래퍼로 오류가 소멸) · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 "Tom, what time it is?",R-78,정제본 교체(간접화법 래퍼로 오류가 소멸),,교체
 What time it is today?,R-78,정제본 교체(간접화법 래퍼로 오류가 소멸),,교체
 He wakes up on one o'clock every day.,R-79,on(요일)/at(시각·밤)/in(월·계절) · 새 문장 (E-0313 대응),,원본 유지
@@ -241,11 +241,11 @@ She wakes up on three o'clock every day.,R-79,on(요일)/at(시각·밤)/in(월�
 "Then I read a book, first I turn on the lamp.",R-80,"순서=First/Then/After that · 새 문장 (E-0319 대응, 수동 보완)",,원본 유지
 How long take it to school?,R-81,정제본 교체(문장 성립 불가/의미 붕괴),,교체
 How long take it to the library?,R-81,정제본 교체(문장 성립 불가/의미 붕괴),,교체
-How long take it by bus?,R-81,정제본 교체(문장 성립 불가/의미 붕괴),,교체
-How you go to the library every day?,R-82,정제본 교체(문장 성립 불가/의미 붕괴),,교체
-How you go to the park every day?,R-82,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+How long take it to get to the airport?,R-81,정제본 교체(문장 성립 불가/의미 붕괴) · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
+How your mom go to work?,R-82,정제본 교체(문장 성립 불가/의미 붕괴) · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
+How you get to the zoo?,R-82,정제본 교체(문장 성립 불가/의미 붕괴) · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 How you go to church on Sunday?,R-82,정제본 교체(문장 성립 불가/의미 붕괴),,교체
-She gets in the train every morning.,R-83,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+"Hurry, get in the bus before it leaves!",R-83,정제본 교체(문장 성립 불가/의미 붕괴) · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 He gets in the subway every morning.,R-83,정제본 교체(문장 성립 불가/의미 붕괴),,교체
 They get in the airplane at the airport.,R-83,정제본 교체(문장 성립 불가/의미 붕괴),,교체
 The bank is on the zoo in our town.,R-84,장소 위치=next to/between/in front of/behind · 새 문장 (E-0333 대응),,원본 유지
@@ -260,7 +260,7 @@ There are a lot oranges on this street.,R-86,많음=a lot of · 새 문장 (E-03
 He works a library as a teacher.,R-87,정제본 교체(이중 오류→단일 오류로),,교체
 She works a hospital as a nurse.,R-87,정제본 교체(문장 성립 불가/의미 붕괴),,교체
 He works a bank in our town.,R-87,정제본 교체(문장 성립 불가/의미 붕괴),,교체
-What does he works?,R-88,정제본 교체(간접화법 래퍼로 오류가 소멸),,교체
+"Tell me, what does the new neighbor works?",R-88,정제본 교체(간접화법 래퍼로 오류가 소멸) · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 What does she works every day?,R-88,정제본 교체(간접화법 래퍼로 오류가 소멸),,교체
 What does your uncle works?,R-88,정제본 교체(간접화법 래퍼로 오류가 소멸),,교체
 He would like be a designer someday.,R-89,정중한 장래희망=would like to be · 새 문장 (E-0353 대응),,원본 유지
@@ -302,15 +302,15 @@ Does she plays tennis well?,R-100,"의문문=Do/Does+주어+동사원형 · 새 
 "Hi, Ben!",NONE,정상 문장(평범) · threshold 측정용,,신규
 "Good morning, everyone!",NONE,정상 문장(평범) · threshold 측정용,,신규
 This is my dad.,NONE,정상 문장(평범) · threshold 측정용,,신규
-These are my cousins.,NONE,정상 문장(평범) · threshold 측정용,,신규
-I have a pencil.,NONE,정상 문장(평범) · threshold 측정용,,신규
+These are my two best friends.,NONE,정상 문장(평범) · threshold 측정용 · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
+I have a new eraser in my bag.,NONE,정상 문장(평범) · threshold 측정용 · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 There is a cup on the table.,NONE,정상 문장(평범) · threshold 측정용,,신규
 Dogs can swim well.,NONE,정상 문장(평범) · threshold 측정용,,신규
 I have an apple.,NONE,정상 문장(평범) · threshold 측정용,,신규
-I want some water.,NONE,정상 문장(평범) · threshold 측정용,,신규
+I want some juice with my lunch.,NONE,정상 문장(평범) · threshold 측정용 · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 I see a blue bird.,NONE,정상 문장(평범) · threshold 측정용,,신규
 I have three books.,NONE,정상 문장(평범) · threshold 측정용,,신규
-It is windy today.,NONE,정상 문장(평범) · threshold 측정용,,신규
+It is really windy at the beach.,NONE,정상 문장(평범) · threshold 측정용 · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 It will snow tomorrow.,NONE,정상 문장(평범) · threshold 측정용,,신규
 He is wearing a warm coat.,NONE,정상 문장(평범) · threshold 측정용,,신규
 My arm hurts.,NONE,정상 문장(평범) · threshold 측정용,,신규
@@ -318,7 +318,7 @@ I like drawing.,NONE,정상 문장(평범) · threshold 측정용,,신규
 She enjoys singing.,NONE,정상 문장(평범) · threshold 측정용,,신규
 We have a quiz on Friday.,NONE,정상 문장(평범) · threshold 측정용,,신규
 She usually walks to school.,NONE,정상 문장(평범) · threshold 측정용,,신규
-We go to school by bus.,NONE,정상 문장(평범) · threshold 측정용,,신규
+My cousin goes to school by subway.,NONE,정상 문장(평범) · threshold 측정용 · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 They go to the park every day.,NONE,정상 문장(평범) · threshold 측정용,,신규
 My mom is a nurse.,NONE,정상 문장(평범) · threshold 측정용,,신규
 I am proud of my sister.,NONE,정상 문장(평범) · threshold 측정용,,신규
@@ -329,33 +329,33 @@ I watched a movie yesterday.,NONE,정상 문장(평범) · threshold 측정용,,
 She reads books every night.,NONE,정상 문장(평범) · threshold 측정용,,신규
 I brush my teeth every day.,NONE,정상 문장(평범) · threshold 측정용,,신규
 My feet are cold.,NONE,정상 문장(평범) · threshold 측정용,,신규
-We play soccer after school.,NONE,정상 문장(평범) · threshold 측정용,,신규
+We play tag after lunch.,NONE,정상 문장(평범) · threshold 측정용 · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 Let's go swimming.,NONE,정상 문장(평범) · threshold 측정용,,신규
 He is good at cooking.,NONE,정상 문장(평범) · threshold 측정용,,신규
-What time is it now?,NONE,정상 문장(평범) · threshold 측정용,,신규
+What time is the movie tonight?,NONE,정상 문장(평범) · threshold 측정용 · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 I get up at seven.,NONE,정상 문장(평범) · threshold 측정용,,신규
 The library is next to the bank.,NONE,정상 문장(평범) · threshold 측정용,,신규
 There are a lot of flowers in the garden.,NONE,정상 문장(평범) · threshold 측정용,,신규
 My dad works at a bank.,NONE,정상 문장(평범) · threshold 측정용,,신규
 This game makes me happy.,NONE,정상 문장(평범) · threshold 측정용,,신규
 Our house has four rooms.,NONE,정상 문장(평범) · threshold 측정용,,신규
-I am hungry now.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+I am sleepy after lunch.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답 · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 She is very kind.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
 "Hello, Amy!",NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
 There are many students in my class.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
-The bird can fly high.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+My parrot can say my name.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답 · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 I don't have much time.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
 I want a hamburger.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
 I see a red rose.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
 I have two dogs.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
-It is cloudy today.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+It is foggy this morning.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답 · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 She is wearing glasses.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
-My head hurts a little.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+My tooth hurts when I eat ice cream.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답 · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 I like playing badminton.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
 I enjoy reading comics.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
-I have a test on Monday.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
-We travel by train.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+I have piano lessons on Wednesday.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답 · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
+My family travels by car every summer.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답 · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)
 She wants to be a singer.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
 My uncle is an actor.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
 He is scared of dogs.,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
-Does she like pizza?,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답,,신규
+Does your brother like spicy food?,NONE,정상 문장(경계) · 오답 패턴과 유사한 정답 · 규칙·예문과 겹쳐 재작성 (09.15),,교체(9/15 errors 겹침 제거)

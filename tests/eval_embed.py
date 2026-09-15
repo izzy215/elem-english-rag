@@ -65,6 +65,19 @@ def _rerank(url: str, model: str, query: str, cands: list[dict]) -> list[dict]:
     return [{**c, "rerank_score": round(float(s), 4)} for c, s in ranked]
 
 
+_FAM: dict[str, set[str]] = {}
+
+
+def _family(rule_id: str) -> set[str]:
+    if rule_id not in _FAM:
+        try:
+            from backend import textbook
+            _FAM[rule_id] = textbook.rule_family(rule_id)
+        except Exception:  # noqa: BLE001
+            _FAM[rule_id] = {rule_id}
+    return _FAM[rule_id]
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--backend", default=os.environ.get("EMBEDDING_BACKEND", "gemini"), choices=["gemini", "local", "remote"])
@@ -163,7 +176,8 @@ def main() -> None:
             if args.rerank:
                 cands = _rerank(rerank_url, args.rerank, text, cands[: args.topn])
             ids = [c["id"] for c in cands]
-            h1, h3, h5 = (not is_normal) and ids[:1] == [expected], (not is_normal) and expected in ids[:3], (not is_normal) and expected in ids[:5]
+            acc = _family(expected)                              # 쌍둥이 규칙(rules.jsonl related)은 어느 쪽이든 적중
+            h1, h3, h5 = (not is_normal) and bool(ids[:1]) and ids[0] in acc, (not is_normal) and any(x in acc for x in ids[:3]), (not is_normal) and any(x in acc for x in ids[:5])
             hit1 += int(h1); hit3 += int(h3); hit5 += int(h5)
             detail.append({"text": text, "expected_rule_id": expected, "is_normal": is_normal,
                            "candidates": [{k: c[k] for k in c if k != "text"} for c in cands[:5]],
@@ -197,6 +211,8 @@ def main() -> None:
     }
     name = f"retrieval_eval_{stamp}{'-rerank' if args.rerank else ''}.json"
     (OUT_DIR / name).write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
+    if not args.rerank:                                      # 최근 실행 복사본 — GET /api/rag/eval (rag.py) 가 읽는 파일. eval_rag 만 쓰던 것을 여기서도 갱신 (9/11 에 멈춰 있던 문제)
+        (OUT_DIR / "retrieval_eval_latest.json").write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"[eval_embed] 저장: {name} (관리자 비교 표에 자동 표시)", flush=True)
 
 
