@@ -1,14 +1,14 @@
 {
- "ran_at": "2026-09-14T11:56:50",
- "label": "rag-gemini-real",
- "condition": "RAG 파이프라인 (검색 상위 5 + 공통 규칙, 임베딩 all-MiniLM-L6-v2)",
+ "ran_at": "2026-09-15T11:31:45",
+ "label": "rag-gemini-k20-v56059a6",
+ "condition": "RAG 파이프라인 (검색 상위 20 + 공통 규칙, 임베딩 gemini-embedding-001)",
  "no_rag": false,
  "sentences": null,
  "index": {
-  "model": "all-MiniLM-L6-v2",
-  "provider": "sentence-transformers-local",
+  "model": "gemini-embedding-001",
+  "provider": "google-genai",
   "count": 100,
-  "generated_at": "2026-09-14T11:45:22"
+  "generated_at": "2026-09-15T10:10:20"
  },
  "prompt_file": "fix_fallback.txt",
  "rules_n": 100,
@@ -17,10 +17,10 @@
  ],
  "summary": {
   "local": {
-   "rule_hit": "58/100",
+   "rule_hit": "70/100",
    "normal_kept": "10/10",
-   "failures": 1,
-   "avg_ms": 4509,
+   "failures": 0,
+   "avg_ms": 4448,
    "model": "qwen2.5:32b-instruct"
   }
  },
@@ -34,18 +34,18 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 8692,
+     "ms": 4449,
      "ok": false,
-     "rule_id": "R-36",
+     "rule_id": "R-01",
      "fixed": "I am hungry now.",
      "full_fixed": "I am hungry now.",
      "more_errors": false,
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 77,
+     "rank": 16,
      "spelling": [],
-     "judge": "✗ R-36"
+     "judge": "✓"
     }
    }
   },
@@ -58,7 +58,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3329,
+     "ms": 3771,
      "ok": true,
      "rule_id": null,
      "fixed": "Good evening Dad.",
@@ -82,7 +82,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4141,
+     "ms": 4680,
      "ok": true,
      "rule_id": null,
      "fixed": "This is Tom pencil.",
@@ -111,18 +111,18 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3821,
-     "ok": true,
-     "rule_id": null,
-     "fixed": "This is my daughters.",
-     "full_fixed": "This is my daughters.",
+     "ms": 2966,
+     "ok": false,
+     "rule_id": "R-33",
+     "fixed": "This is my daughter.",
+     "full_fixed": "This is my daughter.",
      "more_errors": false,
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": null,
+     "rank": 6,
      "spelling": [],
-     "judge": "✗ 놓침 (ok)"
+     "judge": "✗ R-33"
     }
    }
   },
@@ -135,18 +135,18 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 2947,
-     "ok": true,
-     "rule_id": null,
-     "fixed": "There are a book on the desk.",
-     "full_fixed": "There are a book on the desk.",
+     "ms": 4447,
+     "ok": false,
+     "rule_id": "R-05",
+     "fixed": "There is a book on the desk.",
+     "full_fixed": "There is a book on the desk.",
      "more_errors": false,
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": null,
+     "rank": 1,
      "spelling": [],
-     "judge": "✗ 놓침 (ok)"
+     "judge": "✓"
     }
    }
   },
@@ -159,7 +159,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4195,
+     "ms": 4433,
      "ok": true,
      "rule_id": null,
      "fixed": "She a grade has every day.",
@@ -183,7 +183,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4032,
+     "ms": 4216,
      "ok": false,
      "rule_id": "R-07",
      "fixed": "The bird can run fast.",
@@ -207,7 +207,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3850,
+     "ms": 4308,
      "ok": false,
      "rule_id": "R-08",
      "fixed": "These birds are amazing.",
@@ -216,7 +216,7 @@
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 2,
+     "rank": 3,
      "spelling": [],
      "judge": "✓"
     }
@@ -231,7 +231,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4037,
+     "ms": 4410,
      "ok": false,
      "rule_id": "R-09",
      "fixed": "I have much soup.",
@@ -255,18 +255,18 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 2771,
+     "ms": 4742,
      "ok": false,
-     "rule_id": "OTHER",
+     "rule_id": "R-10",
      "fixed": "I want a dessert.",
      "full_fixed": "I want a dessert.",
      "more_errors": false,
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": null,
+     "rank": 1,
      "spelling": [],
-     "judge": "✗ OTHER"
+     "judge": "✓"
     }
    }
   },
@@ -279,18 +279,18 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4164,
+     "ms": 4480,
      "ok": false,
-     "rule_id": "R-38",
-     "fixed": "I see a leaf a black.",
-     "full_fixed": "I see a black leaf.",
+     "rule_id": "R-35",
+     "fixed": "I saw leaf a black.",
+     "full_fixed": "I saw a black leaf.",
      "more_errors": true,
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 21,
+     "rank": 3,
      "spelling": [],
-     "judge": "✗ R-38"
+     "judge": "✗ R-35"
     }
    }
   },
@@ -303,7 +303,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4161,
+     "ms": 4637,
      "ok": false,
      "rule_id": "R-12",
      "fixed": "I have nine pencils.",
@@ -312,7 +312,7 @@
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 3,
+     "rank": 2,
      "spelling": [],
      "judge": "✓"
     }
@@ -327,7 +327,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4062,
+     "ms": 4743,
      "ok": false,
      "rule_id": "R-13",
      "fixed": "He was the first in line.",
@@ -351,7 +351,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3998,
+     "ms": 4545,
      "ok": true,
      "rule_id": null,
      "fixed": "This is cold today.",
@@ -375,7 +375,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4215,
+     "ms": 4635,
      "ok": false,
      "rule_id": "R-15",
      "fixed": "A storm will hit the coast.",
@@ -399,7 +399,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4171,
+     "ms": 4597,
      "ok": false,
      "rule_id": "R-16",
      "fixed": "Trees bloom in spring.",
@@ -423,7 +423,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3947,
+     "ms": 4403,
      "ok": false,
      "rule_id": "R-17",
      "fixed": "He is wearing a blue coat now.",
@@ -447,7 +447,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 2811,
+     "ms": 2825,
      "ok": false,
      "rule_id": "OTHER",
      "fixed": "It is cold.",
@@ -471,7 +471,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4085,
+     "ms": 4752,
      "ok": true,
      "rule_id": null,
      "fixed": "I like dance.",
@@ -500,7 +500,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3908,
+     "ms": 4312,
      "ok": false,
      "rule_id": "R-20",
      "fixed": "I enjoy collecting.",
@@ -524,7 +524,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4290,
+     "ms": 4913,
      "ok": false,
      "rule_id": "R-21",
      "fixed": "I have a test on Friday.",
@@ -548,7 +548,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4329,
+     "ms": 5090,
      "ok": false,
      "rule_id": "R-22",
      "fixed": "I usually visit my grandparents every month.",
@@ -572,7 +572,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4761,
+     "ms": 5216,
      "ok": false,
      "rule_id": "R-23",
      "fixed": "We go to school by subway.",
@@ -596,7 +596,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4283,
+     "ms": 4810,
      "ok": false,
      "rule_id": "R-24",
      "fixed": "We go to the library every day.",
@@ -605,7 +605,7 @@
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 2,
+     "rank": 1,
      "spelling": [],
      "judge": "✓"
     }
@@ -620,7 +620,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4473,
+     "ms": 4796,
      "ok": false,
      "rule_id": "R-25",
      "fixed": "She wants to be a designer.",
@@ -644,7 +644,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4148,
+     "ms": 4812,
      "ok": false,
      "rule_id": "R-26",
      "fixed": "My uncle is a dancer.",
@@ -653,7 +653,7 @@
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 5,
+     "rank": 1,
      "spelling": [],
      "judge": "✓"
     }
@@ -668,18 +668,18 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4086,
-     "ok": true,
-     "rule_id": null,
-     "fixed": "She is bored for her son.",
-     "full_fixed": "She is bored for her son.",
-     "more_errors": false,
+     "ms": 4975,
+     "ok": false,
+     "rule_id": "R-01",
+     "fixed": "She is is bored for her son.",
+     "full_fixed": "She is bored with her son.",
+     "more_errors": true,
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": null,
+     "rank": 7,
      "spelling": [],
-     "judge": "✗ 놓침 (ok)"
+     "judge": "✗ R-01"
     }
    }
   },
@@ -692,7 +692,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4050,
+     "ms": 5130,
      "ok": false,
      "rule_id": "R-28",
      "fixed": "He felt too nervous to continue.",
@@ -716,7 +716,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4166,
+     "ms": 5171,
      "ok": false,
      "rule_id": "R-29",
      "fixed": "How much is our money?",
@@ -740,7 +740,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4419,
+     "ms": 4611,
      "ok": false,
      "rule_id": "R-96",
      "fixed": "The furniture is in the bedroom.",
@@ -749,7 +749,7 @@
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 2,
+     "rank": 1,
      "spelling": [],
      "judge": "✗ R-96"
     }
@@ -764,18 +764,18 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4211,
+     "ms": 4659,
      "ok": false,
-     "rule_id": "R-95",
+     "rule_id": "R-31",
      "fixed": "He bought new shoes yesterday.",
      "full_fixed": "He bought new shoes yesterday.",
      "more_errors": false,
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 4,
+     "rank": 2,
      "spelling": [],
-     "judge": "✗ R-95"
+     "judge": "✓"
     }
    }
   },
@@ -788,7 +788,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4333,
+     "ms": 4612,
      "ok": false,
      "rule_id": "R-16",
      "fixed": "A farmer harvest corn in the fall.",
@@ -797,7 +797,7 @@
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 2,
+     "rank": 4,
      "spelling": [],
      "judge": "✗ R-16"
     }
@@ -812,18 +812,18 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4035,
-     "ok": false,
-     "rule_id": "R-38",
-     "fixed": "I have two a snack.",
-     "full_fixed": "I have two snacks.",
-     "more_errors": true,
+     "ms": 2732,
+     "ok": true,
+     "rule_id": null,
+     "fixed": "I have two snack.",
+     "full_fixed": "I have two snack.",
+     "more_errors": false,
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 3,
+     "rank": null,
      "spelling": [],
-     "judge": "✗ R-38"
+     "judge": "✗ 놓침 (ok)"
     }
    }
   },
@@ -836,7 +836,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3879,
+     "ms": 4490,
      "ok": false,
      "rule_id": "R-34",
      "fixed": "I have an elephant.",
@@ -845,7 +845,7 @@
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 1,
+     "rank": 2,
      "spelling": [],
      "judge": "✓"
     }
@@ -860,7 +860,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3845,
+     "ms": 4300,
      "ok": false,
      "rule_id": "R-35",
      "fixed": "He is eating lunch now.",
@@ -869,7 +869,7 @@
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 54,
+     "rank": 2,
      "spelling": [],
      "judge": "✓"
     }
@@ -884,7 +884,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3914,
+     "ms": 4339,
      "ok": false,
      "rule_id": "R-36",
      "fixed": "She is my cousin.",
@@ -893,7 +893,7 @@
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 7,
+     "rank": 3,
      "spelling": [],
      "judge": "✓"
     }
@@ -908,7 +908,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3733,
+     "ms": 4250,
      "ok": false,
      "rule_id": "R-31",
      "fixed": "It was cold yesterday.",
@@ -932,7 +932,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3861,
+     "ms": 4333,
      "ok": false,
      "rule_id": "R-38",
      "fixed": "I have a pencil.",
@@ -941,7 +941,7 @@
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 28,
+     "rank": 2,
      "spelling": [],
      "judge": "✓"
     }
@@ -956,7 +956,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4210,
+     "ms": 4697,
      "ok": false,
      "rule_id": "R-39",
      "fixed": "How are you this evening?",
@@ -980,7 +980,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4310,
+     "ms": 4673,
      "ok": false,
      "rule_id": "R-40",
      "fixed": "Great to meet you, too.",
@@ -1004,7 +1004,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4150,
+     "ms": 4686,
      "ok": false,
      "rule_id": "R-41",
      "fixed": "You're welcome, Tom.",
@@ -1013,7 +1013,7 @@
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 2,
+     "rank": 1,
      "spelling": [],
      "judge": "✓"
     }
@@ -1028,7 +1028,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4449,
+     "ms": 4736,
      "ok": false,
      "rule_id": "R-42",
      "fixed": "He has a brother and a cousin.",
@@ -1052,7 +1052,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4101,
+     "ms": 4599,
      "ok": false,
      "rule_id": "R-43",
      "fixed": "Her grandparents are kind.",
@@ -1076,7 +1076,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 2960,
+     "ms": 3010,
      "ok": false,
      "rule_id": "OTHER",
      "fixed": "My daughter is nine years old.",
@@ -1100,7 +1100,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4051,
+     "ms": 4607,
      "ok": false,
      "rule_id": "R-45",
      "fixed": "Close the door, please.",
@@ -1124,7 +1124,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4081,
+     "ms": 4676,
      "ok": true,
      "rule_id": null,
      "fixed": "Who homework is this?",
@@ -1153,7 +1153,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4731,
+     "ms": 4716,
      "ok": false,
      "rule_id": "R-30",
      "fixed": "My bag is on the desk and the window.",
@@ -1162,7 +1162,7 @@
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 4,
+     "rank": 3,
      "spelling": [],
      "judge": "✗ R-30"
     }
@@ -1177,18 +1177,18 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 16069,
+     "ms": 4593,
      "ok": false,
-     "rule_id": "R-48",
-     "fixed": "A bear can't flies.",
+     "rule_id": "R-07",
+     "fixed": "A bear can't fly.",
      "full_fixed": "A bear can't fly.",
-     "more_errors": true,
+     "more_errors": false,
      "error": null,
      "fallback_from": null,
      "mode": "rag",
      "rank": 2,
      "spelling": [],
-     "judge": "✓"
+     "judge": "✗ R-07"
     }
    }
   },
@@ -1201,7 +1201,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 15470,
+     "ms": 4759,
      "ok": false,
      "rule_id": "R-49",
      "fixed": "There aren't many creatures in this zoo.",
@@ -1225,7 +1225,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4042,
+     "ms": 4898,
      "ok": false,
      "rule_id": "R-50",
      "fixed": "A bird is stronger than a cat.",
@@ -1234,7 +1234,7 @@
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 1,
+     "rank": 2,
      "spelling": [],
      "judge": "✓"
     }
@@ -1248,16 +1248,19 @@
    "by": {
     "local": {
      "backend": "local",
-     "model": null,
-     "ms": 6886,
-     "ok": null,
-     "rule_id": null,
-     "fixed": null,
-     "full_fixed": null,
-     "more_errors": null,
-     "error": "502: 모델 답이 규칙에 안 맞아 버렸어요 (wrong='many' 이 학생 문장에 없음). 다시 [고쳐줘]를 눌러 주세요.",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 2856,
+     "ok": false,
+     "rule_id": "OTHER",
+     "fixed": "He would like a juice.",
+     "full_fixed": "He would like a juice.",
+     "more_errors": false,
+     "error": null,
      "fallback_from": null,
-     "judge": "! 실패"
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✗ OTHER"
     }
    }
   },
@@ -1270,7 +1273,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3138,
+     "ms": 2915,
      "ok": false,
      "rule_id": "OTHER",
      "fixed": "I don't have any bananas at home.",
@@ -1294,7 +1297,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4696,
+     "ms": 5055,
      "ok": false,
      "rule_id": "R-53",
      "fixed": "He drank a glass of milk after dinner.",
@@ -1318,18 +1321,18 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3750,
-     "ok": true,
-     "rule_id": null,
-     "fixed": "He likes purples balloons at the party.",
-     "full_fixed": "He likes purples balloons at the party.",
+     "ms": 4694,
+     "ok": false,
+     "rule_id": "R-54",
+     "fixed": "He likes purple balloons at the party.",
+     "full_fixed": "He likes purple balloons at the party.",
      "more_errors": false,
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": null,
+     "rank": 3,
      "spelling": [],
-     "judge": "✗ 놓침 (ok)"
+     "judge": "✓"
     }
    }
   },
@@ -1342,18 +1345,18 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 2900,
+     "ms": 4460,
      "ok": false,
-     "rule_id": "OTHER",
-     "fixed": "Do you like the animal the best?",
-     "full_fixed": "Do you like the animal the best?",
+     "rule_id": "R-55",
+     "fixed": "Which animal you like the best?",
+     "full_fixed": "Which animal you like the best?",
      "more_errors": false,
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": null,
+     "rank": 1,
      "spelling": [],
-     "judge": "✗ OTHER"
+     "judge": "✓"
     }
    }
   },
@@ -1366,18 +1369,18 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3118,
-     "ok": true,
-     "rule_id": null,
-     "fixed": "That clock looks brownly in this light.",
-     "full_fixed": "That clock looks brownly in this light.",
+     "ms": 4945,
+     "ok": false,
+     "rule_id": "R-56",
+     "fixed": "That clock looks brown in this light.",
+     "full_fixed": "That clock looks brown in this light.",
      "more_errors": false,
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": null,
+     "rank": 1,
      "spelling": [],
-     "judge": "✗ 놓침 (ok)"
+     "judge": "✓"
     }
    }
   },
@@ -1390,18 +1393,18 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4443,
+     "ms": 4798,
      "ok": false,
-     "rule_id": "R-05",
-     "fixed": "How many plate are there in the room?",
+     "rule_id": "R-57",
+     "fixed": "How many plates is there in the room?",
      "full_fixed": "How many plates are there in the room?",
      "more_errors": true,
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 5,
+     "rank": 1,
      "spelling": [],
-     "judge": "✗ R-05"
+     "judge": "✓"
     }
    }
   },
@@ -1414,7 +1417,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3964,
+     "ms": 4798,
      "ok": false,
      "rule_id": "R-58",
      "fixed": "He has triple the money now.",
@@ -1438,7 +1441,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 16810,
+     "ms": 4756,
      "ok": false,
      "rule_id": "R-59",
      "fixed": "There are hundreds of bikes on the highway.",
@@ -1462,7 +1465,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 2942,
+     "ms": 2967,
      "ok": false,
      "rule_id": "OTHER",
      "fixed": "What's the weather like today?",
@@ -1486,18 +1489,18 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3234,
-     "ok": true,
-     "rule_id": null,
-     "fixed": "It is getting warmly these days.",
-     "full_fixed": "It is getting warmly these days.",
+     "ms": 4908,
+     "ok": false,
+     "rule_id": "R-61",
+     "fixed": "It is getting warm these days.",
+     "full_fixed": "It is getting warm these days.",
      "more_errors": false,
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": null,
+     "rank": 1,
      "spelling": [],
-     "judge": "✗ 놓침 (ok)"
+     "judge": "✓"
     }
    }
   },
@@ -1510,7 +1513,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4592,
+     "ms": 5059,
      "ok": false,
      "rule_id": "R-62",
      "fixed": "He carries an umbrella because it is cold.",
@@ -1534,18 +1537,18 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3081,
+     "ms": 5018,
      "ok": false,
-     "rule_id": "OTHER",
+     "rule_id": "R-63",
      "fixed": "She goes skating every December.",
      "full_fixed": "She goes skating every December.",
      "more_errors": false,
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": null,
+     "rank": 1,
      "spelling": [],
-     "judge": "✗ OTHER"
+     "judge": "✓"
     }
    }
   },
@@ -1558,7 +1561,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4101,
+     "ms": 4870,
      "ok": false,
      "rule_id": "R-64",
      "fixed": "Fall is the coolest season of all.",
@@ -1582,7 +1585,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3133,
+     "ms": 3124,
      "ok": false,
      "rule_id": "OTHER",
      "fixed": "She travels in August every year.",
@@ -1606,7 +1609,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3114,
+     "ms": 3177,
      "ok": false,
      "rule_id": "OTHER",
      "fixed": "She takes off her gloves at home.",
@@ -1630,7 +1633,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4131,
+     "ms": 4556,
      "ok": false,
      "rule_id": "R-67",
      "fixed": "Her pants are dirty.",
@@ -1639,7 +1642,7 @@
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 2,
+     "rank": 1,
      "spelling": [],
      "judge": "✓"
     }
@@ -1654,7 +1657,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4198,
+     "ms": 4641,
      "ok": false,
      "rule_id": "R-56",
      "fixed": "He looks cool in his new dress.",
@@ -1678,7 +1681,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4421,
+     "ms": 5030,
      "ok": false,
      "rule_id": "R-69",
      "fixed": "He has a backache now.",
@@ -1702,7 +1705,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4449,
+     "ms": 5030,
      "ok": false,
      "rule_id": "R-70",
      "fixed": "He washes his hands before eating.",
@@ -1726,7 +1729,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4042,
+     "ms": 4474,
      "ok": false,
      "rule_id": "R-71",
      "fixed": "He has white teeth.",
@@ -1750,7 +1753,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4272,
+     "ms": 4654,
      "ok": false,
      "rule_id": "R-72",
      "fixed": "He plays baseball after school.",
@@ -1759,7 +1762,7 @@
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 2,
+     "rank": 1,
      "spelling": [],
      "judge": "✓"
     }
@@ -1774,18 +1777,18 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3478,
-     "ok": false,
-     "rule_id": "R-63",
-     "fixed": "Let's bike around the park.",
-     "full_fixed": "Let's bike around the park.",
+     "ms": 3462,
+     "ok": true,
+     "rule_id": null,
+     "fixed": "Let's biking around the park.",
+     "full_fixed": "Let's biking around the park.",
      "more_errors": false,
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 3,
+     "rank": null,
      "spelling": [],
-     "judge": "✗ R-63"
+     "judge": "✗ 놓침 (ok)"
     }
    }
   },
@@ -1798,7 +1801,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4432,
+     "ms": 4982,
      "ok": false,
      "rule_id": "R-74",
      "fixed": "They are good at playing soccer.",
@@ -1822,7 +1825,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4170,
+     "ms": 4720,
      "ok": false,
      "rule_id": "R-75",
      "fixed": "He spends time painting every day.",
@@ -1831,7 +1834,7 @@
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 2,
+     "rank": 1,
      "spelling": [],
      "judge": "✓"
     }
@@ -1846,7 +1849,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4133,
+     "ms": 4793,
      "ok": false,
      "rule_id": "R-76",
      "fixed": "How often do you paint at home?",
@@ -1870,7 +1873,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4229,
+     "ms": 4725,
      "ok": false,
      "rule_id": "R-77",
      "fixed": "He is interested in drawing these days.",
@@ -1879,7 +1882,7 @@
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 5,
+     "rank": 2,
      "spelling": [],
      "judge": "✓"
     }
@@ -1894,7 +1897,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3903,
+     "ms": 4378,
      "ok": false,
      "rule_id": "R-78",
      "fixed": "What time is it now?",
@@ -1918,9 +1921,9 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4520,
+     "ms": 4621,
      "ok": false,
-     "rule_id": "R-78",
+     "rule_id": "R-79",
      "fixed": "He wakes up at one o'clock every day.",
      "full_fixed": "He wakes up at one o'clock every day.",
      "more_errors": false,
@@ -1929,7 +1932,7 @@
      "mode": "rag",
      "rank": 1,
      "spelling": [],
-     "judge": "✗ R-78"
+     "judge": "✓"
     }
    }
   },
@@ -1942,11 +1945,11 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3900,
+     "ms": 3877,
      "ok": false,
      "rule_id": "OTHER",
-     "fixed": "First, I have a snack. Then, I do my homework.",
-     "full_fixed": "First, I have a snack. Then, I do my homework.",
+     "fixed": "First I have a snack, then I do my homework.",
+     "full_fixed": "First I have a snack, then I do my homework.",
      "more_errors": false,
      "error": null,
      "fallback_from": null,
@@ -1966,7 +1969,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4438,
+     "ms": 5004,
      "ok": false,
      "rule_id": "R-81",
      "fixed": "How long does it take to school?",
@@ -1990,7 +1993,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4578,
+     "ms": 4944,
      "ok": false,
      "rule_id": "R-82",
      "fixed": "How do you go to the library every day?",
@@ -1999,7 +2002,7 @@
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 3,
+     "rank": 1,
      "spelling": [],
      "judge": "✓"
     }
@@ -2014,7 +2017,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4266,
+     "ms": 4691,
      "ok": false,
      "rule_id": "R-83",
      "fixed": "She gets on the train every morning.",
@@ -2023,7 +2026,7 @@
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 2,
+     "rank": 1,
      "spelling": [],
      "judge": "✓"
     }
@@ -2038,7 +2041,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4878,
+     "ms": 5435,
      "ok": false,
      "rule_id": "R-84",
      "fixed": "The bank is next to the zoo in our town.",
@@ -2062,18 +2065,18 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4319,
+     "ms": 3592,
      "ok": false,
-     "rule_id": "R-85",
+     "rule_id": "OTHER",
      "fixed": "Where is the landmark in this town?",
      "full_fixed": "Where is the landmark in this town?",
      "more_errors": false,
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 2,
+     "rank": null,
      "spelling": [],
-     "judge": "✓"
+     "judge": "✗ OTHER"
     }
    }
   },
@@ -2086,18 +2089,18 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3226,
-     "ok": true,
-     "rule_id": null,
-     "fixed": "There are a lot bananas on this street.",
-     "full_fixed": "There are a lot bananas on this street.",
+     "ms": 5199,
+     "ok": false,
+     "rule_id": "R-86",
+     "fixed": "There are a lot of bananas on this street.",
+     "full_fixed": "There are a lot of bananas on this street.",
      "more_errors": false,
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": null,
+     "rank": 2,
      "spelling": [],
-     "judge": "✗ 놓침 (ok)"
+     "judge": "✓"
     }
    }
   },
@@ -2110,16 +2113,16 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4385,
+     "ms": 4921,
      "ok": false,
      "rule_id": "R-87",
-     "fixed": "He works in a library as a teacher.",
+     "fixed": "He works in library as a teacher.",
      "full_fixed": "He works in a library as a teacher.",
      "more_errors": false,
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 3,
+     "rank": 2,
      "spelling": [],
      "judge": "✓"
     }
@@ -2134,18 +2137,18 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 2905,
+     "ms": 4659,
      "ok": false,
-     "rule_id": "OTHER",
-     "fixed": "What does he do?",
-     "full_fixed": "What does he do?",
+     "rule_id": "R-88",
+     "fixed": "What does he work?",
+     "full_fixed": "What does he work?",
      "more_errors": false,
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": null,
+     "rank": 1,
      "spelling": [],
-     "judge": "✗ OTHER"
+     "judge": "✓"
     }
    }
   },
@@ -2158,7 +2161,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4647,
+     "ms": 4837,
      "ok": false,
      "rule_id": "R-89",
      "fixed": "He would like to be a designer someday.",
@@ -2167,7 +2170,7 @@
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 2,
+     "rank": 1,
      "spelling": [],
      "judge": "✓"
     }
@@ -2182,18 +2185,18 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 8010,
+     "ms": 5227,
      "ok": false,
-     "rule_id": "OTHER",
+     "rule_id": "R-90",
      "fixed": "The game makes him embarrassed every time.",
      "full_fixed": "The game makes him embarrassed every time.",
      "more_errors": false,
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": null,
+     "rank": 4,
      "spelling": [],
-     "judge": "✗ OTHER"
+     "judge": "✓"
     }
    }
   },
@@ -2206,7 +2209,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 8897,
+     "ms": 5092,
      "ok": false,
      "rule_id": "R-91",
      "fixed": "He is so excited after the race.",
@@ -2230,18 +2233,18 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 7845,
-     "ok": true,
-     "rule_id": null,
-     "fixed": "Why she is excited today?",
-     "full_fixed": "Why she is excited today?",
+     "ms": 4569,
+     "ok": false,
+     "rule_id": "R-92",
+     "fixed": "Why is she is excited today?",
+     "full_fixed": "Why is she excited today?",
      "more_errors": false,
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": null,
+     "rank": 7,
      "spelling": [],
-     "judge": "✗ 놓침 (ok)"
+     "judge": "✓"
     }
    }
   },
@@ -2254,7 +2257,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 8687,
+     "ms": 4799,
      "ok": false,
      "rule_id": "R-93",
      "fixed": "It's eight dollars for this cap.",
@@ -2278,18 +2281,18 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 8702,
+     "ms": 3475,
      "ok": false,
-     "rule_id": "R-94",
+     "rule_id": "OTHER",
      "fixed": "Can I have this fork, please?",
      "full_fixed": "Can I have this fork, please?",
      "more_errors": false,
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 1,
+     "rank": null,
      "spelling": [],
-     "judge": "✓"
+     "judge": "✗ OTHER"
     }
    }
   },
@@ -2302,7 +2305,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3374,
+     "ms": 3246,
      "ok": false,
      "rule_id": "OTHER",
      "fixed": "He bought a car for his sister yesterday.",
@@ -2326,7 +2329,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4238,
+     "ms": 4590,
      "ok": false,
      "rule_id": "R-96",
      "fixed": "She studies in her bedroom every evening.",
@@ -2335,7 +2338,7 @@
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 3,
+     "rank": 1,
      "spelling": [],
      "judge": "✓"
     }
@@ -2350,7 +2353,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4052,
+     "ms": 4638,
      "ok": false,
      "rule_id": "R-97",
      "fixed": "Her house has four bedrooms and a big garage.",
@@ -2374,7 +2377,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4072,
+     "ms": 4610,
      "ok": false,
      "rule_id": "R-84",
      "fixed": "This bathroom is there, next to the window.",
@@ -2398,7 +2401,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4049,
+     "ms": 5172,
      "ok": false,
      "rule_id": "R-99",
      "fixed": "He doesn't like rainy days.",
@@ -2407,7 +2410,7 @@
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 3,
+     "rank": 1,
      "spelling": [],
      "judge": "✓"
     }
@@ -2422,7 +2425,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 4029,
+     "ms": 4972,
      "ok": false,
      "rule_id": "R-99",
      "fixed": "Do they play chess well?",
@@ -2431,7 +2434,7 @@
      "error": null,
      "fallback_from": null,
      "mode": "rag",
-     "rank": 11,
+     "rank": 8,
      "spelling": [],
      "judge": "✗ R-99"
     }
@@ -2446,7 +2449,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3238,
+     "ms": 3706,
      "ok": true,
      "rule_id": null,
      "fixed": "Hi, Ben!",
@@ -2470,7 +2473,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3350,
+     "ms": 3760,
      "ok": true,
      "rule_id": null,
      "fixed": "Good morning, everyone!",
@@ -2494,7 +2497,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3471,
+     "ms": 3880,
      "ok": true,
      "rule_id": null,
      "fixed": "This is my dad.",
@@ -2518,7 +2521,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3316,
+     "ms": 3875,
      "ok": true,
      "rule_id": null,
      "fixed": "These are my cousins.",
@@ -2542,7 +2545,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3433,
+     "ms": 3902,
      "ok": true,
      "rule_id": null,
      "fixed": "I have a pencil.",
@@ -2566,7 +2569,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3455,
+     "ms": 4077,
      "ok": true,
      "rule_id": null,
      "fixed": "There is a cup on the table.",
@@ -2590,7 +2593,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3487,
+     "ms": 4026,
      "ok": true,
      "rule_id": null,
      "fixed": "Dogs can swim well.",
@@ -2614,7 +2617,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3436,
+     "ms": 3966,
      "ok": true,
      "rule_id": null,
      "fixed": "I have an apple.",
@@ -2638,7 +2641,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3307,
+     "ms": 4061,
      "ok": true,
      "rule_id": null,
      "fixed": "I want some water.",
@@ -2662,7 +2665,7 @@
     "local": {
      "backend": "local",
      "model": "qwen2.5:32b-instruct",
-     "ms": 3405,
+     "ms": 3840,
      "ok": true,
      "rule_id": null,
      "fixed": "I see a blue bird.",
