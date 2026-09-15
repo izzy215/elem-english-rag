@@ -111,7 +111,7 @@ It is cold yesterday.,R-37,정제본 교체(라벨과 다른 오류 유형),T2(�
 They are at school yesterday.,R-37,정제본 교체(라벨과 다른 오류 유형),T2(과거시제),교체
 I am tired last night.,R-37,정제본 교체(라벨과 다른 오류 유형),T2(과거시제),교체
 I have pencil.,R-38,정제본 교체(라벨과 다른 오류 유형),T4(관사),교체
-She wants cookie.,R-38,정제본 교체(라벨과 다른 오류 유형),T4(관사),교체
+She has cookie.,R-38,정제본 교체(라벨과 다른 오류 유형),T4(관사),교체
 He carries umbrella.,R-38,정제본 교체(라벨과 다른 오류 유형),T4(관사),교체
 How you are this evening?,R-39,정제본 교체(문장 성립 불가/의미 붕괴),,교체
 How you are on your birthday?,R-39,"안부 묻기=How are you? · 새 문장 (E-0153 대응, 수동 보완)",,원본 유지
@@ -218,9 +218,9 @@ She plays a badminton after school.,R-72,정제본 교체(문장 성립 불가/�
 Let's biking around the park.,R-73,"제안=Let's+동사원형 · 새 문장 (E-0291 대응, 수동 보완)",,원본 유지
 Let's dancing at the party.,R-73,"제안=Let's+동사원형 · 새 문장 (E-0289 대응, 수동 보완)",,원본 유지
 Let's playing badminton today.,R-73,정제본 교체(문장 성립 불가/의미 붕괴),,교체
-They are good at play soccer.,R-74,정제본 교체(문장 성립 불가/의미 붕괴),,교체
-She is good at play tennis.,R-74,정제본 교체(문장 성립 불가/의미 붕괴),,교체
-He is good at play baseball.,R-74,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+They are good at sing.,R-74,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+She is good at draw.,R-74,정제본 교체(문장 성립 불가/의미 붕괴),,교체
+He is good at skate.,R-74,정제본 교체(문장 성립 불가/의미 붕괴),,교체
 He spends time to paint every day.,R-75,정제본 교체(문장 성립 불가/의미 붕괴),,교체
 I spend time to read every weekend.,R-75,정제본 교체(문장 성립 불가/의미 붕괴),,교체
 She spends time to dance every day.,R-75,정제본 교체(문장 성립 불가/의미 붕괴),,교체
