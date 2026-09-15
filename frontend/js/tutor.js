@@ -57,7 +57,7 @@ function evidenceBox(r) {
   const chosen = r.rule?.id, cands = r.candidates || [], extras = r.extra_rules || [];
   const mark = (name, id) => id === chosen ? `<b style="color:var(--primary)">✓${esc(name)}</b>` : esc(name);
   const candLine = cands.map((c, i) => `${i + 1}위 ${mark(c.name, c.id)} ${c.score}`).join(' · ');
-  const from = x => x.from === 'unit' ? '유닛' : '공통';
+  const from = x => x.from === 'unit' ? '유닛' : x.from === 'textbook' ? '교과서 문장' : '공통';
   const extraLine = extras.map(x => `${mark(x.name, x.id)}(${from(x)}${x.rank ? `, 검색 ${x.rank}위` : ''})`).join(' · ');
   const inTop = cands.some(c => c.id === chosen), extra = extras.find(x => x.id === chosen);
   const name = esc(r.rule?.name || r.rule?.id || ''), nTop = cands.length || 5;

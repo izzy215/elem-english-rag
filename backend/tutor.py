@@ -38,6 +38,7 @@ from pydantic import BaseModel
 from backend import golden, llm
 from backend.config import settings
 # 학년 밖 단어 후검사에서 빼는 문법어·기능어 (교재 단어표엔 없지만 규칙이 만들어 내는 말: 관사·조동사·전치사·수량사·축약형)
+RECHECK_EXAMPLE_SCORE = float(os.environ.get("FIX_RECHECK_SCORE", "0.85"))   # 닮은 실수 재확인 문턱 (예문 검색 1위 코사인). 0 이면 항상, 2 면 끔
 _OUTSIDE_STOP = set("""a an the this that these those it its i you he she we they me him her us them my your his our their
 am is are was were be been being do does did don't doesn't didn't isn't aren't wasn't weren't can can't could will won't would should must may
 to of in on at by for with from about over under into and or but not no so too very much many some any a lot lots there here than more most
@@ -78,7 +79,17 @@ def _render(template: str, **vars_: str) -> str:
 
 
 def _rules_block(rule_list: list[dict]) -> str:
-    return "\n".join(f"- [{r['id']}] {r['type']}: {r['text']}" for r in rule_list)
+    """후보 규칙 한 줄씩. 예문 검색이 찾은 닮은 틀린 예문(example → fix/correct)이 붙어 있으면 같이 보여 준다 —
+    9/14 gemini 120문장 실측: 정답 규칙이 후보에 있는데도 모델이 "맞는 문장"·OTHER 로 넘긴 18건 중 16건은 거의 같은 틀린 예문이 검색 1위였는데
+    프롬프트에 설명문만 넣어 모델이 못 봤다. 찾아온 증거를 보여 주는 것이 RAG 의 본뜻."""
+    lines = []
+    for r in rule_list:
+        line = f"- [{r['id']}] {r['type']}: {r['text']}"
+        if r.get("example"):
+            fix = r.get("correct") or r.get("fix") or ""       # 고친 문장 전체가 있으면 그것("→ Close the window, please."), 없으면 고친 낱말만
+            line += f" · 닮은 실수: {r['example']}" + (f" → {fix}" if fix else "")
+        lines.append(line)
+    return "\n".join(lines)
 
 
 def _ask_llm(prompt: str, backend: str | None = None, fallback: bool | None = None, timing: dict | None = None) -> dict:
@@ -556,7 +567,7 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         except Exception as e:  # noqa: BLE001
             print(f"[fix] 보조 임베딩 실패 → 예문·교과서 검색 생략: {type(e).__name__}: {e}", flush=True)
         if qvec is not None:
-            ex_cands = textbook.search_examples(text, k=RAG_TOP_K, qvec=qvec)
+            ex_cands = textbook.search_examples(text, k=RAG_TOP_K * 2, qvec=qvec)   # 상위 5개는 후보 합치기에, 나머지는 설명문 후보에 닮은 예문을 붙이는 데
             if os.environ.get("FIX_TEXTBOOK", "1") != "0":                 # FIX_TEXTBOOK=0: 교과서 힌트 없이 (비교 실험용, tests/eval_fix.py --no-textbook)
                 tb = textbook.search_textbook(text, level=level, k_pattern=3, k_word=0, qvec=qvec)
                 if tb.get("error"):
@@ -570,8 +581,13 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         unit_ids = set(unit_row.get("rule_ids") or [])
         all_ids = {r["id"] for r in all_rules if r.get("unit") == "ALL"}
         extra_ids = unit_ids | all_ids
-        top_cands = (textbook.merge_candidates(ex_cands, cands[:RAG_TOP_K], k=RAG_TOP_K) if ex_cands
+        top_cands = (textbook.merge_candidates(ex_cands[:RAG_TOP_K], cands[:RAG_TOP_K], k=RAG_TOP_K) if ex_cands
                      else [{**c, "from": "rules"} for c in cands[:RAG_TOP_K]])
+        ex_by_rule = {c["id"]: c for c in ex_cands}          # 설명문으로 들어온 후보에도 닮은 예문이 있으면 붙인다
+        for c in top_cands:
+            if not c.get("example") and c["id"] in ex_by_rule:
+                e = ex_by_rule[c["id"]]
+                c.update({"example": e.get("example"), "fix": e.get("fix", ""), "correct": e.get("correct", ""), "example_id": e.get("example_id")})
         top_ids = {c["id"] for c in top_cands}
         prompt_rules = list(top_cands) + [c for c in cands if c["id"] in extra_ids and c["id"] not in top_ids]
         seen = {r["id"] for r in prompt_rules}              # 색인에 없는 Unit·공통 규칙은 rules.jsonl 에서 보충
@@ -580,6 +596,12 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         extra_rules = [{"id": r["id"], "name": r["type"], "from": "unit" if r["id"] in unit_ids else "all",
                         "rank": next((i + 1 for i, c in enumerate(cands) if c["id"] == r["id"]), None)}
                        for r in prompt_rules[len(top_cands):]]
+        if tb_hint:                                          # 교과서 힌트 패턴의 규칙도 후보에 ("I hungry now." 는 규칙 검색은 놓쳤지만 패턴 "I am hungry now." 0.943 을 찾음)
+            _prid = (tb["patterns"][0].get("rule_id") or "").strip()
+            _pr = next((r for r in all_rules if r["id"] == _prid), None) if _prid and _prid not in {r["id"] for r in prompt_rules} else None
+            if _pr:
+                prompt_rules.append(_pr)
+                extra_rules.append({"id": _prid, "name": _pr["type"], "from": "textbook", "rank": next((i + 1 for i, c in enumerate(cands) if c["id"] == _prid), None)})
     else:
         prompt_rules = all_rules
         extra_rules = []
@@ -603,8 +625,10 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
     # 2) 생성 → 3) 검증. 검증에 걸리면 이유를 덧붙여 한 번 더 생성, 그래도 안 되면 full_fixed 가 학생 단어뿐일 때 규칙 밖(OTHER)으로 살리고 아니면 502
     problem = None
     first_nochange = False                                   # 1차 답이 '고친 게 없음' 이었나 (2차가 지어낸 답이면 1차 판단을 채택)
+    first_ok_recheck = False                                 # 1차가 ok 인데 닮은 실수가 아주 가까워 다시 물었나 (2차가 억지 답이면 1차 ok 채택)
+    retry_note = ""
     for attempt in (1, 2):
-        sent = prompt if attempt == 1 else prompt + f"\n\n## 다시: 직전 답이 규칙 위반이었다 ({problem}). wrong 은 학생 문장에 실제로 있는 말(보통 한 단어, 어순 규칙이면 구간 전체), fix 는 그 말을 규칙에 맞게 바꾼 것만 쓴다. 학생이 안 쓴 단어를 넣거나 시간 표현을 바꾸지 않는다."
+        sent = prompt if attempt == 1 else prompt + (retry_note or f"\n\n## 다시: 직전 답이 규칙 위반이었다 ({problem}). wrong 은 학생 문장에 실제로 있는 말(보통 한 단어, 어순 규칙이면 구간 전체), fix 는 그 말을 규칙에 맞게 바꾼 것만 쓴다. 학생이 안 쓴 단어를 넣거나 시간 표현을 바꾸지 않는다.")
         if settings.log_prompt:                                  # 모델에 실제로 보내는 프롬프트 전문 (LOG_PROMPT=0 으로 끔)
             print(f"[fix] ── 프롬프트 ({attempt}차, {len(sent)}자, 규칙 {len(prompt_rules)}개) ──\n{sent}\n[fix] ── 프롬프트 끝 ──", flush=True)
         try:
@@ -629,6 +653,16 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         if nochange:                                         # 2차도 고친 게 없으면 사실상 문법 OK (소형 모델이 '틀린 곳을 꼭 골라야' 한다고 여김)
             print(f"[fix] 2차도 고친 게 없음 (wrong={out.get('wrong')!r}) → 맞는 문장으로 처리", flush=True)
             ok = True
+        # 닮은 실수 재확인 (9/14 gemini 120문장): 1차가 "맞는 문장"인데 예문 검색 1위가 아주 가까우면("You close the window, please." 0.88 ↔ "You close the door, please.")
+        # 그 예문과 같은 꼴인지 한 번 더 묻는다. 모델이 짧은 후보 목록에서는 관대해지는 경향(검색 없음 89 vs 있음 87, 놓침 7건). 2차도 ok 면 ok.
+        # 주의: 시험지(eval.csv)가 errors 에서 파생돼 점수가 실제 학생 문장보다 높게 나온다 — 문턱 0.85 는 실제 로그로 다시 잰다.
+        if ok and attempt == 1 and ex_cands and ex_cands[0].get("score", 0) >= RECHECK_EXAMPLE_SCORE and ex_cands[0].get("example"):
+            e0 = ex_cands[0]
+            first_ok_recheck = True
+            retry_note = (f"\n\n## 다시 확인: 학생 문장과 아주 닮은 틀린 예문이 있다 — \"{e0['example']}\" → \"{e0.get('correct') or e0.get('fix') or ''}\" (규칙 {e0['id']}). "
+                          "학생 문장이 이 예문과 같은 방식으로 틀렸는지 낱말 하나하나 대조하라. 같은 방식이면 ok=false 로 그 규칙을 고르고 wrong→fix 를 쓴다. 정말 다르면 ok=true 를 유지한다.")
+            print(f"[fix] 1차 ok 인데 닮은 실수 {e0['id']} {e0.get('score'):.3f} {e0['example']!r} → 재확인", flush=True)
+            continue
         rule_id = (out.get("rule_id") or "").strip() if not ok else ""
         if not ok and rule_id not in allowed_ids:            # 근거 밖 규칙 (전체 목록 기준이 아니라 '전달한 근거' 기준 — 인계문서 4번)
             problem = f"근거 밖 규칙 id={rule_id or '없음'} (전달한 근거: {sorted(allowed_ids)})"
@@ -645,8 +679,8 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         print(f"[fix] 검증 실패({attempt}차): {problem}", flush=True)
     if problem is not None:
         salvage = (out.get("full_fixed") or "").strip()
-        if first_nochange:                                   # 1차는 고칠 곳을 못 찾았고, 다시 시킨 2차는 지어낸 답이라 거절됨 ('i wore a gin yesterday' → wore→wearing)
-            print(f"[fix] 1차 '고친 게 없음' + 2차 검증 실패({problem}) → 억지 답 대신 1차 판단 채택: 맞는 문장", flush=True)   # 502 대신 ok. 우리 규칙 안에서 맞는 문장으로 본다
+        if first_nochange or first_ok_recheck:               # 1차는 고칠 곳을 못 찾았고(또는 ok 였고), 다시 시킨 2차는 지어낸 답이라 거절됨 ('i wore a gin yesterday' → wore→wearing)
+            print(f"[fix] 1차 '{'고친 게 없음' if first_nochange else 'ok'}' + 2차 검증 실패({problem}) → 억지 답 대신 1차 판단 채택: 맞는 문장", flush=True)   # 502 대신 ok. 우리 규칙 안에서 맞는 문장으로 본다
             ok, rule_id, problem = True, "", None
             out["wrong"] = out["fix"] = out["fixed"] = out["full_fixed"] = None   # 2차의 지어낸 고침은 화면·철자 안내에 쓰지 않는다
         elif not ok and salvage and _student_words_only(text, salvage) is None:   # 규칙은 잘못 짚었지만 문장 제안은 학생 단어뿐 → 규칙 밖으로 살림
@@ -772,7 +806,7 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         "log_id": log_id,
         "mode": mode,
         "fallback_reason": fallback_reason,                    # "search_error" | "no_results" | None
-        "candidates": [{"id": c["id"], "name": c["type"], "score": round(c["score"], 4), "from": c.get("from", "rules")} for c in top_cands],   # 프롬프트 상위 후보 (예문+설명문 합침, from: examples|rules)
+        "candidates": [{"id": c["id"], "name": c["type"], "score": round(c["score"], 4), "from": c.get("from", "rules"), "example": c.get("example"), "example_id": c.get("example_id")} for c in top_cands],   # 프롬프트 상위 후보 (예문+설명문 합침, from: examples|rules)
         "textbook": ({"patterns": [{k: p[k] for k in ("id", "text", "meaning", "unit", "level", "score")} for p in tb["patterns"]], "words": [],
                       "hint": tb_hint, "used_pattern": used_pattern, "query_ms": tb.get("query_ms")} if tb is not None else None),   # 교과서 패턴 검색 (힌트로 넣었나 · 고친 문장이 그 표현을 썼나)
         "peer_example": peer,                                  # 모델이 고른 규칙의 닮은 틀린 예문 (errors.jsonl 행 = 오답노트 연습 문제) — 화면 🙋 타일

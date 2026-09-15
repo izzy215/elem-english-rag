@@ -9,6 +9,7 @@
     python -m backend.textbook --search "I go to school by bus." --level 3
     python -m backend.textbook --examples "i go bus"
     python -m backend.textbook --faq "왜 went 예요?"
+    python -m backend.textbook --word "형이 영어로 뭐야?" --level 4   # 단어장 표 조회 (임베딩 없음)
 
 세 함수 공통 약속
   - 임베딩은 backend/embedding.py 함수 그대로 (.env 의 EMBEDDING_BACKEND). 규칙 색인과 같은 모델이어야 같은 질의 벡터를 나눠 쓸 수 있다.
@@ -325,6 +326,53 @@ def sharp(scores: list[float], gap: float = 0.06, top: float = 0.85) -> bool:
     return scores[0] >= top and (scores[0] - scores[min(4, len(scores) - 1)]) >= gap
 
 
+# ── ⑥ 단어장 표 조회 (임베딩 없음) ──────────────────────────────────────
+_WORD_BY_EN: dict[str, list[dict]] = {}      # "bus" → [단어장 행, …]
+_WORD_BY_KO: dict[str, list[dict]] = {}      # "형" → [단어장 행, …]  (뜻 열 "형/오빠/남동생" 을 슬래시로 나눠 각각 열쇠)
+
+
+def _word_tables() -> tuple[dict, dict]:
+    if not _WORD_BY_EN:
+        for w in golden._read("words.csv"):  # noqa: SLF001
+            row = {**w, "level": int(w.get("level") or 0)}
+            _WORD_BY_EN.setdefault(w["word"].strip().lower(), []).append(row)
+            for ko in re.split(r"[/,·]", w.get("meaning", "") or ""):
+                ko = ko.strip()
+                if ko:
+                    _WORD_BY_KO.setdefault(ko, []).append(row)
+    return _WORD_BY_EN, _WORD_BY_KO
+
+
+def lookup_word(question: str, level: int = 6) -> list[dict]:
+    """질문 속 낱말을 단어장(words.csv)에서 **글자로** 찾는다 — 임베딩 검색이 아니라 키워드 검색 (하이브리드 검색의 키워드 쪽).
+    ① 영어 낱말 → 뜻 ("bus 가 뭐야?") ② 한국어 뜻 → 영어 ("형이 영어로 뭐야?" → w-0024 brother). 변형(-s/-es/-ing/-ed)은 끝을 떼고 다시 찾는다.
+    반환은 search_textbook 의 words 항목과 같은 모양 [{id, word, meaning, example, unit, level, score=1.0}] 이라 ask.py 가 그 자리에 그대로 쓴다.
+    학년(level) 이하 행을 우선하되 없으면 전체. 2026-09-15 TTS 담당 수정 목록 4번(단어장 역방향 조회)용. words 임베딩 400건은 이걸로 대체 예정."""
+    by_en, by_ko = _word_tables()
+    hits: list[dict] = []
+    for tok in re.findall(r"[a-z']+", question.lower()):
+        if len(tok) < 2:
+            continue
+        for cand in (tok, re.sub(r"(ies)$", "y", tok), re.sub(r"(es|s|ing|ed)$", "", tok)):
+            if cand in by_en:
+                hits += by_en[cand]
+                break
+    for ko in sorted(by_ko, key=len, reverse=True):           # 긴 뜻부터: "할머니" 가 "머니" 보다 먼저 맞도록
+        if ko in question:
+            hits += by_ko[ko]
+    lv = int(level or 0)
+    if lv:
+        hits = [h for h in hits if h["level"] <= lv] or hits
+    seen: set[str] = set()
+    out: list[dict] = []
+    for h in hits:
+        if h["id"] not in seen:
+            seen.add(h["id"])
+            out.append({"id": h["id"], "word": h["word"], "meaning": h.get("meaning", ""), "example": h.get("example", ""),
+                        "unit": h.get("unit", ""), "level": h["level"], "score": 1.0})
+    return out
+
+
 # ── ⑤ 규칙 별칭 → 규칙 (문법 용어 질문) ─────────────────────────────────
 def search_rule_aliases(question: str, k: int = 3, qvec: list[float] | None = None) -> list[dict]:
     """"과거시제가 뭐예요?" 류 질문 → 규칙 후보 (규칙마다 가장 닮은 별칭 하나, 점수 내림차순).
@@ -363,6 +411,7 @@ def main() -> None:
     ap.add_argument("--examples", default=None, help="틀린 예문 → 규칙 후보")
     ap.add_argument("--faq", default=None, help="FAQ 검색")
     ap.add_argument("--rule", default=None, help="규칙 별칭 검색 (문법 용어 질문)")
+    ap.add_argument("--word", default=None, help="단어장 표 조회 (임베딩 없음): 영어 낱말 → 뜻, 한국어 뜻 → 영어")
     ap.add_argument("--level", type=int, default=3)
     ap.add_argument("--sleep", type=float, default=0.0, help="배치 사이 대기 초 (gemini 한도용)")
     args = ap.parse_args()
@@ -392,6 +441,12 @@ def main() -> None:
         did = True
         for r in search_rule_aliases(args.rule, k=3):
             print(f"  규칙 {r['score']:.3f} {r['id']} {r['type']} | 닮은 별칭: {r['matched']} | {r['short']}")
+    if args.word:
+        did = True
+        rows = lookup_word(args.word, level=args.level)
+        print(f"[word] '{args.word}' level<={args.level} → {len(rows)}건" + ("" if rows else " (없음)"))
+        for w in rows:
+            print(f"  단어 {w['id']} L{w['level']} {w['unit']} | {w['word']} ({w['meaning']}) 예: {w['example']}")
     if not did:
         ap.print_help()
 
