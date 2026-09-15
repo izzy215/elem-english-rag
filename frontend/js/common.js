@@ -22,6 +22,33 @@ const S = {
   set(patch) { const s = { ...S.get(), ...patch }; sessionStorage.setItem('echo', JSON.stringify(s)); return s; },
 };
 function go(page) { location.href = page; }
+
+// ---------- 유닛 학습 흐름 (목업 9/15: 표현 익히기 → 말해보기 → 미션 성공). 학생·유닛별 진행은 sessionStorage 의 flow[unit] ----------
+const FLOW = {
+  need: 3,                                                     // 미션 성공에 필요한 "미션에 맞는 문장" 수
+  get(unit) { return ((S.get().flow || {})[unit]) || { learned: false, sentences: [], done: false }; },
+  set(unit, patch) { const all = S.get().flow || {}; all[unit] = { ...FLOW.get(unit), ...patch }; S.set({ flow: all }); return all[unit]; },
+  addSentence(unit, entry) { const f = FLOW.get(unit); const ss = f.sentences.filter(x => x.text !== entry.text).concat([entry]); return FLOW.set(unit, { sentences: ss, done: ss.length >= FLOW.need }); },
+  reset(unit) { const all = S.get().flow || {}; delete all[unit]; S.set({ flow: all }); },
+};
+// 상단 진행 고리: 1 표현 익히기 · 2 말해보기 · 3 미션 성공 (지금 단계는 초록 원 + 주황 테두리, 끝난 단계는 ✓)
+function renderFlow(cur) {
+  const el = $('#flow'); if (!el) return;
+  const names = ['표현 익히기', '말해보기', '미션 성공'];
+  el.innerHTML = names.map((n, i) => {
+    const k = i + 1, done = k < cur, now = k === cur;
+    const mark = done ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>' : `<i>${k}</i>`;
+    return `<div class="fs ${done ? 'done' : ''} ${now ? 'now' : ''}"><div class="dot">${mark}</div><div class="nm">${n}</div></div>` + (k < 3 ? `<div class="bar ${k < cur ? 'on' : ''}"></div>` : '');
+  }).join('');
+}
+// 이 레벨의 유닛 목록에서 지금 유닛의 다음 것 (없으면 null). units.html 이 쓰는 /api/units 그대로
+async function nextUnit() {
+  const s = S.get(); if (!s.level || !s.unit) return null;
+  const units = await api(`/api/units?level=${s.level.level}`).catch(() => []);
+  const i = units.findIndex(u => u.unit === s.unit.unit);
+  const u = i >= 0 ? units[i + 1] : null;
+  return u ? { unit: u.unit, title: u.title, mission: u.mission || `${u.title} 단어로 한 문장 말해봐요`, hint_words: u.hint_words || [], rule_ids: u.rule_ids || [] } : null;
+}
 function requireState(...keys) { const s = S.get(); for (const k of keys) if (s[k] == null) { go('index.html'); return null; } return s; }
 
 // ---------- 상단바 · 상태줄 ----------
@@ -36,7 +63,10 @@ function renderTopbar({ back = true, crumbs = true } = {}) {
   const s = S.get(); const parts = [];
   if (crumbs && s.level) parts.push(`Level ${s.level.level}`);
   if (crumbs && s.unit) parts.push(`${s.unit.unit} ${s.unit.title}`);
-  $('#topbar').innerHTML = `${back ? '<button class="back" onclick="history.back()">‹ 뒤로</button>' : ''}<div class="crumb">${parts.map(p => `<span>${esc(p)}</span>`).join('')}</div><div class="student${DEV.on() ? ' dev' : ''}" title="길게 누르면 발표용 보기">학생 ${esc(s.student || 'A')}${DEV.on() ? ' · 발표용' : ''}</div>`;
+  // 칩을 누르면 이동 (Level → 홈, Unit → 유닛 목록). 아이들이 칩을 버튼인 줄 알고 눌러서 (9/15)
+  const links = ['index.html', 'units.html'];
+  $('#topbar').innerHTML = `${back ? '<button class="back" onclick="history.back()">‹ 뒤로</button>' : ''}<div class="crumb">${parts.map((p, i) => `<span class="lnk" data-go="${links[i]}" title="${i ? '유닛 목록으로' : '홈으로'}">${esc(p)}</span>`).join('')}</div><div class="student${DEV.on() ? ' dev' : ''}" title="길게 누르면 발표용 보기">학생 ${esc(s.student || 'A')}${DEV.on() ? ' · 발표용' : ''}</div>`;
+  $$('#topbar .crumb .lnk').forEach(el => el.addEventListener('click', () => go(el.dataset.go)));
   const chip = $('#topbar .student'); let t = null;
   const start = () => { t = setTimeout(() => { t = null; DEV.toggle(); }, 600); };
   const cancel = () => { if (t) { clearTimeout(t); t = null; } };

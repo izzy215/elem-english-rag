@@ -41,8 +41,13 @@ function renderStep() {
   // 유닛에 패턴이 8개까지 있어 좁은 화면에서 칩이 넘치지 않게: 현재 = "▶ 지금", 통과 = "✓", 나머지 = 번호만 (칩은 줄바꿈 허용)
   $('#patStep').innerHTML = pats.map((p, i) => `<span class="${i === pi ? 'cur' : ''} ${done.has(p.id) ? 'done' : ''}" data-i="${i}" title="${esc(p.text)}">${i === pi ? (done.has(p.id) ? '✓ 지금' : '▶ 지금') : done.has(p.id) ? '✓' : String(i + 1)}</span>`).join('');
   $$('#patStep span[data-i]').forEach(el => el.addEventListener('click', () => { pi = +el.dataset.i; renderPat(); }));
-  $('#goTutor').classList.toggle('glow', pats.length > 0 && pats.every(p => done.has(p.id)));
+  // 패턴 3개(패턴이 3개 미만이면 전부) 통과하면 "말해보기"가 빛난다. 잠그지는 않는다 (9/15 팀장: 테스트 편하게 늘 열어 두기)
+  const need = Math.min(3, pats.length), got = pats.filter(p => done.has(p.id)).length;
+  $('#patCnt').textContent = pats.length ? `${got} / ${pats.length}` : '';
+  $('#goTutor').classList.toggle('glow', pats.length > 0 && got >= need);
+  $('#goTutorSub').textContent = got >= need ? '준비됐어요! 미션 문장을 말해봐요' : `패턴 ${pats.length}개 중 ${got}개 통과 · 3개 통과하면 빛나요`;
 }
+function goTutor() { FLOW.set(state.unit.unit, { learned: true }); go('tutor.html'); }
 function renderPat() {
   const p = pats[pi];
   if (!p) { $('#patCard').innerHTML = '<div class="word">패턴이 없어요</div>'; $('#patStep').innerHTML = ''; return; }
@@ -96,7 +101,7 @@ function toggleAll(force) {
   if (autoAll) { const done = doneSet(); const first = pats.findIndex(p => !done.has(p.id)); pi = first < 0 ? 0 : first; renderPat(); record(); }
 }
 (async function init() {
-  if (!state) return; renderTopbar(); showHealth(); injectChat('learn');
+  if (!state) return; renderTopbar(); renderFlow(1); showHealth(); injectChat('learn');
   await loadData(); pi = S.get().patIdx || 0; if (pi >= pats.length) pi = 0; renderWords(); renderPat();
   const why = micSupport(); if (why) { showResult('#learnResult', '🎙 ' + esc(why) + ' 듣기는 돼요.', 'todo'); $('#shRec').disabled = true; $('#allBtn').disabled = true; }
 })();

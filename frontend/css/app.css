@@ -84,6 +84,24 @@ body.busy button{cursor:wait}
 .task .hints{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px} .task .hints span{background:#fff;border:1px solid #E9D3A3;border-radius:999px;padding:3px 9px;font-size:.76rem;font-weight:800;color:#7A5210;font-family:'Nunito',sans-serif}
 .task .hints .k{background:transparent;border:0;padding:3px 0;color:#A9690F;font-family:inherit}
 .tools{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+/* 유닛 학습 흐름 진행 고리 (9/15): 표현 익히기 → 말해보기 → 미션 성공 */
+.flow{display:flex;align-items:center;background:var(--surface);border-radius:16px;padding:10px 12px;box-shadow:var(--shadow-sm);margin:4px 0 10px}
+.flow .fs{display:flex;flex-direction:column;align-items:center;gap:4px;flex:0 0 auto;width:84px}
+.flow .dot{width:26px;height:26px;border-radius:50%;background:#fff;border:2px solid var(--line);display:grid;place-items:center} .flow .dot i{font-style:normal;font-family:'Nunito',sans-serif;font-weight:800;font-size:.75rem;color:var(--muted)}
+.flow .nm{font-size:.68rem;font-weight:700;color:var(--muted);white-space:nowrap}
+.flow .fs.now .dot{background:var(--primary);border-color:var(--primary);box-shadow:0 0 0 4px var(--accent-soft)} .flow .fs.now .dot i{color:#fff} .flow .fs.now .nm{color:var(--ink);font-weight:800}
+.flow .fs.done .dot{background:var(--primary);border-color:var(--primary)}
+.flow .bar{flex:1;height:3px;border-radius:999px;background:var(--line);margin:0 2px 18px} .flow .bar.on{background:var(--primary)}
+.btn .sub{display:block;font-size:.74rem;font-weight:700;color:#fff;opacity:.92;margin-top:2px} .btn.ghost .sub{color:var(--muted)}
+.topbar .crumb .lnk{cursor:pointer} .topbar .crumb .lnk:active{opacity:.7}
+/* 미션 성공 카드 (success.html) */
+.done-card{margin-top:10px;background:linear-gradient(135deg,var(--primary-2),var(--primary));border-radius:18px;padding:20px 16px 18px;color:#fff;box-shadow:0 10px 30px rgba(20,85,74,.18);display:flex;flex-direction:column;gap:12px}
+.done-card .head{display:flex;align-items:center;gap:12px} .done-card .head .ic{font-size:2.3rem;line-height:1} .done-card h2{font-family:'Jua','Noto Sans KR',sans-serif;font-weight:400;font-size:1.4rem;line-height:1.2;margin:0} .done-card .sub{color:var(--primary-soft);font-size:.82rem;margin-top:2px}
+.done-card .stats{display:flex;gap:8px} .done-card .stats div{flex:1;background:rgba(255,255,255,.14);border-radius:12px;padding:8px 6px;text-align:center} .done-card .stats b{display:block;font-family:'Nunito',sans-serif;font-size:1.3rem;font-weight:800} .done-card .stats span{font-size:.7rem;color:var(--primary-soft)}
+.done-card .next{margin:0;background:#fff;color:var(--primary);box-shadow:0 0 0 4px rgba(255,255,255,.25)} .done-card .next .sub{color:var(--muted)}
+.done-card .links{display:flex;justify-content:center;gap:14px;font-size:.82rem;color:var(--primary-soft);font-weight:700} .done-card .links button{border:0;background:none;color:inherit;font:inherit;font-weight:800;padding:0}
+.done-list{margin-top:10px;background:var(--surface);border-radius:18px;padding:12px 16px 4px;box-shadow:var(--shadow-sm)} .done-list .lbl{font-size:.74rem;font-weight:800;color:var(--muted);margin-bottom:4px}
+.done-list .row{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)} .done-list .row .en{flex:1;font-size:.95rem} .done-list .row .badge{margin:0}
 .tool{padding:13px;border:0;border-radius:16px;background:var(--surface);font-weight:800;font-size:.9rem;box-shadow:var(--shadow-sm)}
 .tool.on{background:var(--primary);color:#fff}
 .tool.rec{background:var(--danger);color:#fff;animation:pulse 1s infinite}

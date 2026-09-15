@@ -11,11 +11,12 @@
 <div class="app">
   <header class="topbar" id="topbar"></header>
   <main>
+    <div class="flow" id="flow"></div>
     <h1>표현 익히기</h1>
     <p class="sub">듣고 → 따라 말하고 → 내 문장으로</p>
     <label class="field">단어 <span id="wordCnt" style="font-weight:500"></span> <span style="font-weight:500">· 누르면 들려요</span></label>
     <div class="mini-row" id="wordRow"></div>
-    <label class="field">문장 패턴 <span style="font-weight:500">· 듣고 따라 말하면 ✓</span></label>
+    <label class="field">문장 패턴 <span style="font-weight:500">· 듣고 따라 말하면 ✓</span> <span id="patCnt" style="float:right;color:var(--primary)"></span></label>
     <div class="pstep" id="patStep"></div>
     <div class="flash" id="patCard"><div class="word">불러오는 중…</div></div>
     <div class="tools"><button class="tool" id="patTts" onclick="playPattern()">🔊 듣기</button><button class="tool" id="shRec" onclick="record()">🎙 따라 말하기</button></div>
@@ -27,9 +28,9 @@
     <div class="diag" id="shResult" style="display:none"></div>
     <div class="likeness" id="shLike" style="display:none"><div class="lbl">선생님 목소리와 닮은 정도</div><div class="lv" id="shLv"></div><div class="msg" id="shLikeMsg"></div></div>
     <div class="result" id="learnResult"></div>
-    <div class="row2"><button class="btn ghost" onclick="movePat(1)">다음 패턴 →</button><button class="btn" id="goTutor" onclick="go('tutor.html')">내 문장 말해보기 🎙</button></div>
-    <button class="btn ghost" id="allBtn" onclick="toggleAll()">▶ 전부 따라 말하기 (순서대로)</button>
-    <p class="hint">통과(70점 이상)한 패턴은 ✓. 다 ✓ 면 "내 문장 말해보기"가 빛나요. 점수는 들린 문장과 원문의 단어 일치율이고, 닮은 정도는 참고용이에요.</p>
+    <button class="btn" id="goTutor" onclick="goTutor()">다 익혔어요 → 말해보기 🎙<span class="sub" id="goTutorSub"></span></button>
+    <div class="row2"><button class="btn ghost" onclick="movePat(1)">다음 패턴 →</button><button class="btn ghost" id="allBtn" onclick="toggleAll()">▶ 전부 따라 말하기</button></div>
+    <p class="hint">통과(70점 이상)한 패턴은 ✓. 3개를 통과하면 "말해보기"가 빛나요 (안 해도 넘어갈 수 있어요). 점수는 들린 문장과 원문의 단어 일치율이고, 닮은 정도는 참고용이에요.</p>
   </main>
   <div class="status" id="status"></div>
   <audio id="player"></audio>

@@ -80,6 +80,22 @@
   .pstep{display:flex;gap:6px;margin:4px 0 10px} .pstep span{flex:1;height:34px;border-radius:12px;display:grid;place-items:center;font-size:.8rem;font-weight:800;background:var(--surface);border:2px solid var(--line);color:var(--muted);cursor:pointer}
   .pstep span.cur{border-color:var(--primary);color:var(--primary);background:var(--primary-soft)} .pstep span.done{background:var(--primary);border-color:var(--primary);color:#fff}
   .btn.glow{box-shadow:0 0 0 4px var(--accent-soft);animation:none}
+  .btn .sub{display:block;font-size:.74rem;font-weight:700;color:#fff;opacity:.92;margin-top:2px} .btn.ghost .sub{color:var(--muted)}
+  /* 유닛 흐름 진행 고리 (9/15): 표현 익히기 → 말해보기 → 미션 성공 */
+  .flow{display:flex;align-items:center;background:var(--surface);border-radius:16px;padding:10px 12px;box-shadow:var(--shadow-sm);margin:4px 0 10px}
+  .flow .fs{display:flex;flex-direction:column;align-items:center;gap:4px;flex:0 0 auto;width:84px}
+  .flow .dot{width:26px;height:26px;border-radius:50%;background:#fff;border:2px solid var(--line);display:grid;place-items:center;font-family:'Nunito',sans-serif;font-weight:800;font-size:.75rem;color:var(--muted)}
+  .flow .nm{font-size:.68rem;font-weight:700;color:var(--muted);white-space:nowrap}
+  .flow .fs.now .dot{background:var(--primary);border-color:var(--primary);color:#fff;box-shadow:0 0 0 4px var(--accent-soft)} .flow .fs.now .nm{color:var(--ink);font-weight:800}
+  .flow .fs.done .dot{background:var(--primary);border-color:var(--primary);color:#fff}
+  .flow .bar{flex:1;height:3px;border-radius:999px;background:var(--line);margin:0 2px 18px} .flow .bar.on{background:var(--primary)}
+  .done-card{margin-top:10px;background:linear-gradient(135deg,var(--primary-2),var(--primary));border-radius:18px;padding:20px 16px 18px;color:#fff;box-shadow:0 10px 30px rgba(20,85,74,.18);display:flex;flex-direction:column;gap:12px}
+  .done-card .head{display:flex;align-items:center;gap:12px} .done-card .head .ic{font-size:2.3rem;line-height:1} .done-card h2{font-family:'Jua','Noto Sans KR',sans-serif;font-weight:400;font-size:1.4rem;line-height:1.2;margin:0;color:#fff} .done-card .sub{color:var(--primary-soft);font-size:.82rem;margin:2px 0 0}
+  .done-card .stats{display:flex;gap:8px} .done-card .stats div{flex:1;background:rgba(255,255,255,.14);border-radius:12px;padding:8px 6px;text-align:center} .done-card .stats b{display:block;font-family:'Nunito',sans-serif;font-size:1.3rem;font-weight:800} .done-card .stats span{font-size:.7rem;color:var(--primary-soft)}
+  .done-card .next{margin:0;background:#fff;color:var(--primary);box-shadow:0 0 0 4px rgba(255,255,255,.25)} .done-card .next .sub{color:var(--muted)}
+  .done-card .links{display:flex;justify-content:center;gap:14px;font-size:.82rem;color:var(--primary-soft);font-weight:700} .done-card .links button{border:0;background:none;color:inherit;font:inherit;font-weight:800;padding:0;cursor:pointer}
+  .done-list{margin-top:10px;background:var(--surface);border-radius:18px;padding:12px 16px 4px;box-shadow:var(--shadow-sm)} .done-list .lbl{font-size:.74rem;font-weight:800;color:var(--muted);margin-bottom:4px}
+  .done-list .row{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)} .done-list .row .en{flex:1;font-size:.95rem}
   .tag.alt{background:var(--accent-soft);color:#7A5210}
   .diag .tile.peer{cursor:pointer} .diag .tile .go{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap} .diag .tile .go button{font:inherit;font-size:.72rem;font-weight:800;padding:4px 9px;border-radius:999px;border:1.5px solid #E2C48A;background:#fff;color:#7A5210;cursor:pointer}
   .nbdrill{grid-column:1/-1;margin-top:8px} .nbdrill .q{box-shadow:none;border:1.5px solid var(--line);margin-top:4px;padding:12px 12px 10px}
@@ -210,7 +226,7 @@
     <span class="spacer"></span>
     <label class="toggle"><input type="checkbox" id="notesToggle" checked onchange="document.body.classList.toggle('no-notes', !this.checked)"> 기획 메모 보기</label>
   </div>
-  <div class="role-desc" id="roleDesc">모바일 · Unit 표현 익히기 → 내 문장 말하기/쓰기 → 고쳐주기 → 더 물어보기 → 오답노트</div>
+  <div class="role-desc" id="roleDesc">모바일 · Unit 표현 익히기 → 내 문장 말하기/쓰기 → 고쳐주기 → 더 물어보기 → 미션 성공 → 오답노트</div>
 
   <div class="stage on" id="stage-student">
     <div class="grid">
@@ -280,8 +296,9 @@
         <!-- 합친 안: 표현 익히기 + 따라 말하기 (2026-09-14 제안) -->
         <div class="screen" data-screen="learn2">
           <div class="topbar"><button class="back" onclick="goScreen('units')">‹ 뒤로</button><span class="crumb"><span>Level 2</span><span>U3 Animals</span></span><span class="student">학생 <b class="sName">A</b></span></div>
+          <div class="flow"><div class="fs now"><div class="dot">1</div><div class="nm">표현 익히기</div></div><div class="bar"></div><div class="fs"><div class="dot">2</div><div class="nm">말해보기</div></div><div class="bar"></div><div class="fs"><div class="dot">3</div><div class="nm">미션 성공</div></div></div>
           <h2>표현 익히기</h2>
-          <p class="sub">듣고 → 따라 말하고 → 내 문장으로. 화면 하나에서 <span class="tag alt">채택 9/14</span></p>
+          <p class="sub">듣고 → 따라 말하고 → 내 문장으로. 화면 하나에서 <span class="tag alt">채택 9/14</span> · 진행 고리 <span class="tag alt">9/15</span></p>
           <label class="field">단어 8개 <span style="font-weight:500">(넘겨 보기 · 누르면 듣기)</span></label>
           <div class="mini-row" id="l2Words"></div>
           <label class="field">문장 패턴</label>
@@ -294,16 +311,17 @@
           </div>
           <div class="likeness" id="l2Like" style="display:none"><div class="lbl">선생님 목소리와 닮은 정도</div><div class="lv" id="l2Lv"></div><div class="msg" id="l2LikeMsg"></div></div>
           <div class="diag" id="l2Result" style="display:none"></div>
-          <div class="row2" style="margin-top:10px"><button class="btn ghost" onclick="l2Next()">다음 패턴 →</button><button class="btn" id="l2Go" onclick="goScreen('tutor')">내 문장 말해보기 🎙</button></div>
-          <button class="btn ghost" id="l2AllBtn" style="margin-top:6px" onclick="l2All()">▶ 전부 따라 말하기 (3개 순서대로)</button>
+          <button class="btn" id="l2Go" onclick="goScreen('tutor')">다 익혔어요 → 말해보기 🎙<span class="sub" id="l2GoSub">패턴 3개 중 0개 통과 · 3개 통과하면 빛나요</span></button>
+          <div class="row2"><button class="btn ghost" onclick="l2Next()">다음 패턴 →</button><button class="btn ghost" id="l2AllBtn" onclick="l2All()">▶ 전부 따라 말하기</button></div>
           <p class="hint">통과(70점 이상)한 패턴은 ✓. 세 개 다 ✓ 면 "내 문장 말해보기"가 빛나요. 화면은 하나, 채점 코드(speak.py)는 그대로. <a href="#" onclick="goScreen('learn');return false" style="color:var(--muted)">옛 화면(익히기·따라 말하기 분리) 보기</a></p>
           <button class="fab" onclick="openChat('learn')">🙋</button>
         </div>
 
         <div class="screen" data-screen="tutor">
           <div class="topbar"><button class="back" onclick="goScreen('learn')">‹ 뒤로</button><span class="crumb"><span>Level 2</span><span>U3 Animals</span></span><span class="student">학생 <b class="sName">A</b></span></div>
+          <div class="flow"><div class="fs done"><div class="dot">✓</div><div class="nm">표현 익히기</div></div><div class="bar on"></div><div class="fs now"><div class="dot">2</div><div class="nm">말해보기</div></div><div class="bar"></div><div class="fs"><div class="dot">3</div><div class="nm">미션 성공</div></div></div>
           <h2>내 문장 말해보기</h2>
-          <div class="task" style="margin-top:8px"><div class="ic">🎯</div><div><div class="lb">오늘의 미션</div><div class="ms">어제 동물원에서 본 것을 영어로 한 문장 말해봐요</div><div class="hints"><span class="k">힌트</span><span>rabbit</span><span>lion</span><span>saw</span><span>yesterday</span></div></div></div>
+          <div class="task" style="margin-top:8px"><div class="ic">🎯</div><div><div class="lb">오늘의 미션</div><div class="ms">어제 동물원에서 본 것을 영어로 한 문장 말해봐요</div><div class="hints"><span class="k">힌트</span><span>rabbit</span><span>lion</span><span>saw</span><span>yesterday</span></div><div class="lb" id="missionCnt" style="margin-top:8px">미션 문장 0 / 3</div></div></div>
           <div class="tools">
             <button class="tool" id="recBtn" onclick="fakeRec()">🎙 말하기</button>
             <button class="tool" onclick="toggleType()">⌨ 쓰기</button>
@@ -323,7 +341,26 @@
             <div class="chips" id="askChips"></div>
             <div class="ans" id="ans"></div>
           </div>
-          <div class="row2" id="tutorNav" style="display:none"><button class="btn ghost" onclick="resetTutor()">다른 문장</button><button class="btn" onclick="goScreen('notebook')">오답노트 보기</button></div>
+          <div id="tutorNav" style="display:none;gap:8px">
+            <div class="diag" id="missionNote" style="display:none;padding:10px 12px;font-weight:800;font-size:.86rem"></div>
+            <button class="btn glow" id="moreBtn" onclick="resetTutor()">한 문장 더 말하기<span class="sub" id="moreSub">미션 문장 1 / 3</span></button>
+            <div class="row2"><button class="btn ghost" onclick="goScreen('learn2')">표현 다시 보기</button><button class="btn ghost" onclick="goScreen('notebook')">오답노트에서 연습</button></div>
+          </div>
+          <button class="fab" onclick="openChat('tutor')">🙋</button>
+        </div>
+
+        <!-- 미션 성공 (유닛 흐름 마지막, 2026-09-15) -->
+        <div class="screen" data-screen="success">
+          <div class="topbar"><button class="back" onclick="goScreen('tutor')">‹ 뒤로</button><span class="crumb"><span>Level 2</span><span>U3 Animals</span></span><span class="student">학생 <b class="sName">A</b></span></div>
+          <div class="flow"><div class="fs done"><div class="dot">✓</div><div class="nm">표현 익히기</div></div><div class="bar on"></div><div class="fs done"><div class="dot">✓</div><div class="nm">말해보기</div></div><div class="bar on"></div><div class="fs now"><div class="dot">3</div><div class="nm">미션 성공</div></div></div>
+          <div class="done-card">
+            <div class="head"><div class="ic">🎉</div><div><h2>미션 성공!</h2><p class="sub">U3 Animals 를 끝냈어요</p></div></div>
+            <div class="stats"><div><b id="sPat">3</b><span>익힌 표현</span></div><div><b id="sSent">3</b><span>말한 문장</span></div><div><b id="sRule">1</b><span>고친 규칙</span></div></div>
+            <button class="btn next" onclick="goScreen('units')">다음 유닛으로 →<span class="sub">U4 Food</span></button>
+            <div class="links"><button onclick="againUnit()">이 유닛 한 번 더</button><span>·</span><button onclick="goScreen('start')">홈으로</button></div>
+          </div>
+          <div class="done-list" id="sList"></div>
+          <p class="hint" id="sNb" style="display:none">고친 문장은 <b>오답노트</b>에 들어갔어요. 다음에 다시 연습할 수 있어요. <button class="chip" onclick="goScreen('notebook')">오답노트 보기</button></p>
           <button class="fab" onclick="openChat('tutor')">🙋</button>
         </div>
 
@@ -499,7 +536,7 @@ let student='A', patIdx=0, cur=null, typing=false;
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 
 function setRole(r){ $$('.bar .tab').forEach(b=>b.classList.toggle('on',b.dataset.role===r)); $$('.stage').forEach(s=>s.classList.toggle('on',s.id==='stage-'+r)); $('#roleDesc').textContent=r==='student'?'모바일 · Unit 표현 익히기 → 내 문장 말하기/쓰기 → 고쳐주기 → 더 물어보기 → 오답노트':'데스크톱 · 골든 데이터(규칙 조각 중심) · RAG 정확도(문장→규칙) · 학생 문장 로그'; }
-function goScreen(n){ $$('.phone .screen').forEach(s=>s.classList.toggle('on',s.dataset.screen===n)); renderNotes(n); if(n==='units') renderUnits(); if(n==='learn') renderLearn(); if(n==='learn2') renderLearn2(); if(n==='notebook'||n==='start') renderNotebook(); if(n==='tutor') resetTutor(); if(n==='shadow') renderShadow(); }
+function goScreen(n){ $$('.phone .screen').forEach(s=>s.classList.toggle('on',s.dataset.screen===n)); renderNotes(n); if(n==='units') renderUnits(); if(n==='learn') renderLearn(); if(n==='learn2') renderLearn2(); if(n==='notebook'||n==='start') renderNotebook(); if(n==='tutor') resetTutor(); if(n==='shadow') renderShadow(); if(n==='success') renderSuccess(); }
 function setStudent(v){ student=v; $$('.sName').forEach(e=>e.textContent=v); renderNotebook(); }
 
 // Unit
@@ -527,7 +564,7 @@ function shadowNext(){ shIdx=(shIdx+1)%SHADOW.length; renderShadow(); }
 let l2Idx=0, l2Auto=false; const l2Done=new Set();
 const L2TIP=['과거를 말할 땐 동사를 과거형으로','a·e·i·o·u 소리 앞엔 an','한 마리면 동사에 -s'];
 function renderLearn2(){ $('#l2Words').innerHTML=WORDS.map(w=>`<div class="mini" onclick="fakeTTS(this)"><b>${w[0]}</b>${w[1]}</div>`).join(''); l2Show(); }
-function l2Dots(){ $('#l2Dots').innerHTML=SHADOW.map((x,i)=>`<span class="${i===l2Idx?'cur':''} ${l2Done.has(i)?'done':''}" onclick="l2Idx=${i};l2Show()" title="${x.t}">${l2Done.has(i)?'✓ 통과':i===l2Idx?'▶ 지금':'문장 '+(i+1)}</span>`).join(''); $('#l2Go').classList.toggle('glow',l2Done.size===SHADOW.length); }
+function l2Dots(){ $('#l2Dots').innerHTML=SHADOW.map((x,i)=>`<span class="${i===l2Idx?'cur':''} ${l2Done.has(i)?'done':''}" onclick="l2Idx=${i};l2Show()" title="${x.t}">${l2Done.has(i)?'✓ 통과':i===l2Idx?'▶ 지금':'문장 '+(i+1)}</span>`).join(''); const need=Math.min(3,SHADOW.length), got=l2Done.size; $('#l2Go').classList.toggle('glow',got>=need); $('#l2GoSub').textContent=got>=need?'준비됐어요! 미션 문장을 말해봐요':`패턴 ${SHADOW.length}개 중 ${got}개 통과 · ${need}개 통과하면 빛나요`; }
 function l2Show(){ const x=SHADOW[l2Idx]; $('#l2T').textContent=x.t; $('#l2M').textContent=x.m; $('#l2Tip').textContent=L2TIP[l2Idx]; ['#l2Wave','#l2Like','#l2Result'].forEach(q=>$(q).style.display='none'); const b=$('#l2Rec'); b.classList.remove('rec'); b.textContent='🎙 따라 말하기'; l2Dots(); }
 function l2Rec(){ const b=$('#l2Rec'), x=SHADOW[l2Idx]; b.classList.add('rec'); b.textContent='⏺ 녹음 중…'; setTimeout(()=>{ b.classList.remove('rec'); b.textContent='🎙 다시 말하기';
   $('#l2Wave').style.display='block'; $('#l2WvTTxt').textContent=x.t; $('#l2WvMTxt').textContent=x.heard; bars($('#l2WvT'),7); bars($('#l2WvM'),7+(3-x.like)*11);
@@ -538,7 +575,7 @@ function l2Rec(){ const b=$('#l2Rec'), x=SHADOW[l2Idx]; b.classList.add('rec'); 
   if(l2Auto && ok && l2Idx<SHADOW.length-1) setTimeout(()=>{ l2Next(); l2Rec(); },1300);
 },1500); }
 function l2Next(){ l2Idx=(l2Idx+1)%SHADOW.length; l2Show(); }
-function l2All(){ l2Auto=!l2Auto; $('#l2AllBtn').textContent=l2Auto?'⏹ 순서대로 멈추기':'▶ 전부 따라 말하기 (3개 순서대로)'; if(l2Auto){ l2Idx=0; l2Done.clear(); l2Show(); l2Rec(); } }
+function l2All(){ l2Auto=!l2Auto; $('#l2AllBtn').textContent=l2Auto?'⏹ 순서대로 멈추기':'▶ 전부 따라 말하기'; if(l2Auto){ l2Idx=0; l2Done.clear(); l2Show(); l2Rec(); } }
 function fakeShadow(){ const b=$('#shRec'), x=SHADOW[shIdx]; b.classList.add('rec'); b.textContent='⏺ 녹음 중…'; setTimeout(()=>{ b.classList.remove('rec'); b.textContent='🎙 따라 말하기'; $('#shWave').style.display='block'; $('#wvMeTxt').textContent=x.heard; bars($('#wvT'),7); bars($('#wvM'),7+ (3-x.like)*11); $('#shLike').style.display='block'; $('#shLv').innerHTML=[1,2,3].map(i=>`<span class="${i<=x.like?'on':''}"></span>`).join('')+`<b>${LIKE[x.like][0]}</b>`; $('#shLikeMsg').textContent=LIKE[x.like][1]; $('#shHeard').style.display='block'; $('#shHeardS').textContent=x.heard; const r=$('#shResult'); r.style.display='block'; const ok=x.score>=70; r.innerHTML=`<div class="type ${ok?'ok':''}">${ok?'✓ 잘 들렸어요':'✕ 한 번 더 해볼까요?'}</div><div class="fixed" style="color:${ok?'var(--primary)':'var(--danger)'}">${x.score}점</div><div class="why">원문: ${x.t}<br>들린 말: ${x.heard}${x.score<100?'<br><span style="color:var(--muted);font-size:.8rem">다른 부분: '+diffWords(x.t,x.heard)+'</span>':''}</div><div class="src">🎙 <b>잘 들렸나</b> = STT 단어 일치율(통과 70) · 🌿 <b>닮은 정도</b> = 파형 비교를 3단계로만 (절대 점수는 숨김)</div>`; },1800); }
 function diffWords(a,b){ const A=a.toLowerCase().replace(/[^a-z ]/g,'').split(' '), B=b.toLowerCase().replace(/[^a-z ]/g,'').split(' '); return A.filter((w,i)=>B[i]!==w).map((w,i)=>`<s>${B[A.indexOf(w)]||'…'}</s>→<b>${w}</b>`).join(', ')||'없음'; }
 
@@ -575,8 +612,21 @@ async function runFix(){
   $('#ask').style.display='block'; $('#ans').className='ans';
   const qs=cur.rule?ASK[cur.rule]:[['다른 문장도 만들어줘','I saw a big lion. / The monkey was cute. (예시 조각 E-20, E-21)']];
   $('#askChips').innerHTML=qs.map((q,i)=>`<button class="chip" onclick="askQ('${cur.rule||'ok'}',${i})">${q[0]}</button>`).join('')+`<button class="chip" onclick="askFree()">⌨ 직접 물어보기</button>`;
+  // 유닛 흐름 (9/15): 미션에 맞는 문장(힌트 단어 포함) 3개를 모으면 미션 성공 화면으로. 틀렸어도 고쳐서 ✓
+  const hit=/rabbit|lion|saw|yesterday|zoo|monkey|elephant/i.test(cur.s); if(hit&&!MISSION.some(x=>x.text===cur.s)) MISSION.push({text:cur.s,fixed:cur.fixed,ok:!cur.rule,rule:cur.rule});
+  const left=Math.max(0,3-MISSION.length); $('#missionCnt').textContent=`미션 문장 ${Math.min(MISSION.length,3)} / 3`;
+  const mn=$('#missionNote'); mn.style.display='block'; mn.textContent=!hit?'🎯 힌트 단어(rabbit, lion, saw, yesterday)를 넣어 말해봐요':left>0?`🎯 미션에 맞는 문장이에요! ${left}문장만 더 하면 미션 성공`:'🎉 미션 문장을 다 모았어요! 아래 버튼으로 결과를 봐요';
+  const more=$('#moreBtn'); if(left===0){ more.innerHTML='미션 성공! 결과 보기 🎉'; more.onclick=()=>goScreen('success'); } else { more.innerHTML=`한 문장 더 말하기<span class="sub">${hit?`미션 문장 ${MISSION.length} / 3`:'힌트 단어를 넣어 말해봐요'}</span>`; more.onclick=resetTutor; }
   $('#tutorNav').style.display='grid'; renderNotebook();
 }
+const MISSION=[];   // 목업: 이 유닛에서 미션에 맞게 말한 문장 (실제 화면은 sessionStorage flow[unit])
+function renderSuccess(){
+  const rules=new Set(MISSION.filter(x=>x.rule).map(x=>x.rule));
+  $('#sPat').textContent=l2Done.size||3; $('#sSent').textContent=MISSION.length; $('#sRule').textContent=rules.size;
+  $('#sList').innerHTML='<div class="lbl">오늘 말한 문장</div>'+(MISSION.length?MISSION.map(x=>`<div class="row"><span class="en">${x.ok?x.text:x.fixed}</span>${x.ok?'<span class="badge b-ok">바로 ✓</span>':`<span class="badge b-todo">고쳐서 ✓ · ${RULES[x.rule].name}</span>`}</div>`).join(''):'<div class="row"><span class="en" style="color:var(--muted)">말해보기에서 미션 문장을 3개 모으면 여기에 나와요</span></div>');
+  $('#sNb').style.display=rules.size?'block':'none';
+}
+function againUnit(){ MISSION.length=0; l2Done.clear(); goScreen('learn2'); }
 function askQ(rule,i){ // 더 물어보기 칩 = 🙋 물어보기 챗의 입구. 실제 서비스(tutor.js)와 같이 같은 챗 시트를 열고 방금 규칙을 문맥으로 넘긴 뒤 질문을 보낸다
   const q=(rule==='ok'?[['다른 문장도 만들어줘','I saw a big lion. / The monkey was cute. (예시 조각 E-20, E-21)']]:ASK[rule])[i];
   if(!FAQ[q[0]]) FAQ[q[0]]=[q[1].split(' (규칙')[0].split(' (예시')[0], (q[1].match(/\((.*)\)/)||['',''])[1]];
@@ -665,10 +715,11 @@ const NOTES={
   learn2:`<h3>표현 익히기 · 따라 말하기와 합침 (2026-09-14 채택)</h3><ol><li><b>화면 하나, 모드 둘.</b> 패턴 카드 아래 🎙 를 누르면 그 자리에서 녹음·채점(파형 두 줄 · 닮은 정도 · 점수)이 펼쳐지고, "전부 따라 말하기"를 켜면 통과할 때마다 다음 패턴으로 자동 진행.</li><li><b>왜 합치나.</b> 아이 동선이 "배운 문장 → 바로 따라 말하기 → 내 문장"으로 이어짐. 화면 8 → 7, 시연 동선 짧아짐. 지금은 나갔다 들어와야 함.</li><li><b>바뀌지 않는 것.</b> speak.py · STT 점수 · 닮은 정도 3단계 · 통과 70 은 그대로. STT 담당 코드는 안 건드리고 화면 배치만.</li><li><b>진행 표시.</b> 패턴 점 ①②③ 에 통과하면 ✓. 셋 다 ✓ 면 "내 문장 말해보기" 버튼이 빛남 — 워밍업을 마치고 튜터로 가라는 신호.</li></ol><div class="note"><b>결정 필요</b> ① 따라 말하기 화면을 없앨지, 합친 화면 안 "전부 따라 말하기" 모드로만 남길지 ② 단어 칩을 눌러 듣기(TTS) 를 여기 붙일지 ③ STT 담당과 일정 — RAG v2 뒤(다음 주)</div>`,
   learn:`<h3>표현 익히기 · 기획 포인트</h3><ol><li><b>짧게.</b> 단어 8개 가로 스크롤, 문장 패턴 3개. 여기서 오래 머물지 않고 말하기로.</li><li><b>패턴 카드에 규칙 힌트</b> 한 줄 ("과거를 말할 땐 동사를 과거형으로") — 이게 규칙 조각의 요약.</li><li><b>🎙 따라 말하기</b> → STT 점수 화면 (TTS 담당 몫). 튜터로 가기 전 워밍업.</li></ol><div class="note"><b>확인 필요</b> 단어 카드 넘기기·듣기·따라 말하기(기존 목업 학습 화면)를 여기 그대로 둘지, 이렇게 줄일지.</div>`,
   tutor:`<h3>내 문장 말해보기 · 기획 포인트 (핵심 화면)</h3><ol><li><b>미션 카드.</b> 🎯 는 왼쪽 칸, 라벨 → 미션 문장(굵게) → 힌트 단어 칩. 문장이 길어져도 줄바꿈될 뿐 아이콘과 안 겹침 (2026-09-14). 실제 화면(tutor.html)도 이 모양으로 — d2.</li><li><b>입력 두 가지.</b> 🎙 말하기(STT, 팀원 구현 완료) 또는 ⌨ 쓰기. 목업에선 예시 4개 중 고르면 "말한 것"으로 침.</li><li><b>고쳐줘 → 3단계가 보임.</b> ① 문장 받기 ② <b>검색 3갈래</b> — 닮은 실수(틀린 예문 500)·규칙 설명(100)·교과서 표현(패턴 462) ③ AI 는 후보 5개 중 규칙을 고르고 문장만 고침. <b>설명은 규칙 문서 그대로</b>(모델이 지어내지 않음).</li><li><b>아이용 카드 구성 (2026-09-14 개정).</b> 규칙 이름 + 한 줄 구호("지난 일은 과거형으로!") → 고친 문장 크게 → 타일 3개(📖 교과서 문장 · 🙋 친구들 실수 · ✏️ 새 단어, 각 두 줄) → "왜 그래요?"·"어떻게 찾았어요?"는 접어 둠. 줄글은 접힌 곳에만.</li><li><b>"친구들도 이렇게 실수해요" 타일 → "이 문제 풀어보기".</b> 타일 문장은 검색 ①이 errors.jsonl 에서 찾은 행이고, 그 행이 곧 4지선다 연습 문제. 누르면 오답노트가 그 규칙 카드를 펼친 채로 열림 (2026-09-14 결정, 별도 연습 화면 폐기).</li><li><b>카드 타일 세 개가 곧 검색 결과.</b> 📖 교과서 규칙 설명(②) · 친구들도 자주 이렇게 써요(① — 오답노트 연습 문제와 같은 행) · 교과서에서는 이렇게 말해요(③). 검색이 답에 무엇을 보탰는지가 화면에서 보임 — 교수님 "그건 RAG 가 아니다" 지적에 대한 답.</li><li><b>근거 박스에 검색 3갈래 점수.</b> ①②가 같은 규칙을 1위로 내면 확신, 다르면 모델이 고름. 절대 문턱은 안 씀(정상 문장도 가까운 규칙은 늘 있음).</li><li><b>더 물어보기 = 🙋 물어보기 챗의 입구.</b> 둘은 같은 /ask 예요. 차이는 문맥뿐: 카드 아래 칩은 <b>방금 걸린 규칙</b>에 맞는 추천 질문(FAQ 에서 고름)이고, 누르면 그 규칙·문장 id 를 문맥으로 들고 챗 시트가 열려요. 🙋 버튼은 어느 화면에서든 유닛 문맥으로 열려요. 답 상자를 카드 안에 따로 두지 않아요 (2026-09-14 정리).</li><li><b>틀린 규칙은 오답노트에</b> 자동 기록. 문장 원문과 고친 문장도 같이.</li></ol><div class="note rag"><b>RAG인 이유 (v2, 2026-09-14)</b> 문법 지식은 모델이 이미 안다. 모델이 모르는 건 <b>우리 교과서의 설명 방식·표현·학년별 단어·학생들이 실제로 하는 실수</b>다. 그걸 검색해 답에 넣는다: 설명은 규칙 문서에서, 표현은 패턴에서, 닮은 실수는 틀린 예문에서. 규칙 찾기 자체도 틀린 예문 검색이 설명문 검색보다 정확(hit@3 78% → 90%, 같은 300문장).</div><div class="note decided"><b>결정됨 (2026-09-14)</b> 설명은 모델 문장이 아니라 규칙 문서(text·examples) 그대로 — 반영 완료. 재랭킹은 보류(후보 5개 안에 95% 들어와 이득 작음). 문턱은 절대 점수 대신 ①②일치·점수 분포 뾰족함.</div><div class="note"><b>확인 필요 ④</b> 시험지가 errors.jsonl 에서 파생돼 ① 예문 검색 수치가 부풀 수 있음 → 데이터팀에 errors 무관 시험 문장 50개 요청.</div><div class="note"><b>확인 필요 ①</b> 한 문장에 오류가 2개면? (기본안: 가장 점수 높은 규칙 1개만 고치고 "하나 더 있어요" 표시)</div><div class="note"><b>확인 필요 ②</b> 문장이 문법은 맞는데 미션과 무관하면? (기본안: "잘 썼어요"만. 미션 판정은 2차)</div><div class="note"><b>확인 필요 ③</b> 초등학생이 직접 물어보기를 쓸까? 추천 질문 버튼을 기본으로, 입력창은 접어둘지.</div>`,
+  success:`<h3>미션 성공 · 유닛 흐름 마무리 (2026-09-15 채택)</h3><ol><li><b>유닛 = 한 흐름.</b> 표현 익히기 → 말해보기 → 미션 성공. 상단 진행 고리(3단계 중 2)로 지금 어디인지 보임. 말해보기에서 끝나 버려 "다음에 뭘 하지?"가 없던 문제를 푼다.</li><li><b>문턱.</b> 표현 익히기에서 패턴 3개 통과하면 "다 익혔어요 → 말해보기"가 빛남. 잠그지는 않음 — 테스트·시연 편하게 늘 열어 둠 (9/15 결정). 말해보기에서 미션에 맞는 문장(힌트 단어 포함) 3개를 모으면 미션 성공 — 문법이 틀려도 고친 문장이 미션에 맞으면 "고쳐서 ✓"로 센다.</li><li><b>마무리 카드.</b> 숫자 3개(익힌 표현 · 말한 문장 · 고친 규칙) + 큰 버튼 "다음 유닛으로"(같은 레벨의 다음 유닛, 마지막이면 유닛 목록) + 작은 글씨 "이 유닛 한 번 더 · 홈으로". 오늘 말한 문장 목록에 바로 ✓ / 고쳐서 ✓ 배지.</li><li><b>상단 칩 Level·Unit 을 누르면 이동</b>(홈 · 유닛 목록). 아이들이 칩을 버튼인 줄 알고 눌러서.</li><li><b>서버 변경 없음.</b> 진행 상태는 브라우저 sessionStorage(flow[unit]), 다음 유닛은 기존 /api/units 로 찾음. 미션 판정은 /fix 의 mission 필드 그대로.</li></ol><div class="note decided"><b>결정됨 (2026-09-15)</b> 유닛 흐름 3단계 + 진행 고리 + 미션 문장 3개 = 성공. 실제 화면(learn/tutor/success.html) 반영.</div><div class="note"><b>확인 필요</b> ① 미션 문장 3개가 초등 저학년에 많은지(2개?) ② 마지막 유닛 뒤 다음 레벨로 넘길지 ③ "한 번 더"가 패턴 통과 기록까지 지우는 게 맞는지</div>`,
   notebook:`<h3>오답노트 · 기획 포인트</h3><div class="note decided"><b>결정됨 (2026-09-14) 연습은 오답노트 카드 안에서.</b> "이 규칙 연습하기"를 누르면 카드가 그 자리에서 펼쳐져 4지선다 2문제. 별도 규칙 연습 화면은 폐기(화면 8 → 7). 한 번에 한 카드만 펼침. 채점·극복(연속 2번) 규칙과 문제 데이터(errors.jsonl)는 그대로.<br>튜터 카드의 "친구들도 이렇게 실수해요" 타일 → "이 문제 풀어보기" 를 누르면 오답노트가 그 규칙 카드를 펼친 채로 열림. 타일 문장 = errors.jsonl 의 한 행 = 이 연습 문제 (검색 ①과 연습이 같은 데이터).</div><ol><li><b>단위가 "문법 규칙".</b> 단어가 아니라 과거시제·관사처럼 규칙별로 쌓임. 내 문장과 고친 문장을 같이 기록.</li><li><b>각 규칙에 근거(규칙 조각 id)</b>가 붙어 있어, 나중에 다시 봐도 설명을 꺼낼 수 있음.</li><li><b>"이 규칙 연습하기"</b> → 4지선다 2문제. 다 맞히면 streak+1, 연속 2번이면 극복.</li></ol><div class="note"><b>확인 필요</b> 단어 오답(뜻을 모름)도 여기 같이 둘지, 문법만 둘지. B 방향이면 문법만이 깔끔 (기본안).</div>`,
   drill:`<h3>규칙 연습 · (2026-09-14 폐기 — 오답노트 카드 안으로 합침)</h3><ol><li><b>4지선다는 여기서만.</b> 밑줄 친 곳을 어떻게 고칠지 고르기. 기존 문제 화면 코드 재사용.</li><li><b>답 뒤에 규칙 조각 그대로 표시.</b> 오답노트의 근거와 같은 조각.</li></ol><div class="note decided"><b>결정됨</b> 문장 고치기 객관식 = "고칠 말 고르기" 형식 (앞서 합의한 객관식 B).</div>`,
 };
-function renderNotes(n){ $('#notes-student').innerHTML=(NOTES[n]||'')+(['learn','shadow','tutor','notebook','drill'].includes(n)?NOTES.chat:''); }
+function renderNotes(n){ $('#notes-student').innerHTML=(NOTES[n]||'')+(['learn','shadow','tutor','notebook','drill','success'].includes(n)?NOTES.chat:''); }
 renderNotes('start'); renderNotebook();
 </script>
 </body>

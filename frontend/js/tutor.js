@@ -23,12 +23,16 @@ function missionHints() {
   const u = state.unit; const h = (u.hint_words && u.hint_words.length) ? u.hint_words : (S.get().words || []).map(w => w.word);
   return h.map(w => w.toLowerCase());
 }
-function checkMission(text, r) {
-  if (r.mission) return r.mission;                                  // 서버 판단 우선 {ok, nudge}
-  const hints = missionHints(); if (!hints.length) return null;
+function hintHit(text) {   // 힌트 단어가 문장에 들어 있나 (zoo / lions / eating 정도 허용)
+  const hints = missionHints(); if (!hints.length) return false;
   const words = text.toLowerCase().replace(/[^a-z' ]/g, ' ').split(/\s+/);
-  const hit = hints.filter(h => words.includes(h) || words.some(w => w.startsWith(h) && w.length - h.length <= 3));   // zoo / lions / eating 정도 허용
-  return hit.length ? { ok: true } : { ok: false, nudge: `미션은 "${state.unit.mission}"이에요. ${hints.slice(0, 4).join(' · ')} 같은 단어를 넣어 말해볼까요?`, local: true };
+  return hints.some(h => words.includes(h) || words.some(w => w.startsWith(h) && w.length - h.length <= 3));
+}
+function checkMission(text, r) {
+  // 서버(모델) 판단이 우선이지만, 힌트 단어를 넣어 말했으면 미션으로 친다 (9/15 팀장: 힌트 넣었는데 안 올라가면 안 됨). 모델은 "좋아하는 색깔" 같은 뜻까지 따져서 더 깐깐하다
+  if (r.mission) return (!r.mission.ok && hintHit(text)) ? { ok: true, hint: true } : r.mission;
+  const hints = missionHints(); if (!hints.length) return null;
+  return hintHit(text) ? { ok: true } : { ok: false, nudge: `미션은 "${state.unit.mission}"이에요. ${hints.slice(0, 4).join(' · ')} 같은 단어를 넣어 말해볼까요?`, local: true };
 }
 function toggleType() { typing = !typing; $('#typeBox').style.display = typing ? 'block' : 'none'; if (typing) $('#typeInput').focus(); }
 function onType() { const v = $('#typeInput').value.trim(); if (v) setText(v, 'typed'); }
@@ -154,7 +158,20 @@ async function runFix() {
   rounds.push(r); renderAll();
   if (!r.ok && r.rule && r.rule.id !== 'OTHER') NB.addWrong(state.student, r.rule.id, text, r.fixed, r.log_id);   // 브라우저 사본 (정식 기록은 서버 notebook.json)
   const m = checkMission(text, r);
-  if (m && !m.ok) showResult('#missionNote', `🎯 ${esc(m.nudge)}${m.local ? ' <span style="opacity:.6;font-weight:500">(서버 없이 힌트 단어만 확인한 결과)</span>' : ''}`, 'todo'); else hideResult('#missionNote');
+  // 유닛 흐름 (9/15): 미션에 맞는 문장을 FLOW.need(3)개 모으면 미션 성공. 문법이 틀렸어도 고친 문장이 미션에 맞으면 센다 (고쳐서 ✓)
+  const missionOk = !!(m && m.ok);
+  if (missionOk && round === 1) FLOW.addSentence(state.unit.unit, { text, fixed: r.fixed, ok: !!r.ok, rule_id: (!r.ok && r.rule && r.rule.id !== 'OTHER') ? r.rule.id : null });
+  const flow = FLOW.get(state.unit.unit), left = Math.max(0, FLOW.need - flow.sentences.length);
+  renderMissionCnt();
+  if (m && !m.ok) showResult('#missionNote', `🎯 ${esc(m.nudge)}${m.local ? ' <span style="opacity:.6;font-weight:500">(서버 없이 힌트 단어만 확인한 결과)</span>' : ''}`, 'todo');
+  else if (missionOk && left > 0) showResult('#missionNote', `🎯 미션에 맞는 문장이에요! ${left}문장만 더 하면 미션 성공`);
+  else if (missionOk) showResult('#missionNote', '🎉 미션 문장을 다 모았어요! 아래 버튼으로 결과를 봐요');
+  else hideResult('#missionNote');
+  // 마무리 버튼: 미션 완료면 "미션 성공 보기", 아니면 "한 문장 더" (틀린 문장이면 오답노트 버튼을 살린다)
+  const more = $('#moreBtn');
+  if (flow.done) { more.textContent = '미션 성공! 결과 보기 🎉'; more.onclick = () => go('success.html'); more.classList.add('glow'); }
+  else { more.innerHTML = `한 문장 더 말하기<span class="sub">${missionOk ? `미션 문장 ${flow.sentences.length} / ${FLOW.need}` : `이 문장은 미션과 달라서 안 셌어요 · 힌트: ${missionHints().slice(0, 3).join(', ')}`}</span>`; more.onclick = reset; more.classList.toggle('glow', !flow.done); }
+  const showNb = !!(!r.ok && r.rule && r.rule.id !== 'OTHER'); $('#nbBtn').style.display = showNb ? '' : 'none'; $('#nbBtn').parentElement.style.gridTemplateColumns = showNb ? '' : '1fr';   // 맞는 문장이면 오답노트 버튼 없이 한 칸으로
   localStorage.setItem(`spoken_${state.student}_${state.unit.unit}_${Date.now()}`, '1'); S.set({ lastFix: { log_id: r.log_id, rule_id: r.rule?.id || null } });
   const chips = $('#askChips'); chips.style.display = 'flex';
   const sugg = (r.suggested_questions || []).filter(q => typeof q === 'string' && q);
@@ -163,8 +180,9 @@ async function runFix() {
   $$('#askChips button[data-q]').forEach(b => b.addEventListener('click', () => openChat(chatCtx).then(() => { if (b.dataset.q) askChat(b.dataset.q); })));
   $('#nav').style.display = 'grid';
 }
+function renderMissionCnt() { const f = FLOW.get(state.unit.unit); $('#missionCnt').textContent = `미션 문장 ${Math.min(f.sentences.length, FLOW.need)} / ${FLOW.need}`; }
 (async function init() {
-  if (!state) return; renderTopbar(); showHealth(); injectChat('tutor');
+  if (!state) return; renderTopbar(); renderFlow(2); showHealth(); injectChat('tutor'); renderMissionCnt();
   const u = state.unit; $('#mission').textContent = u.mission || `${u.title} 단어로 한 문장 말해봐요`;
   const hint = (u.hint_words && u.hint_words.length) ? u.hint_words : (S.get().words || []).slice(0, 4).map(w => w.word);
   $('#hintWords').innerHTML = hint.length ? `<span class="k">힌트</span>` + hint.map(h => `<span>${esc(h)}</span>`).join('') : ''; reset();

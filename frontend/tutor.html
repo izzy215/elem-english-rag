@@ -11,8 +11,9 @@
 <div class="app">
   <header class="topbar" id="topbar"></header>
   <main>
+    <div class="flow" id="flow"></div>
     <h1>내 문장 말해보기</h1>
-    <div class="task" id="task"><div class="ic">🎯</div><div><div class="lb">오늘의 미션</div><div class="ms" id="mission"></div><div class="hints" id="hintWords"></div></div></div>
+    <div class="task" id="task"><div class="ic">🎯</div><div><div class="lb">오늘의 미션</div><div class="ms" id="mission"></div><div class="hints" id="hintWords"></div><div class="lb" id="missionCnt" style="margin-top:8px"></div></div></div>
     <div class="tools"><button class="tool" id="recBtn" onclick="record()">🎙 말하기</button><button class="tool" id="typeBtn" onclick="toggleType()">⌨ 쓰기</button></div>
     <div id="typeBox" style="display:none;margin-top:8px"><textarea class="txt" id="typeInput" placeholder="영어로 써 보세요" rows="2" oninput="onType()"></textarea></div>
     <div class="heard" id="heard" style="display:none"><div class="lbl" id="heardLbl">들린 문장</div><div class="s" id="heardS"></div></div>
@@ -26,7 +27,10 @@
     <div class="diag" id="diag" style="display:none"></div>
     <div class="result" id="missionNote"></div>
     <div class="chips" id="askChips" style="display:none"></div>
-    <div class="row2" id="nav" style="display:none"><button class="btn ghost" onclick="reset()">다른 문장</button><button class="btn" onclick="go('notebook.html')">오답노트 보기</button></div>
+    <div id="nav" style="display:none;gap:8px">
+      <button class="btn" id="moreBtn" onclick="reset()">한 문장 더 말하기<span class="sub" id="moreSub"></span></button>
+      <div class="row2"><button class="btn ghost" onclick="go('learn.html')">표현 다시 보기</button><button class="btn ghost" id="nbBtn" onclick="go('notebook.html')">오답노트에서 연습</button></div>
+    </div>
   </main>
   <div class="status" id="status"></div>
   <audio id="player"></audio>
