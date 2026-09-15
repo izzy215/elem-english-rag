@@ -250,6 +250,28 @@ def fix_run_start(body: FixRunIn):
     return evalrun.start_fix_job(backend, body.no_rag, body.label, max(0, min(body.limit, 1000)), max(0, body.per_rule), max(-1, body.normal), body.textbook)
 
 
+# ── 서버 임베딩 빌려 쓰기 (평가 스크립트용) ──
+# tests/eval_fix.py·eval_embed.py 를 따로 띄우면 e5-base(1.1GB)를 한 번 더 읽어야 해서 메모리가 모자란 PC 에서 MemoryError 가 난다 (2026-09-14).
+# 서버 프로세스가 이미 올린 모델로 대신 계산해 준다. embed_server.py 와 같은 요청·응답 모양이라
+#   EMBEDDING_BACKEND=remote EMBEDDING_REMOTE_URL=http://localhost:8000/api/admin EMBEDDING_REMOTE_MODEL=<서버와 같은 모델>
+# 로 평가를 돌리면 된다. 모델 이름이 서버와 다르면 400 (다른 벡터 공간으로 섞이는 것 방지).
+class EmbedIn(BaseModel):
+    texts: list[str]
+    task_type: str = "RETRIEVAL_DOCUMENT"
+    model: str = ""
+
+
+@router.post("/embed")
+def embed_texts(body: EmbedIn):
+    from backend import embedding
+    if body.model and body.model != embedding.EMBEDDING_MODEL:
+        raise HTTPException(400, f"서버 임베딩 모델은 {embedding.EMBEDDING_MODEL} (요청: {body.model})")
+    if len(body.texts) > 256:
+        raise HTTPException(400, "한 번에 256개까지")
+    vectors = embedding.embed_documents(body.texts) if body.task_type == "RETRIEVAL_DOCUMENT" else [embedding.embed_query(t) for t in body.texts]
+    return {"embeddings": vectors, "model": embedding.EMBEDDING_MODEL}
+
+
 # ── 교과서 검색 시험 (backend/textbook.py 프로토타입 — 패턴·단어 색인에서 학생 문장과 가까운 것) ──
 @router.get("/textbook")
 def textbook_search(q: str = "", level: int = 3, k: int = 5, min_score: float = 0.0):
