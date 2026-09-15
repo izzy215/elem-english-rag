@@ -1,0 +1,2681 @@
+{
+ "ran_at": "2026-09-15T11:12:53",
+ "label": "rag-gemini-k5-v56059a6",
+ "condition": "RAG 파이프라인 (검색 상위 5 + 공통 규칙, 임베딩 gemini-embedding-001)",
+ "no_rag": false,
+ "sentences": null,
+ "index": {
+  "model": "gemini-embedding-001",
+  "provider": "google-genai",
+  "count": 100,
+  "generated_at": "2026-09-15T10:10:20"
+ },
+ "prompt_file": "fix_fallback.txt",
+ "rules_n": 100,
+ "backends": [
+  "local"
+ ],
+ "summary": {
+  "local": {
+   "rule_hit": "66/100",
+   "normal_kept": "10/10",
+   "failures": 1,
+   "avg_ms": 7896,
+   "model": "qwen2.5:32b-instruct"
+  }
+ },
+ "results": [
+  {
+   "text": "I hungry now.",
+   "expected": "R-01",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7406,
+     "ok": false,
+     "rule_id": "R-36",
+     "fixed": "I am hungry now.",
+     "full_fixed": "I am hungry now.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 30,
+     "spelling": [],
+     "judge": "✗ R-36"
+    }
+   }
+  },
+  {
+   "text": "Good evening Dad.",
+   "expected": "R-02",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7870,
+     "ok": true,
+     "rule_id": null,
+     "fixed": "Good evening Dad.",
+     "full_fixed": "Good evening Dad.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✗ 놓침 (ok)"
+    }
+   }
+  },
+  {
+   "text": "This is Tom pencil.",
+   "expected": "R-03",
+   "is_normal": false,
+   "note": "정제본 교체(라벨과 다른 오류 유형)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8695,
+     "ok": true,
+     "rule_id": null,
+     "fixed": "This is Tom pencil.",
+     "full_fixed": "This is Tom's pencil.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [
+      {
+       "wrong": "tom",
+       "fix": "tom's"
+      }
+     ],
+     "judge": "✗ 놓침 (ok)"
+    }
+   }
+  },
+  {
+   "text": "This is my daughters.",
+   "expected": "R-04",
+   "is_normal": false,
+   "note": "한 명 This is, 여럿 These are · 새 문장 (E-0014 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8705,
+     "ok": true,
+     "rule_id": null,
+     "fixed": "This is my daughters.",
+     "full_fixed": "This is my daughters.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✗ 놓침 (ok)"
+    }
+   }
+  },
+  {
+   "text": "There are a book on the desk.",
+   "expected": "R-05",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8815,
+     "ok": false,
+     "rule_id": "R-05",
+     "fixed": "There is a book on the desk.",
+     "full_fixed": "There is a book on the desk.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "She a grade has every day.",
+   "expected": "R-06",
+   "is_normal": false,
+   "note": "주어+동사+목적어 순서 · 새 문장 (E-0022 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8542,
+     "ok": true,
+     "rule_id": null,
+     "fixed": "She a grade has every day.",
+     "full_fixed": "She a grade has every day.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✗ 놓침 (ok)"
+    }
+   }
+  },
+  {
+   "text": "The bird can runs fast.",
+   "expected": "R-07",
+   "is_normal": false,
+   "note": "can 뒤엔 동사원형 · 새 문장 (E-0027 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8252,
+     "ok": false,
+     "rule_id": "R-07",
+     "fixed": "The bird can run fast.",
+     "full_fixed": "The bird can run fast.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "This birds are amazing.",
+   "expected": "R-08",
+   "is_normal": false,
+   "note": "This+단수, These+복수 · 새 문장 (E-0029 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8307,
+     "ok": false,
+     "rule_id": "R-08",
+     "fixed": "These birds are amazing.",
+     "full_fixed": "These birds are amazing.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 3,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "I have many soup.",
+   "expected": "R-09",
+   "is_normal": false,
+   "note": "셀 수 없으면 much/some · 새 문장 (E-0033 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8883,
+     "ok": false,
+     "rule_id": "R-09",
+     "fixed": "I have much soup.",
+     "full_fixed": "I have much soup.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "I want to a dessert.",
+   "expected": "R-10",
+   "is_normal": false,
+   "note": "want 뒤엔 명사 바로 · 새 문장 (E-0037 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8514,
+     "ok": false,
+     "rule_id": "OTHER",
+     "fixed": "I want a dessert.",
+     "full_fixed": "I want a dessert.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✗ OTHER"
+    }
+   }
+  },
+  {
+   "text": "I see leaf a black.",
+   "expected": "R-11",
+   "is_normal": false,
+   "note": "형용사는 명사 앞에 · 새 문장 (E-0043 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8829,
+     "ok": false,
+     "rule_id": "R-38",
+     "fixed": "I see a leaf a black.",
+     "full_fixed": "I see a black leaf.",
+     "more_errors": true,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 5,
+     "spelling": [],
+     "judge": "✗ R-38"
+    }
+   }
+  },
+  {
+   "text": "I have nine pencil.",
+   "expected": "R-12",
+   "is_normal": false,
+   "note": "숫자 2 이상+복수형 · 새 문장 (E-0046 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8520,
+     "ok": false,
+     "rule_id": "R-12",
+     "fixed": "I have nine pencils.",
+     "full_fixed": "I have nine pencils.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 2,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "He was first in line.",
+   "expected": "R-13",
+   "is_normal": false,
+   "note": "서수 앞엔 the · 새 문장 (E-0049 대응, 수동 보완)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8606,
+     "ok": false,
+     "rule_id": "R-13",
+     "fixed": "He was the first in line.",
+     "full_fixed": "He was the first in line.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "This is cold today.",
+   "expected": "R-14",
+   "is_normal": false,
+   "note": "날씨는 It is ~ · 새 문장 (E-0053 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8586,
+     "ok": true,
+     "rule_id": null,
+     "fixed": "This is cold today.",
+     "full_fixed": "This is cold today.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✗ 놓침 (ok)"
+    }
+   }
+  },
+  {
+   "text": "A storm will hits the coast.",
+   "expected": "R-15",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8785,
+     "ok": false,
+     "rule_id": "R-15",
+     "fixed": "A storm will hit the coast.",
+     "full_fixed": "A storm will hit the coast.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "Trees bloom on spring.",
+   "expected": "R-16",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8732,
+     "ok": false,
+     "rule_id": "R-16",
+     "fixed": "Trees bloom in spring.",
+     "full_fixed": "Trees bloom in spring.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "He wear a blue coat now.",
+   "expected": "R-17",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8409,
+     "ok": false,
+     "rule_id": "R-17",
+     "fixed": "He is wearing a blue coat now.",
+     "full_fixed": "He is wearing a blue coat now.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 3,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "Ear is cold.",
+   "expected": "R-18",
+   "is_normal": false,
+   "note": "신체부위 앞엔 소유격 · 새 문장 (E-0070 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8254,
+     "ok": false,
+     "rule_id": "OTHER",
+     "fixed": "It is cold.",
+     "full_fixed": "It is cold.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✗ OTHER"
+    }
+   }
+  },
+  {
+   "text": "I like dance.",
+   "expected": "R-19",
+   "is_normal": false,
+   "note": "정제본 교체(정답 문장에 오답 라벨)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8437,
+     "ok": true,
+     "rule_id": null,
+     "fixed": "I like dance.",
+     "full_fixed": "I like dancing.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [
+      {
+       "wrong": "dance",
+       "fix": "dancing"
+      }
+     ],
+     "judge": "✗ 놓침 (ok)"
+    }
+   }
+  },
+  {
+   "text": "I enjoy collect.",
+   "expected": "R-20",
+   "is_normal": false,
+   "note": "enjoy 뒤엔 동사-ing · 새 문장 (E-0079 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8709,
+     "ok": false,
+     "rule_id": "R-20",
+     "fixed": "I enjoy collecting.",
+     "full_fixed": "I enjoy collecting.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "I have a test in friday.",
+   "expected": "R-21",
+   "is_normal": false,
+   "note": "요일은 on+대문자 · 새 문장 (E-0081 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8767,
+     "ok": false,
+     "rule_id": "R-21",
+     "fixed": "I have a test on Friday.",
+     "full_fixed": "I have a test on Friday.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "I visit usually my grandparents every month.",
+   "expected": "R-22",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 9219,
+     "ok": false,
+     "rule_id": "R-22",
+     "fixed": "I usually visit my grandparents every month.",
+     "full_fixed": "I usually visit my grandparents every month.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 2,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "We go to school by a subway.",
+   "expected": "R-23",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 9262,
+     "ok": false,
+     "rule_id": "R-23",
+     "fixed": "We go to school by subway.",
+     "full_fixed": "We go to school by subway.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "We go to library every day.",
+   "expected": "R-24",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7889,
+     "ok": false,
+     "rule_id": "R-24",
+     "fixed": "We go to the library every day.",
+     "full_fixed": "We go to the library every day.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "She wants to be designer.",
+   "expected": "R-25",
+   "is_normal": false,
+   "note": "장래희망=want to be a/an · 새 문장 (E-0098 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8789,
+     "ok": false,
+     "rule_id": "R-25",
+     "fixed": "She wants to be a designer.",
+     "full_fixed": "She wants to be a designer.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "My uncle is dancer.",
+   "expected": "R-26",
+   "is_normal": false,
+   "note": "직업 앞엔 a/an · 새 문장 (E-0103 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8884,
+     "ok": false,
+     "rule_id": "R-26",
+     "fixed": "My uncle is a dancer.",
+     "full_fixed": "My uncle is a dancer.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "She is bored for her son.",
+   "expected": "R-27",
+   "is_normal": false,
+   "note": "감정형용사+알맞은 전치사 · 새 문장 (E-0107 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8860,
+     "ok": false,
+     "rule_id": "R-95",
+     "fixed": "She is bought for her son.",
+     "full_fixed": "She bought for her son.",
+     "more_errors": true,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✗ R-95"
+    }
+   }
+  },
+  {
+   "text": "He felt very too nervous to continue.",
+   "expected": "R-28",
+   "is_normal": false,
+   "note": "지나치면 too+형용사 · 새 문장 (E-0109 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8690,
+     "ok": false,
+     "rule_id": "R-28",
+     "fixed": "He felt too nervous to continue.",
+     "full_fixed": "He felt too nervous to continue.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "How many is our money?",
+   "expected": "R-29",
+   "is_normal": false,
+   "note": "가격 How much, 개수 How many · 새 문장 (E-0113 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8546,
+     "ok": false,
+     "rule_id": "R-29",
+     "fixed": "How much is our money?",
+     "full_fixed": "How much is our money?",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 2,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "The furniture is on the bedroom.",
+   "expected": "R-30",
+   "is_normal": false,
+   "note": "안=in, 위=on, 아래=under · 새 문장 (E-0117 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8510,
+     "ok": false,
+     "rule_id": "R-96",
+     "fixed": "The furniture is in the bedroom.",
+     "full_fixed": "The furniture is in the bedroom.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✗ R-96"
+    }
+   }
+  },
+  {
+   "text": "He buy new shoes yesterday.",
+   "expected": "R-31",
+   "is_normal": false,
+   "note": "정제본 교체(이중 오류→단일 오류로)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8830,
+     "ok": false,
+     "rule_id": "R-95",
+     "fixed": "He bought new shoes yesterday.",
+     "full_fixed": "He bought new shoes yesterday.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 3,
+     "spelling": [],
+     "judge": "✗ R-95"
+    }
+   }
+  },
+  {
+   "text": "A farmer harvest corn in fall.",
+   "expected": "R-32",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 9093,
+     "ok": false,
+     "rule_id": "R-16",
+     "fixed": "A farmer harvests corn in fall.",
+     "full_fixed": "A farmer harvests corn in the fall.",
+     "more_errors": true,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 4,
+     "spelling": [],
+     "judge": "✗ R-16"
+    }
+   }
+  },
+  {
+   "text": "I have two snack.",
+   "expected": "R-33",
+   "is_normal": false,
+   "note": "둘 이상이면 -s · 새 문장 (E-0129 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8768,
+     "ok": false,
+     "rule_id": "R-33",
+     "fixed": "I have two snacks.",
+     "full_fixed": "I have two snacks.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 3,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "I have a elephant.",
+   "expected": "R-34",
+   "is_normal": false,
+   "note": "모음 소리 앞엔 an · 새 문장 (E-0135 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8164,
+     "ok": false,
+     "rule_id": "R-34",
+     "fixed": "I have an elephant.",
+     "full_fixed": "I have an elephant.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 2,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "He is eat lunch now.",
+   "expected": "R-35",
+   "is_normal": false,
+   "note": "정제본 교체(이중 오류→단일 오류로)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8320,
+     "ok": false,
+     "rule_id": "R-35",
+     "fixed": "He is eating lunch now.",
+     "full_fixed": "He is eating lunch now.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 2,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "She are my cousin.",
+   "expected": "R-36",
+   "is_normal": false,
+   "note": "정제본 교체(정답 문장에 오답 라벨)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8430,
+     "ok": false,
+     "rule_id": "R-36",
+     "fixed": "She is my cousin.",
+     "full_fixed": "She is my cousin.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 3,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "It is cold yesterday.",
+   "expected": "R-37",
+   "is_normal": false,
+   "note": "정제본 교체(라벨과 다른 오류 유형)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8125,
+     "ok": false,
+     "rule_id": "R-31",
+     "fixed": "It was cold yesterday.",
+     "full_fixed": "It was cold yesterday.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 5,
+     "spelling": [],
+     "judge": "✗ R-31"
+    }
+   }
+  },
+  {
+   "text": "I have pencil.",
+   "expected": "R-38",
+   "is_normal": false,
+   "note": "정제본 교체(라벨과 다른 오류 유형)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8091,
+     "ok": false,
+     "rule_id": "R-38",
+     "fixed": "I have a pencil.",
+     "full_fixed": "I have a pencil.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 2,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "How you are this evening?",
+   "expected": "R-39",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 9149,
+     "ok": false,
+     "rule_id": "R-39",
+     "fixed": "How are you this evening?",
+     "full_fixed": "How are you this evening?",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "Great to meet you, also.",
+   "expected": "R-40",
+   "is_normal": false,
+   "note": "초면 인사+too로 답하기 · 새 문장 (E-0157 대응, 수동 보완)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8711,
+     "ok": false,
+     "rule_id": "R-40",
+     "fixed": "Great to meet you, too.",
+     "full_fixed": "Great to meet you, too.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "You welcome, Tom.",
+   "expected": "R-41",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 9040,
+     "ok": false,
+     "rule_id": "R-41",
+     "fixed": "You're welcome, Tom.",
+     "full_fixed": "You're welcome, Tom.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "He has a brother a cousin.",
+   "expected": "R-42",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 9035,
+     "ok": false,
+     "rule_id": "R-42",
+     "fixed": "He has a brother and a cousin.",
+     "full_fixed": "He has a brother and a cousin.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "Her grandparents is kind.",
+   "expected": "R-43",
+   "is_normal": false,
+   "note": "parents는 항상 복수 · 새 문장 (E-0170 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8879,
+     "ok": false,
+     "rule_id": "R-43",
+     "fixed": "Her grandparents are kind.",
+     "full_fixed": "Her grandparents are kind.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "My daughter is nine year old.",
+   "expected": "R-44",
+   "is_normal": false,
+   "note": "나이=숫자+years old · 새 문장 (E-0173 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7653,
+     "ok": false,
+     "rule_id": "OTHER",
+     "fixed": "My daughter is nine years old.",
+     "full_fixed": "My daughter is nine years old.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✗ OTHER"
+    }
+   }
+  },
+  {
+   "text": "You close the door, please.",
+   "expected": "R-45",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8205,
+     "ok": false,
+     "rule_id": "OTHER",
+     "fixed": "Close the door, please.",
+     "full_fixed": "Close the door, please.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✗ OTHER"
+    }
+   }
+  },
+  {
+   "text": "Who homework is this?",
+   "expected": "R-46",
+   "is_normal": false,
+   "note": "누구 것?=Whose+명사 · 새 문장 (E-0181 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7551,
+     "ok": true,
+     "rule_id": null,
+     "fixed": "Who homework is this?",
+     "full_fixed": "Whose homework is this?",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [
+      {
+       "wrong": "who",
+       "fix": "whose"
+      }
+     ],
+     "judge": "✗ 놓침 (ok)"
+    }
+   }
+  },
+  {
+   "text": "My bag is at the desk and the window.",
+   "expected": "R-47",
+   "is_normal": false,
+   "note": "옆=next to, 사이=between · 새 문장 (E-0185 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8432,
+     "ok": false,
+     "rule_id": "R-30",
+     "fixed": "My bag is on the desk and the window.",
+     "full_fixed": "My bag is on the desk and on the window.",
+     "more_errors": true,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 3,
+     "spelling": [],
+     "judge": "✗ R-30"
+    }
+   }
+  },
+  {
+   "text": "A bear can not flies.",
+   "expected": "R-48",
+   "is_normal": false,
+   "note": "동물의 불가능=can't · 새 문장 (E-0189 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7531,
+     "ok": false,
+     "rule_id": "R-07",
+     "fixed": "A bear can fly.",
+     "full_fixed": "A bear can not fly.",
+     "more_errors": true,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 2,
+     "spelling": [],
+     "judge": "✗ R-07"
+    }
+   }
+  },
+  {
+   "text": "There isn't many creatures in this zoo.",
+   "expected": "R-49",
+   "is_normal": false,
+   "note": "없음=There isn't/aren't · 새 문장 (E-0195 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7868,
+     "ok": false,
+     "rule_id": "R-49",
+     "fixed": "There aren't many creatures in this zoo.",
+     "full_fixed": "There aren't many creatures in this zoo.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "A bird is strong than a cat.",
+   "expected": "R-50",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8162,
+     "ok": false,
+     "rule_id": "R-50",
+     "fixed": "A bird is stronger than a cat.",
+     "full_fixed": "A bird is stronger than a cat.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 2,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "He would like to a juice.",
+   "expected": "R-51",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7932,
+     "ok": false,
+     "rule_id": "R-89",
+     "fixed": "He would like a juice.",
+     "full_fixed": "He would like a juice.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 2,
+     "spelling": [],
+     "judge": "✗ R-89"
+    }
+   }
+  },
+  {
+   "text": "I don't have some bananas at home.",
+   "expected": "R-52",
+   "is_normal": false,
+   "note": "정제본 교체(이중 오류→단일 오류로)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7530,
+     "ok": false,
+     "rule_id": "OTHER",
+     "fixed": "I don't have any bananas at home.",
+     "full_fixed": "I don't have any bananas at home.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✗ OTHER"
+    }
+   }
+  },
+  {
+   "text": "He drank a milk glass after dinner.",
+   "expected": "R-53",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7996,
+     "ok": false,
+     "rule_id": "R-53",
+     "fixed": "He drank a glass of milk after dinner.",
+     "full_fixed": "He drank a glass of milk after dinner.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "He likes purples balloons at the party.",
+   "expected": "R-54",
+   "is_normal": false,
+   "note": "색깔형용사는 복수에도 그대로 · 새 문장 (E-0214 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7838,
+     "ok": false,
+     "rule_id": "R-54",
+     "fixed": "He likes purple balloons at the party.",
+     "full_fixed": "He likes purple balloons at the party.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 3,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "What animal you like the best?",
+   "expected": "R-55",
+   "is_normal": false,
+   "note": "선택 의문문=Which · 새 문장 (E-0218 대응, 수동 보완)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7600,
+     "ok": false,
+     "rule_id": "R-55",
+     "fixed": "Which animal you like the best?",
+     "full_fixed": "Which animal you like the best?",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "That clock looks brownly in this light.",
+   "expected": "R-56",
+   "is_normal": false,
+   "note": "look+형용사 · 새 문장 (E-0221 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7703,
+     "ok": false,
+     "rule_id": "R-56",
+     "fixed": "That clock looks brown in this light.",
+     "full_fixed": "That clock looks brown in this light.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "How many plate is there in the room?",
+   "expected": "R-57",
+   "is_normal": false,
+   "note": "개수 묻기=How many~are there · 새 문장 (E-0226 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7870,
+     "ok": false,
+     "rule_id": "R-57",
+     "fixed": "How many plates is there in the room?",
+     "full_fixed": "How many plates are there in the room?",
+     "more_errors": true,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "He has one triple the money now.",
+   "expected": "R-58",
+   "is_normal": false,
+   "note": "두 배=double, 세 배=triple · 새 문장 (E-0229 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8412,
+     "ok": false,
+     "rule_id": "R-58",
+     "fixed": "He has triple the money now.",
+     "full_fixed": "He has triple the money now.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "There are hundred of bikes on the highway.",
+   "expected": "R-59",
+   "is_normal": false,
+   "note": "아주 많음=hundreds/thousands of · 새 문장 (E-0233 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8350,
+     "ok": false,
+     "rule_id": "R-59",
+     "fixed": "There are hundreds of bikes on the highway.",
+     "full_fixed": "There are hundreds of bikes on the highway.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "How's the weather like today?",
+   "expected": "R-60",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7504,
+     "ok": false,
+     "rule_id": "OTHER",
+     "fixed": "What's the weather like today?",
+     "full_fixed": "What's the weather like today?",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✗ OTHER"
+    }
+   }
+  },
+  {
+   "text": "It is getting warmly these days.",
+   "expected": "R-61",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7960,
+     "ok": false,
+     "rule_id": "R-61",
+     "fixed": "It is getting warm these days.",
+     "full_fixed": "It is getting warm these days.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "He carries an umbrella because cold.",
+   "expected": "R-62",
+   "is_normal": false,
+   "note": "이유=because+문장 · 새 문장 (E-0245 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8123,
+     "ok": false,
+     "rule_id": "R-62",
+     "fixed": "He carries an umbrella because it is cold.",
+     "full_fixed": "He carries an umbrella because it is cold.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "She goes to skate every December.",
+   "expected": "R-63",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 4400,
+     "ok": false,
+     "rule_id": "R-63",
+     "fixed": "She goes skating every December.",
+     "full_fixed": "She goes skating every December.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "Fall is coolest season of all.",
+   "expected": "R-64",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 4183,
+     "ok": false,
+     "rule_id": "R-64",
+     "fixed": "Fall is the coolest season of all.",
+     "full_fixed": "Fall is the coolest season of all.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "She travels while August every year.",
+   "expected": "R-65",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 3131,
+     "ok": false,
+     "rule_id": "OTHER",
+     "fixed": "She travels in August every year.",
+     "full_fixed": "She travels in August every year.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✗ OTHER"
+    }
+   }
+  },
+  {
+   "text": "She wears off her gloves at home.",
+   "expected": "R-66",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7951,
+     "ok": false,
+     "rule_id": "OTHER",
+     "fixed": "She takes off her gloves at home.",
+     "full_fixed": "She takes off her gloves at home.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✗ OTHER"
+    }
+   }
+  },
+  {
+   "text": "Her pants is dirty.",
+   "expected": "R-67",
+   "is_normal": false,
+   "note": "정제본 교체(라벨과 다른 오류 유형)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8789,
+     "ok": false,
+     "rule_id": "R-67",
+     "fixed": "Her pants are dirty.",
+     "full_fixed": "Her pants are dirty.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "He looks coolly in his new dress.",
+   "expected": "R-68",
+   "is_normal": false,
+   "note": "look+형용사(옷) · 새 문장 (E-0271 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8257,
+     "ok": false,
+     "rule_id": "R-56",
+     "fixed": "He looks cool in his new dress.",
+     "full_fixed": "He looks cool in his new dress.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 3,
+     "spelling": [],
+     "judge": "✗ R-56"
+    }
+   }
+  },
+  {
+   "text": "He has backache now.",
+   "expected": "R-69",
+   "is_normal": false,
+   "note": "아픔 표현=have a+통증명사 · 새 문장 (E-0273 대응, 수동 보완)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 4248,
+     "ok": false,
+     "rule_id": "R-69",
+     "fixed": "He has a backache now.",
+     "full_fixed": "He has a backache now.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "He washes hands before eating.",
+   "expected": "R-70",
+   "is_normal": false,
+   "note": "wash/brush+소유격+신체부위 · 새 문장 (E-0277 대응, 수동 보완)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8731,
+     "ok": false,
+     "rule_id": "R-70",
+     "fixed": "He washes his hands before eating.",
+     "full_fixed": "He washes his hands before eating.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "He has white tooths.",
+   "expected": "R-71",
+   "is_normal": false,
+   "note": "foot→feet, tooth→teeth · 새 문장 (E-0283 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 3828,
+     "ok": false,
+     "rule_id": "R-71",
+     "fixed": "He has white teeth.",
+     "full_fixed": "He has white teeth.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "He plays a baseball after school.",
+   "expected": "R-72",
+   "is_normal": false,
+   "note": "구기=play+무관사, 악기=play the · 새 문장 (E-0285 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8801,
+     "ok": false,
+     "rule_id": "R-72",
+     "fixed": "He plays baseball after school.",
+     "full_fixed": "He plays baseball after school.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "Let's biking around the park.",
+   "expected": "R-73",
+   "is_normal": false,
+   "note": "제안=Let's+동사원형 · 새 문장 (E-0291 대응, 수동 보완)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": null,
+     "ms": 17813,
+     "ok": null,
+     "rule_id": null,
+     "fixed": null,
+     "full_fixed": null,
+     "more_errors": null,
+     "error": "502: 모델 답이 규칙에 안 맞아 버렸어요 (fix='go biking' 에 학생이 안 쓴 단어 ['go'] (기능어와 errors.jsonl 이 보여 준 단어만 덧붙일 수 있음)). 다시 [고쳐줘]를 눌러 주세요.",
+     "fallback_from": null,
+     "judge": "! 실패"
+    }
+   }
+  },
+  {
+   "text": "They are good at play soccer.",
+   "expected": "R-74",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 4104,
+     "ok": false,
+     "rule_id": "R-74",
+     "fixed": "They are good at playing soccer.",
+     "full_fixed": "They are good at playing soccer.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 4,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "He spends time to paint every day.",
+   "expected": "R-75",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8540,
+     "ok": false,
+     "rule_id": "R-75",
+     "fixed": "He spends time painting every day.",
+     "full_fixed": "He spends time painting every day.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "How many often do you paint at home?",
+   "expected": "R-76",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8232,
+     "ok": false,
+     "rule_id": "R-76",
+     "fixed": "How often do you paint at home?",
+     "full_fixed": "How often do you paint at home?",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "He is interested at drawing these days.",
+   "expected": "R-77",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7182,
+     "ok": false,
+     "rule_id": "R-77",
+     "fixed": "He is interested in drawing these days.",
+     "full_fixed": "He is interested in drawing these days.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 2,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "What time it is now?",
+   "expected": "R-78",
+   "is_normal": false,
+   "note": "정제본 교체(간접화법 래퍼로 오류가 소멸)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7889,
+     "ok": false,
+     "rule_id": "R-78",
+     "fixed": "What time is it now?",
+     "full_fixed": "What time is it now?",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "He wakes up on one o'clock every day.",
+   "expected": "R-79",
+   "is_normal": false,
+   "note": "on(요일)/at(시각·밤)/in(월·계절) · 새 문장 (E-0313 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8344,
+     "ok": false,
+     "rule_id": "R-79",
+     "fixed": "He wakes up at one o'clock every day.",
+     "full_fixed": "He wakes up at one o'clock every day.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "Then I do my homework, first I have a snack.",
+   "expected": "R-80",
+   "is_normal": false,
+   "note": "순서=First/Then/After that · 새 문장 (E-0318 대응, 수동 보완)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 9037,
+     "ok": false,
+     "rule_id": "OTHER",
+     "fixed": "First, I have a snack. Then, I do my homework.",
+     "full_fixed": "First, I have a snack. Then, I do my homework.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✗ OTHER"
+    }
+   }
+  },
+  {
+   "text": "How long take it to school?",
+   "expected": "R-81",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 4219,
+     "ok": false,
+     "rule_id": "R-81",
+     "fixed": "How long does it take to school?",
+     "full_fixed": "How long does it take to school?",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "How you go to the library every day?",
+   "expected": "R-82",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 9051,
+     "ok": false,
+     "rule_id": "R-82",
+     "fixed": "How do you go to the library every day?",
+     "full_fixed": "How do you go to the library every day?",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "She gets in the train every morning.",
+   "expected": "R-83",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8384,
+     "ok": false,
+     "rule_id": "R-83",
+     "fixed": "She gets on the train every morning.",
+     "full_fixed": "She gets on the train every morning.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "The bank is on the zoo in our town.",
+   "expected": "R-84",
+   "is_normal": false,
+   "note": "장소 위치=next to/between/in front of/behind · 새 문장 (E-0333 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8757,
+     "ok": false,
+     "rule_id": "R-84",
+     "fixed": "The bank is next to the zoo in our town.",
+     "full_fixed": "The bank is next to the zoo in our town.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "Where the landmark is in this town?",
+   "expected": "R-85",
+   "is_normal": false,
+   "note": "장소 묻기=Where is the~? · 새 문장 (E-0337 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8316,
+     "ok": false,
+     "rule_id": "OTHER",
+     "fixed": "Where is the landmark in this town?",
+     "full_fixed": "Where is the landmark in this town?",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✗ OTHER"
+    }
+   }
+  },
+  {
+   "text": "There are a lot bananas on this street.",
+   "expected": "R-86",
+   "is_normal": false,
+   "note": "많음=a lot of · 새 문장 (E-0341 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8790,
+     "ok": false,
+     "rule_id": "R-86",
+     "fixed": "There are a lot of bananas on this street.",
+     "full_fixed": "There are a lot of bananas on this street.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 2,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "He works a library as a teacher.",
+   "expected": "R-87",
+   "is_normal": false,
+   "note": "정제본 교체(이중 오류→단일 오류로)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8430,
+     "ok": false,
+     "rule_id": "R-87",
+     "fixed": "He works in a library as a teacher.",
+     "full_fixed": "He works in a library as a teacher.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 2,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "What does he works?",
+   "expected": "R-88",
+   "is_normal": false,
+   "note": "정제본 교체(간접화법 래퍼로 오류가 소멸)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8204,
+     "ok": false,
+     "rule_id": "R-100",
+     "fixed": "What does he work?",
+     "full_fixed": "What does he work?",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 5,
+     "spelling": [],
+     "judge": "✗ R-100"
+    }
+   }
+  },
+  {
+   "text": "He would like be a designer someday.",
+   "expected": "R-89",
+   "is_normal": false,
+   "note": "정중한 장래희망=would like to be · 새 문장 (E-0353 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8406,
+     "ok": false,
+     "rule_id": "R-89",
+     "fixed": "He would like to be a designer someday.",
+     "full_fixed": "He would like to be a designer someday.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "The game makes him to embarrassed every time.",
+   "expected": "R-90",
+   "is_normal": false,
+   "note": "감정 유발=make+목적어+형용사 · 새 문장 (E-0357 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8735,
+     "ok": false,
+     "rule_id": "OTHER",
+     "fixed": "The game makes him embarrassed every time.",
+     "full_fixed": "The game makes him embarrassed every time.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✗ OTHER"
+    }
+   }
+  },
+  {
+   "text": "He is so much excited after the race.",
+   "expected": "R-91",
+   "is_normal": false,
+   "note": "강조=so+형용사 · 새 문장 (E-0362 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 9008,
+     "ok": false,
+     "rule_id": "R-91",
+     "fixed": "He is so excited after the race.",
+     "full_fixed": "He is so excited after the race.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "Why she is excited today?",
+   "expected": "R-92",
+   "is_normal": false,
+   "note": "정제본 교체(간접화법 래퍼로 오류가 소멸)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8266,
+     "ok": false,
+     "rule_id": "R-100",
+     "fixed": "Why does she is excited today?",
+     "full_fixed": "Why is she excited today?",
+     "more_errors": true,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 4,
+     "spelling": [],
+     "judge": "✗ R-100"
+    }
+   }
+  },
+  {
+   "text": "It's eight dollar for this cap.",
+   "expected": "R-93",
+   "is_normal": false,
+   "note": "가격 답변=It's+숫자+dollars · 새 문장 (E-0369 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 4009,
+     "ok": false,
+     "rule_id": "R-93",
+     "fixed": "It's eight dollars for this cap.",
+     "full_fixed": "It's eight dollars for this cap.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "I have this fork, please?",
+   "expected": "R-94",
+   "is_normal": false,
+   "note": "정제본 교체(간접화법 래퍼로 오류가 소멸)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8542,
+     "ok": false,
+     "rule_id": "R-94",
+     "fixed": "Can I have this fork, please?",
+     "full_fixed": "Can I have this fork, please?",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "He buyed a car his sister yesterday.",
+   "expected": "R-95",
+   "is_normal": false,
+   "note": "buy A for B(과거 bought) · 새 문장 (E-0379 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8149,
+     "ok": false,
+     "rule_id": "OTHER",
+     "fixed": "He bought a car for his sister yesterday.",
+     "full_fixed": "He bought a car for his sister yesterday.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✗ OTHER"
+    }
+   }
+  },
+  {
+   "text": "She studies at her bedroom every evening.",
+   "expected": "R-96",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8044,
+     "ok": false,
+     "rule_id": "R-96",
+     "fixed": "She studies in her bedroom every evening.",
+     "full_fixed": "She studies in her bedroom every evening.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "Her house is four bedrooms and a big garage.",
+   "expected": "R-97",
+   "is_normal": false,
+   "note": "정제본 교체(문장 성립 불가/의미 붕괴)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8264,
+     "ok": false,
+     "rule_id": "R-97",
+     "fixed": "Her house has four bedrooms and a big garage.",
+     "full_fixed": "Her house has four bedrooms and a big garage.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "This bathroom is there, near the window.",
+   "expected": "R-98",
+   "is_normal": false,
+   "note": "가까움=this, 멈=that · 새 문장 (E-0390 대응)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8333,
+     "ok": false,
+     "rule_id": "R-84",
+     "fixed": "This bathroom is there, next to the window.",
+     "full_fixed": "This bathroom is there, next to the window.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 3,
+     "spelling": [],
+     "judge": "✗ R-84"
+    }
+   }
+  },
+  {
+   "text": "He don't likes rainy days.",
+   "expected": "R-99",
+   "is_normal": false,
+   "note": "부정문=don't/doesn't+동사원형 · 새 문장 (E-0394 대응, 수동 보완)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 4258,
+     "ok": false,
+     "rule_id": "R-99",
+     "fixed": "He doesn't like rainy days.",
+     "full_fixed": "He doesn't like rainy days.",
+     "more_errors": true,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 1,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "Do they plays chess well?",
+   "expected": "R-100",
+   "is_normal": false,
+   "note": "의문문=Do/Does+주어+동사원형 · 새 문장 (E-0398 대응, 수동 보완)",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 8553,
+     "ok": false,
+     "rule_id": "R-100",
+     "fixed": "Do they play chess well?",
+     "full_fixed": "Do they play chess well?",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": 3,
+     "spelling": [],
+     "judge": "✓"
+    }
+   }
+  },
+  {
+   "text": "Hi, Ben!",
+   "expected": "NONE",
+   "is_normal": true,
+   "note": "정상 문장(평범) · threshold 측정용",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7159,
+     "ok": true,
+     "rule_id": null,
+     "fixed": "Hi, Ben!",
+     "full_fixed": "Hi, Ben!",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✓ 정상 유지"
+    }
+   }
+  },
+  {
+   "text": "Good morning, everyone!",
+   "expected": "NONE",
+   "is_normal": true,
+   "note": "정상 문장(평범) · threshold 측정용",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7243,
+     "ok": true,
+     "rule_id": null,
+     "fixed": "Good morning, everyone!",
+     "full_fixed": "Good morning, everyone!",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✓ 정상 유지"
+    }
+   }
+  },
+  {
+   "text": "This is my dad.",
+   "expected": "NONE",
+   "is_normal": true,
+   "note": "정상 문장(평범) · threshold 측정용",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7324,
+     "ok": true,
+     "rule_id": null,
+     "fixed": "This is my dad.",
+     "full_fixed": "This is my dad.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✓ 정상 유지"
+    }
+   }
+  },
+  {
+   "text": "These are my cousins.",
+   "expected": "NONE",
+   "is_normal": true,
+   "note": "정상 문장(평범) · threshold 측정용",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7500,
+     "ok": true,
+     "rule_id": null,
+     "fixed": "These are my cousins.",
+     "full_fixed": "These are my cousins.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✓ 정상 유지"
+    }
+   }
+  },
+  {
+   "text": "I have a pencil.",
+   "expected": "NONE",
+   "is_normal": true,
+   "note": "정상 문장(평범) · threshold 측정용",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7405,
+     "ok": true,
+     "rule_id": null,
+     "fixed": "I have a pencil.",
+     "full_fixed": "I have a pencil.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✓ 정상 유지"
+    }
+   }
+  },
+  {
+   "text": "There is a cup on the table.",
+   "expected": "NONE",
+   "is_normal": true,
+   "note": "정상 문장(평범) · threshold 측정용",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 3283,
+     "ok": true,
+     "rule_id": null,
+     "fixed": "There is a cup on the table.",
+     "full_fixed": "There is a cup on the table.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✓ 정상 유지"
+    }
+   }
+  },
+  {
+   "text": "Dogs can swim well.",
+   "expected": "NONE",
+   "is_normal": true,
+   "note": "정상 문장(평범) · threshold 측정용",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7367,
+     "ok": true,
+     "rule_id": null,
+     "fixed": "Dogs can swim well.",
+     "full_fixed": "Dogs can swim well.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✓ 정상 유지"
+    }
+   }
+  },
+  {
+   "text": "I have an apple.",
+   "expected": "NONE",
+   "is_normal": true,
+   "note": "정상 문장(평범) · threshold 측정용",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 6440,
+     "ok": true,
+     "rule_id": null,
+     "fixed": "I have an apple.",
+     "full_fixed": "I have an apple.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✓ 정상 유지"
+    }
+   }
+  },
+  {
+   "text": "I want some water.",
+   "expected": "NONE",
+   "is_normal": true,
+   "note": "정상 문장(평범) · threshold 측정용",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7249,
+     "ok": true,
+     "rule_id": null,
+     "fixed": "I want some water.",
+     "full_fixed": "I want some water.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✓ 정상 유지"
+    }
+   }
+  },
+  {
+   "text": "I see a blue bird.",
+   "expected": "NONE",
+   "is_normal": true,
+   "note": "정상 문장(평범) · threshold 측정용",
+   "by": {
+    "local": {
+     "backend": "local",
+     "model": "qwen2.5:32b-instruct",
+     "ms": 7235,
+     "ok": true,
+     "rule_id": null,
+     "fixed": "I see a blue bird.",
+     "full_fixed": "I see a blue bird.",
+     "more_errors": false,
+     "error": null,
+     "fallback_from": null,
+     "mode": "rag",
+     "rank": null,
+     "spelling": [],
+     "judge": "✓ 정상 유지"
+    }
+   }
+  }
+ ]
+}
