@@ -496,7 +496,7 @@ def ask(body: AskIn):
     return result
 
 
-_NOTEBOOK_TRIGGER = re.compile(r"틀렸|틀린|틀리는|오답|자주\s*틀리|실수")
+_NOTEBOOK_TRIGGER = re.compile(r"틀렸|틀린|틀리는|틀려|오답|자주\s*틀리|실수")
 _TRAILING_PARTICLE = re.compile(r"(는|은|이|가|을|를|도|만|의|랑|와|과|에서|에게|에)$")
 
 
@@ -526,6 +526,30 @@ def _notebook_rule_answer(question: str, student: str) -> dict | None:
             answer += f" 예를 들어 '{ex['text']}'는 '{ex['fixed']}'로 고쳐야 해요."
         return {"answer": answer, "source": [{"chunk_id": it["rule_id"]}], "offtopic": False, "suggested": []}
     return None
+
+
+def _notebook_summary_answer(question: str, student: str) -> dict | None:
+    """"내가 뭘 자주 틀려?"/"틀린 거 알려줘"처럼 특정 문법 주제 없이 오답노트 전체를 요약해
+    달라는 질문 — _notebook_rule_answer()는 주제어가 없으면(topic_words 없음) None을 반환해서
+    이런 질문이 그냥 일반 검색으로 새 "그건 교과서에 없어요"로 거절되고 있었다(2026-09-16
+    오답노트 화면 실사용 테스트에서 재현 — 계약 문서 2-1절이 오답노트 화면 예시 질문으로 바로
+    이 문장을 들고 있는데도 안 됐음). 옛 _answer()의 PROMPT 5번 규칙이 LLM에게 자유 요약을
+    맡겼던 걸(2026-09-16 삭제 전 확인), 지금 결정적 매칭 기조에 맞춰 notebook_summary()로 직접
+    만든다 — 아직 안 극복한(overcome 제외) 규칙 중 많이 틀린 순으로 최대 2개, 그 중 1위는
+    최근 예문도 같이."""
+    if not _NOTEBOOK_TRIGGER.search(question) or len(_content_words(question)) > 3:
+        return None
+    from backend.student import notebook_summary
+    items = sorted(notebook_summary(student, max_examples=1)["active"],
+                   key=lambda it: it["count"], reverse=True)[:2]
+    if not items:
+        return None
+    answer = ", ".join(f"{it['name']}({it['rule_id']})을(를) {it['count']}번" for it in items) + " 틀렸어요."
+    top_ex = items[0]["examples"][0] if items[0].get("examples") else None
+    if top_ex:
+        answer += f" 예를 들어 '{top_ex['text']}'는 '{top_ex['fixed']}'로 고쳐야 해요."
+    return {"answer": answer, "source": [{"chunk_id": it["rule_id"]} for it in items],
+            "offtopic": False, "suggested": []}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -899,6 +923,9 @@ def _hybrid_answer(body: AskIn) -> dict:
         if notebook_text(body.student) == "아직 오답노트가 비어 있음.":
             return {"answer": "아직 오답노트에 기록된 게 없어요! 문제를 몇 개 풀어보면 그때 자주 틀리는 것도 알려줄 수 있어요.",
                     "source": [], "offtopic": False, "suggested": []}
+        notebook_summary_ans = _notebook_summary_answer(question, body.student)
+        if notebook_summary_ans is not None:
+            return notebook_summary_ans
 
     a_an = _a_an_answer(question) or _a_an_followup_answer(question, body.student)
     if a_an is not None:
