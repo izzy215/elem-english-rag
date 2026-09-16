@@ -238,9 +238,13 @@ def _pattern_match(question: str, patterns_pool: list[dict], faq_list: list[dict
 
 
 def _local_match(question: str, faq_list: list[dict], rule_list: list[dict],
-                  words_pool: dict[str, dict], patterns_pool: list[dict]) -> dict | None:
+                  words_pool: dict[str, dict], patterns_pool: list[dict], level: int = 3) -> dict | None:
     """faq→rules→patterns→words 순으로 로컬 매칭, 전부 실패하면 None → 폴백. RAG 힌트는 답을
-    좌우하지 않고 불일치 시 로그만 남긴다(신뢰도가 검증되기 전까진 관찰용, 2026-09-11)."""
+    좌우하지 않고 불일치 시 로그만 남긴다(신뢰도가 검증되기 전까진 관찰용, 2026-09-11).
+
+    level: 단어장 조회(lookup_word)에 쓸 학년. _retrieval_answer()가 실패 시 같은 조회를 또
+    하지 않도록(skip_word_lookup) 여기서도 _retrieval_answer()와 같은 값(ctx.level or 3)을
+    받아써서 두 곳의 lookup_word 결과가 어긋나지 않게 한다(2026-09-16)."""
     _rag_cache: dict[str, tuple[str | None, float]] = {}
 
     def _log_rag_disagreement(rule_ids: list[str], match_id: str, match_score: float) -> None:
@@ -288,7 +292,7 @@ def _local_match(question: str, faq_list: list[dict], rule_list: list[dict],
         # 안에도 걸리는 오탐이 있어서(2026-09-16 재현) _retrieval_answer()와 같은 안전장치를
         # 그대로 쓴다: 영어 낱말이 질문에 그대로 있거나 "영어로" 표시가 있을 때만 신뢰.
         from backend import textbook
-        hits = textbook.lookup_word(question)
+        hits = textbook.lookup_word(question, level=level)
         if hits:
             w = hits[0]
             eng_in_q = w["word"].lower() in question.lower()
@@ -642,7 +646,7 @@ def _casual_chat_reject(question: str) -> dict | None:
 
 
 def _retrieval_answer(question: str, body: AskIn, skip_similar: bool = False,
-                       all_faqs: list[dict] | None = None) -> dict:
+                       all_faqs: list[dict] | None = None, skip_word_lookup: bool = False) -> dict:
     """계약 문서 2-1절(2026-09-14 개정): search_faq + search_textbook 이 먼저 후보를 좁힌다.
     9/15 저녁 개정판 순서: 0) 의도 가르기(인사·감정 고정답, 이어가기는 직전 규칙) 1) FAQ+faq_hit
     2) 규칙 별칭+rule_hit 3) 단어장 lookup_word(임베딩 없음) 4) search_textbook(학년별, sharp
@@ -655,7 +659,11 @@ def _retrieval_answer(question: str, body: AskIn, skip_similar: bool = False,
 
     all_faqs: _hybrid_answer()가 이미 golden.faqs()로 읽어둔 걸 넘겨줄 때 사용 — 안 넘기면
     (단독 호출 시) 여기서 직접 읽는다. golden.faqs()는 캐싱이 없어 매번 파일을 다시 읽고
-    파싱하므로, 호출부가 이미 읽어둔 걸 또 읽는 낭비를 없앤다(2026-09-16 발견)."""
+    파싱하므로, 호출부가 이미 읽어둔 걸 또 읽는 낭비를 없앤다(2026-09-16 발견).
+
+    skip_word_lookup: _hybrid_answer()의 _local_match()가 같은 level로 textbook.lookup_word()를
+    이미 시도하고 실패한 뒤에 호출할 때 True — lookup_word는 결정적이라 같은 질문·같은 level로
+    또 불러봐야 같은 결과라서 낭비다(2026-09-16 발견, _similar_match와 같은 종류의 문제)."""
     ctx = body.context
     level = ctx.level or 3
 
@@ -683,18 +691,20 @@ def _retrieval_answer(question: str, body: AskIn, skip_similar: bool = False,
 
     # 3) 단어장 조회 — 임베딩 전에, 결정적. 영어→뜻·한국어→영어 둘 다 이 하나로 (기존 _word_match
     # 는 여기서 제거 — lookup_word가 그 역할을 대신함, 2026-09-15 팀 결정).
-    word_hits = textbook.lookup_word(question, level=level)
-    if word_hits:
-        w = word_hits[0]
-        # lookup_word의 한국어 뜻 매칭은 순수 부분일치라 "형"(뜻)이 "과거형"/"형용사" 안에도 걸려서
-        # 완전히 무관한 답이 나가는 문제가 있었다(2026-09-16 재현 — "과거형이 뭐예요?"가 brother로
-        # 답함, "오늘 날씨 어때?"/"숙제 있어?"가 today/homework 뜻풀이로 새버림). 영어 낱말이 질문에
-        # 그대로 있는 정방향(예: "bus가 뭐예요?")은 안전하니 그대로 믿고, 역방향(한국어→영어)은
-        # "영어로" 같은 번역 의도 표시가 있을 때만 믿는다.
-        eng_in_q = w["word"].lower() in question.lower()
-        asks_translation = bool(re.search(r"영어로|영어\s*(단어|낱말)", question))
-        if eng_in_q or asks_translation:
-            return _word_answer(w)
+    # skip_word_lookup=True면 1단계(_local_match)가 이미 같은 level로 시도해서 건너뜀(2026-09-16).
+    if not skip_word_lookup:
+        word_hits = textbook.lookup_word(question, level=level)
+        if word_hits:
+            w = word_hits[0]
+            # lookup_word의 한국어 뜻 매칭은 순수 부분일치라 "형"(뜻)이 "과거형"/"형용사" 안에도
+            # 걸려서 완전히 무관한 답이 나가는 문제가 있었다(2026-09-16 재현 — "과거형이 뭐예요?"가
+            # brother로 답함, "오늘 날씨 어때?"/"숙제 있어?"가 today/homework 뜻풀이로 새버림).
+            # 영어 낱말이 질문에 그대로 있는 정방향(예: "bus가 뭐예요?")은 안전하니 그대로 믿고,
+            # 역방향(한국어→영어)은 "영어로" 같은 번역 의도 표시가 있을 때만 믿는다.
+            eng_in_q = w["word"].lower() in question.lower()
+            asks_translation = bool(re.search(r"영어로|영어\s*(단어|낱말)", question))
+            if eng_in_q or asks_translation:
+                return _word_answer(w)
 
     try:
         qvec = embedding.embed_query(question)
@@ -893,12 +903,21 @@ def _hybrid_answer(body: AskIn) -> dict:
 
     words_pool = {w["word"].lower(): w for w in golden.all_words()}
     patterns_pool = golden.all_patterns()
-    if not _REFERENTIAL_PATTERN.search(question):
-        local = _local_match(question, all_faqs, all_rules, words_pool, patterns_pool)
+    level = body.context.level or 3
+    # _local_match의 단어장 조회(lookup_word)는 영단어가 2개 이하일 때만 도는데, 그게 돌고도
+    # 실패했다면 _retrieval_answer()가 같은 level로 또 불러봐야 결과가 같으므로(결정적 함수)
+    # 건너뛴다 — 2개 넘게 섞인 질문은 _local_match가 애초에 안 돌렸으니 거기서 처음이자
+    # 유일하게 시도해야 한다(2026-09-16 발견).
+    referential = _REFERENTIAL_PATTERN.search(question)
+    word_lookup_attempted = not referential and len(re.findall(r"[A-Za-z']+", question)) <= 2
+    if not referential:
+        local = _local_match(question, all_faqs, all_rules, words_pool, patterns_pool, level=level)
         if local is not None:
             return local
 
     # 여기까지 전부 실패해야만 검색 기반 경로로 — 바로 위에서 _similar_match를 이미 확인했고
-    # (skip_similar=True), all_faqs도 이미 읽어뒀으니(golden.faqs() 재호출 방지) 그대로 넘긴다
+    # (skip_similar=True), all_faqs도 이미 읽어뒀고(golden.faqs() 재호출 방지), 위 word_lookup_
+    # attempted면 lookup_word도 이미 시도했으니(skip_word_lookup) 전부 중복 호출을 없앤다
     # (2026-09-16).
-    return _retrieval_answer(question, body, skip_similar=True, all_faqs=all_faqs)
+    return _retrieval_answer(question, body, skip_similar=True, all_faqs=all_faqs,
+                              skip_word_lookup=word_lookup_attempted)
