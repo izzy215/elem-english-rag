@@ -517,7 +517,13 @@ def _check_correctness(question: str, level: int = 3) -> dict:
     out = llm.generate_json(prompt)
     llm_info = out.pop("_llm", {})
     ok = bool(out.get("ok", True))
-    rule = golden.find_rule(out.get("rule_id")) if not ok else None
+    # golden.find_rule()은 rules.jsonl을 처음부터 다시 읽는데(캐싱 없음), LLM이 고른 rule_id는
+    # 방금 프롬프트에 보여준 rules 후보 중 하나일 가능성이 높다 — 거기서 먼저 찾고, 없을 때만
+    # (LLM이 후보 밖 id를 골랐을 때만) find_rule()로 폴백해 중복 읽기를 없앤다(2026-09-16).
+    rule = None
+    if not ok:
+        rid = out.get("rule_id")
+        rule = next((r for r in rules if r["id"] == rid), None) or (golden.find_rule(rid) if rid else None)
     sentence = (out.get("sentence") or "").strip()
     if ok:
         answer = f'네, "{sentence}"는 맞는 문장이에요! 👍' if sentence else "네, 맞는 문장이에요!"
