@@ -688,7 +688,11 @@ def _retrieval_answer(question: str, body: AskIn, skip_similar: bool = False,
     try:
         qvec = embedding.embed_query(question)
     except Exception as e:
-        return {"answer": "", "source": [], "offtopic": True, "error": f"임베딩 실패: {e}"}
+        # 빈 답변("")은 학생 화면에 아무것도 안 뜨는 것처럼 보여서(2026-09-16 지적), 다른 거절
+        # 문구들과 같은 톤으로 원인(서버 문제)을 알려주고 다시 시도하라고 안내한다. error 필드는
+        # 그대로 남겨서 로그로는 진짜 원인을 알 수 있게 한다.
+        return {"answer": "지금 검색 기능에 문제가 생겼어요. 잠시 후 다시 물어보거나 선생님께 물어볼까?",
+                "source": [], "offtopic": True, "suggested": [], "error": f"임베딩 실패: {e}"}
 
     rule_id = ctx.rule_id
     if not rule_id:
