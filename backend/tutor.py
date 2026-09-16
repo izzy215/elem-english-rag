@@ -784,9 +784,19 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         wt, ft = _tokens(out.get("wrong") or ""), _tokens(out.get("fix") or "")
         if len(wt) == 1 and len(ft) == 1 and wt[0] in _swap_words() and ft[0] in _swap_words():
             cand = _single_fix(text, out.get("wrong"), out.get("fix")) or (out.get("fixed") or "")
-            if not _second_opinion(text, cand, backend, fallback, timing):
-                print(f"[fix] 재확인: {wt[0]}→{ft[0]} 고침이 더 맞다고 못 함 → 원문 유지(ok)", flush=True)
+            # 틀린 곳이 둘 이상이면(more_errors 또는 full_fixed 가 한 곳 고친 문장과 다름) 한 곳만 고친 문장은 여전히 틀려서 "원문 vs 그것" 비교가 성립하지 않는다
+            # ("me hobby are craft" → "me hobby is craft" 는 아직 틀림 → 모델이 B 를 못 고르고 서버가 원문을 맞다고 냈음, 9/16). 그때는 다 고친 문장으로 비교한다
+            full = (out.get("full_fixed") or "").strip()
+            multi = bool(out.get("more_errors")) or (bool(full) and _tokens(full) != _tokens(cand))
+            if multi and full and _full_fixed_ok(text, full, out.get("fix")):
+                cand_cmp, note = full, f" (틀린 곳 여럿 → 다 고친 문장 {full!r} 으로 비교)"
+            else:
+                cand_cmp, note = cand, ""
+            if not _second_opinion(text, cand_cmp, backend, fallback, timing):
+                print(f"[fix] 재확인: {wt[0]}→{ft[0]} 고침이 더 맞다고 못 함{note} → 원문 유지(ok)", flush=True)
                 ok = True
+            elif note:
+                print(f"[fix] 재확인: {wt[0]}→{ft[0]} 고침 유지{note}", flush=True)
     rule = golden.find_rule(rule_id) if not ok else None
 
     raw_fixed = (out.get("fixed") or text).strip()
