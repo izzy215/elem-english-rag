@@ -21,6 +21,7 @@ notebook_text() 도 개인화 참고 자료로 넣는다(답 근거는 여전히
 또 물어보면 최근 대화를 프롬프트에 같이 줘서 "그거/이거" 같은 지시어를 이해하게 한다
 (프론트가 대화 기록을 안 보내도 서버가 student+시간 윈도우로 알아서 판단, 2026-09-10).
 """
+import difflib
 import json
 import re
 import time
@@ -100,12 +101,62 @@ _GENERIC_WORDS = {
 # 3인칭단수를 맞게 설명해놓고 "때" 한 단어만 겹쳐서 무관한 R-29(How much/many)가 근거로 붙음).
 _WEAK_OVERLAP_WORDS = {"때", "수", "것", "안", "예", "예:", "그", "이", "저"}
 
+# "뭐가/뭐예요"류 필러 표현의 흔한 오타(모/머)·붙여쓰기(뭐가달라요)가 _GENERIC_WORDS에 정확히
+# 안 걸려서, 그 단어만으로 다단어 질문(2개 이상 후보 전체와 안 겹치면 폐기, D2 규칙)이 통째로
+# 폐기되던 문제(2026-09-16, 100문항 수동 테스트 — "go랑 went 머가 달라요"/"뭐가달라요"가
+# offtopic으로 잘못 거절됨). 앞이 공백/문장 시작일 때만 치환 — "이모가 영어로 뭐예요?"(이모=aunt)
+# 처럼 진짜 단어 중간의 모/가를 건드리지 않기 위해 단어 시작 위치만 잡는다. 뒤쪽은 "뭐가달라요"처럼
+# 다른 말이 붙어 한 토큰으로 뭉쳐도 잡히게 경계를 안 둔다.
+_FILLER_TYPO_FIXES = [
+    (re.compile(r"(?:^|(?<=\s))[모머](가|예요|에요|에오|야)"), r"뭐\1"),
+    # "머임"만 처리 — "모임"(gathering, 진짜 단어)까지 같이 걸리지 않게 모/머를 묶지 않고 머만 지정.
+    (re.compile(r"(?:^|(?<=\s))머임"), "뭐예요"),
+    (re.compile(r"(?<!이)에요"), "예요"),
+    (re.compile(r"이에오"), "이에요"),
+    (re.compile(r"맏(아요|나요)"), r"맞\1"),
+]
+
+
+_STANDALONE_DEMONSTRATIVE = re.compile(r"(?:^|(?<=\s))(이거|그거|이것|그것)(?=\s|$|[?!.,])")
+
+
+def _normalize_filler_typos(question: str) -> str:
+    for pat, repl in _FILLER_TYPO_FIXES:
+        question = pat.sub(repl, question)
+    if re.search(r"[A-Za-z]", question):
+        # "water 이거 머임?"처럼 질문에 영단어가 이미 있으면 "이거/그거"는 직전 대화가 아니라
+        # 그 단어를 가리키는 말인데, 그대로 두면 임베딩 유사도가 눈에 띄게 떨어져서(실측 —
+        # "water 뭐예요?" 0.878 → "water 이거 뭐예요?" 0.844, F-05 기준) 문턱을 못 넘고
+        # 거절돼버린다(2026-09-16, 오프토픽/필러 경계 테스트에서 발견). 영단어가 없는 순수
+        # 이어가기 질문("이거 왜 틀렸어?")은 이 가드에 안 걸려 그대로 남는다.
+        question = re.sub(r"\s+", " ", _STANDALONE_DEMONSTRATIVE.sub(" ", question)).strip()
+    return question
+
 
 def _content_words(text: str) -> list[str]:
     """"무슨 뜻이에요"류 범용 의문 표현만 뺀 단어 목록 — 이것만 겹쳐서 서로 다른 단어를
     묻는 질문끼리 오매칭되는 걸 막는다(2026-09-10, "elephant 뜻이 뭐예요?"가 F-06(zoo)에
     잘못 매칭된 사례)."""
     return [w for w in _norm_words(text) if w not in _GENERIC_WORDS]
+
+
+_PAREN = re.compile(r"\([^)]*\)")
+
+
+def _fuzzy_rule_name_match(question: str, rule: dict, threshold: float = 0.6) -> bool:
+    """편집거리(difflib)로 질문의 내용어와 규칙 이름(type/short)이 충분히 가까운지 본다 —
+    _overlaps_question의 "접두 2글자 일치" 조건은 첫 글자가 오타면(과→괴) 못 잡는다.
+    type의 "(시간)" 같은 괄호 설명은 떼고 비교(안 떼면 진짜 정답도 0.6대 초반이라 문턱을
+    넘기 어려움). 임계값 0.6은 실측 기준 — "미래시제"·"과거시제"처럼 진짜 다른 규칙끼리는
+    0.44 밖에 안 나오고, "괴거시제"·"과거시제"는 0.667이라 그 사이에 안전하게 걸린다."""
+    labels = [_PAREN.sub("", rule.get("type") or ""), _PAREN.sub("", rule.get("short") or "")]
+    for w in _content_words(question):
+        if len(w) < 3:
+            continue
+        for label in labels:
+            if label and difflib.SequenceMatcher(None, w, label).ratio() >= threshold:
+                return True
+    return False
 
 
 # "elephant는 a예요 an이에요?"류 질문 — LLM한테 맡겼더니 "elephant는 자음이라 a"처럼 기본
@@ -778,7 +829,11 @@ def _referential_rule_answer(question: str, student: str, ctx_rule_id: str | Non
 _CASUAL_CHAT_PATTERN = re.compile(
     r"(날씨|기분|컨디션)\s*(가|이)?\s*(어때|어떄)|"
     r"(점심|저녁|아침|간식|급식)\s*(이|가)?\s*(뭐|뭘)|"
-    r"숙제\s*있"
+    r"숙제\s*있|"
+    # "오늘 몇시야"류 잡담이 "여행이 몇 시인지" 같은 교과서 문장과 우연히 겹쳐서 답변까지
+    # 나가버리는 문제(2026-09-16, 100문항 수동 테스트에서 발견) — 시각을 묻는 잡담도 거절 대상에 추가.
+    # 영어·"영어" 언급이 있으면(예: "몇 시를 영어로 어떻게 말해요?") 위의 [A-Za-z]|영어 가드에서 이미 걸러진다.
+    r"지금\s*몇\s*시|몇\s*시(야|이야|예요|이에요)"
 )
 
 
@@ -936,6 +991,16 @@ def _retrieval_answer(question: str, body: AskIn, skip_similar: bool = False,
     rule_alias_hits = textbook.search_rule_aliases(question, k=3, qvec=qvec)
     rule = golden.find_rule(rule_alias_hits[0]["id"]) if rule_alias_hits and textbook.rule_hit([r["score"] for r in rule_alias_hits]) else None
     rule_ok = bool(rule) and _overlaps_question(f'{rule["type"]} {rule.get("short", "")} {rule["text"]}')
+    if not rule_ok and rule_alias_hits and rule_alias_hits[0]["score"] >= 0.75:
+        # 규칙명 자체에 오타가 있으면(예: "괴거시제" vs "과거시제") 임베딩 점수가 문턱(0.86) 밑으로
+        # 떨어지거나, 위 _overlaps_question의 접두 2글자 일치 조건도 같이 못 넘어서 둘 다
+        # 걸러지는 문제가 있었다(2026-09-16, 100문항 수동 테스트). 그래도 임베딩이 여전히 1위로
+        # 꼽았고(0.75 이상) 편집거리(difflib)로 봐도 질문의 핵심 단어가 그 규칙 이름과 충분히
+        # 가까우면(0.6 이상) 구제한다 — "미래시제"·"과거시제"처럼 진짜 다른 개념끼리는 0.44
+        # 밖에 안 나와서 안 걸린다(직접 계산해 확인).
+        cand = golden.find_rule(rule_alias_hits[0]["id"])
+        if cand and _fuzzy_rule_name_match(question, cand):
+            rule, rule_ok = cand, True
     rule_examples = rule_alias_hits[0].get("examples") if rule_ok else None
 
     # 4) 패턴·단어 — sharp()는 한국어 질문에서 격차가 0.01~0.04라 한 번도 안 통과해서(2026-09-14
@@ -1054,7 +1119,7 @@ def _hybrid_answer(body: AskIn) -> dict:
     먼저 시도하고, 전부 실패했을 때만 검색 기반 _retrieval_answer()로 넘긴다 — 옛 _answer()가
     쓰던 "FAQ 전체를 프롬프트에 통째로 넣고 LLM이 고르게 함" 폴백은 검색 기반으로 완전히
     대체돼서 삭제됐다(계약 9번, 2026-09-16)."""
-    question = body.question.strip()
+    question = _normalize_filler_typos(body.question.strip())
     if not question:
         return {"answer": "", "source": [], "offtopic": True}
 
@@ -1115,8 +1180,15 @@ def _hybrid_answer(body: AskIn) -> dict:
     # 건너뛴다 — 2개 넘게 섞인 질문은 _local_match가 애초에 안 돌렸으니 거기서 처음이자
     # 유일하게 시도해야 한다(2026-09-16 발견).
     referential = _REFERENTIAL_PATTERN.search(question)
-    word_lookup_attempted = not referential and len(re.findall(r"[A-Za-z']+", question)) <= 2
-    if not referential:
+    en_word_count = len(re.findall(r"[A-Za-z']+", question))
+    # "water 이거 머임?"처럼 질문 자체에 조회할 영단어가 이미 있으면 "이거"는 직전 대화가 아니라
+    # 그 단어를 가리키는 것으로 본다 — "이거"가 있다는 이유만으로 무조건 이어가기 취급해서
+    # 문장 안에 이미 있는 답을 로컬 매칭도 안 해보고 놓치던 문제(2026-09-16, 오프토픽/필러
+    # 경계 테스트에서 발견). 영단어가 하나도 없을 때만(순수 지시어, "이거 왜 틀렸어?" 등)
+    # 이어가기로 보고 로컬 매칭을 건너뛴다.
+    treat_as_referential = bool(referential) and en_word_count == 0
+    word_lookup_attempted = not treat_as_referential and en_word_count <= 2
+    if not treat_as_referential:
         local = _local_match(question, all_faqs, all_rules, words_pool, patterns_pool, level=level,
                               ctx_unit=body.context.unit)
         if local is not None:
