@@ -124,6 +124,17 @@ check("N5", "구체적 문법 주제는 그 규칙으로 직접 답(회귀 확�
       r_specific["offtopic"] is False and any(s["chunk_id"] == "R-38" for s in r_specific["source"]))
 
 
+# ── 2026-09-16 정오 판정 검색 축소(ctx8k 컨텍스트 절약) ─────────────────────
+r_corr = a("C_NARROW", "He like pizza. 이거 맞아?")
+check("C1", "정오 판정이 검색 축소 후에도 정답 규칙(R-32) 찾음",
+      r_corr["offtopic"] is False and any(s["chunk_id"] == "R-32" for s in r_corr["source"]))
+
+from backend.ask import _correctness_candidate_rules  # noqa: E402
+narrowed = _correctness_candidate_rules("He like pizza")
+check("C2", "정오 판정용 규칙 후보가 100개 전체가 아니라 좁혀짐",
+      narrowed is not None and len(narrowed) <= 10, f"(len={len(narrowed) if narrowed else 0})")
+
+
 print("\n=== 요약 ===")
 passed = sum(1 for _, _, c, _ in results if c)
 print(f"{passed}/{len(results)} 통과")

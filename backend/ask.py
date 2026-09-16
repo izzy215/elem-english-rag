@@ -466,6 +466,29 @@ CORRECTNESS_PROMPT = """너는 초등학교 {grade}에게 영어를 가르치는
 }}"""
 
 
+def _correctness_candidate_rules(sentence: str, k: int = 8) -> list[dict] | None:
+    """/fix가 이미 쓰는 검색(search_examples+search_rules를 merge_candidates로 합침, 실측
+    hit@1 77%·hit@3 91%)을 재사용해 판정 대상 문장과 관련된 규칙 후보만 추린다(2026-09-16) —
+    CORRECTNESS_PROMPT가 규칙 100개를 통째로 넣어 ctx8k(8192토큰) 중 7,335토큰을 써버리던 위험을
+    없애고, LLM이 100개 중 헤매지 않게 한다. k=8은 /fix의 RAG_TOP_K와 동일(5→8로 늘렸을 때
+    82→84% 개선된 실측값 재사용). 검색 실패(색인 없음 등)하면 None — 호출부가 golden.rules()
+    전체로 폴백한다."""
+    try:
+        from backend import embedding, indexing, textbook
+        from backend.rag import search_rules
+    except ImportError:
+        return None
+    try:
+        qvec = embedding.embed_query(sentence)
+        ex_cands = textbook.search_examples(sentence, k=k, qvec=qvec)
+        rule_cands = search_rules(sentence, k=k)
+    except indexing.IndexUnavailableError:
+        return None
+    except Exception:
+        return None
+    return textbook.merge_candidates(ex_cands, rule_cands, k=k) or None
+
+
 def _check_correctness(question: str, level: int = 3) -> dict:
     """"맞는 문장이에요?" 류 질문을 /fix 를 부르지 않고 자체 판정한다(sentence_log/notebook 에
     기록 안 남김 — 궁금해서 물어본 거지 "내 문장 말하기" 연습이 아니라서). 실패하면 안내 문구로
@@ -473,8 +496,12 @@ def _check_correctness(question: str, level: int = 3) -> dict:
 
     level: RETRIEVAL_PROMPT처럼 페르소나 문구("초등학교 N학년")에만 씀 — 이전엔 "3~4학년"으로
     고정돼 있어서 6학년 학생한테도 그렇게 답했다(2026-09-16 발견)."""
+    # question엔 판정 대상 문장 외에 한국어 메타 질문("이거 맞아?")도 섞여 있어서, 검색 정확도를
+    # 위해 영어 토큰만 추려 붙인 걸 검색 질의로 쓴다(2026-09-16).
+    eng_sentence = " ".join(re.findall(r"[A-Za-z][A-Za-z']*", question)) or question
+    rules = _correctness_candidate_rules(eng_sentence) or golden.rules()
     prompt = CORRECTNESS_PROMPT.format(grade=f"{level}학년",
-                                        rules_block="\n".join(f"- [{r['id']}] {r['type']}: {r['text']}" for r in golden.rules()), question=question)
+                                        rules_block="\n".join(f"- [{r['id']}] {r['type']}: {r['text']}" for r in rules), question=question)
     out = llm.generate_json(prompt)
     llm_info = out.pop("_llm", {})
     ok = bool(out.get("ok", True))
