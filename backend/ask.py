@@ -548,8 +548,12 @@ def _notebook_summary_answer(question: str, student: str) -> dict | None:
     top_ex = items[0]["examples"][0] if items[0].get("examples") else None
     if top_ex:
         answer += f" 예를 들어 '{top_ex['text']}'는 '{top_ex['fixed']}'로 고쳐야 해요."
+    # 여러 규칙을 한 번에 요약했으니, 이어지는 "이거 왜 틀렸어?" 류가 어느 걸 가리키는지 모호해서
+    # _referential_rule_answer()가 되묻게 되는데(2026-09-16 추가), 그 전에 학생이 처음부터 구체적
+    # 규칙명으로 물어보게 칩으로 유도한다.
+    suggested = [f"{it['name']} 왜 틀렸어?" for it in items] if len(items) > 1 else []
     return {"answer": answer, "source": [{"chunk_id": it["rule_id"]} for it in items],
-            "offtopic": False, "suggested": []}
+            "offtopic": False, "suggested": suggested}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -633,12 +637,22 @@ def _with_rule_examples(text: str, examples: list[str] | None) -> str:
 def _referential_rule_answer(question: str, student: str, ctx_rule_id: str | None) -> dict | None:
     """"다른 예문 보여줘"/"다시 설명해줘"/"왜요?" 같은 이어가기(_REFERENTIAL_PATTERN)는 검색하면
     무관한 FAQ에 걸리기 쉬워서(2026-09-14 팀 실측 — "다른 예문 보여줘"가 FAQ에 잘못 매칭됨)
-    검색 없이 직전 규칙 문서로 바로 답한다."""
+    검색 없이 직전 규칙 문서로 바로 답한다.
+
+    직전 답이 규칙 하나가 아니라 여러 개를 한 번에 요약한 거면(예: _notebook_summary_answer의
+    "OO를 3번, XX를 2번 틀렸어요") 첫 번째로 추측해서 답하지 않고 어느 걸 묻는지 되묻는다(옛
+    _answer()의 PROMPT 6번 규칙과 같은 방식, 2026-09-16 되살림) — ctx.rule_id로 화면이 직접
+    특정 규칙을 지정해준 경우는 모호하지 않으니 그대로 쓴다."""
     if not _REFERENTIAL_PATTERN.search(question):
         return None
     rule_id = ctx_rule_id
     if not rule_id:
         last = next((t for t in reversed(_recent_chat_turns(student, max_turns=5)) if t.get("rule_ids")), None)
+        if last and len(last["rule_ids"]) > 1:
+            names = [r["type"] for r in (golden.find_rule(rid) for rid in last["rule_ids"]) if r]
+            if len(names) > 1:
+                return {"answer": ", ".join(names[:-1]) + f" 얘기야, 아니면 {names[-1]} 얘기야?",
+                        "source": [], "offtopic": False, "suggested": []}
         if last:
             rule_id = last["rule_ids"][0]
     if not rule_id:
@@ -923,9 +937,14 @@ def _hybrid_answer(body: AskIn) -> dict:
         if notebook_text(body.student) == "아직 오답노트가 비어 있음.":
             return {"answer": "아직 오답노트에 기록된 게 없어요! 문제를 몇 개 풀어보면 그때 자주 틀리는 것도 알려줄 수 있어요.",
                     "source": [], "offtopic": False, "suggested": []}
-        notebook_summary_ans = _notebook_summary_answer(question, body.student)
-        if notebook_summary_ans is not None:
-            return notebook_summary_ans
+        # "이거 왜 틀렸어?"처럼 이어가기 표현("틀렸다") 자체가 _NOTEBOOK_TRIGGER에도 걸려서, 방금
+        # 요약 답변 뒤에 되묻기(_referential_rule_answer)로 가야 할 질문이 여기서 또 가로채 같은
+        # 요약을 반복하는 문제가 있었다(2026-09-16 발견) — 이어가기면 여기서 건너뛰고 아래에서
+        # _referential_rule_answer가 처리하게 둔다.
+        if not _REFERENTIAL_PATTERN.search(question):
+            notebook_summary_ans = _notebook_summary_answer(question, body.student)
+            if notebook_summary_ans is not None:
+                return notebook_summary_ans
 
     a_an = _a_an_answer(question) or _a_an_followup_answer(question, body.student)
     if a_an is not None:
