@@ -33,14 +33,24 @@ CASES = [
     ("Good morning Mom.", "Good morning Mom", "Good morning, Mom!", "인사말 문장부호", "R-02", True),
     ("It is very too hot.", "very too", "too", "too+형용사", "R-28", True),
     ("I went to go to the zoo.", "went to go", "went", "규칙 밖", "OTHER", True),
-    ("I like playing.", "playing", "playing baseball", "like+동명사", "R-19", True),      # R-19 예시에만 있는 단어 → 그 규칙일 때만
-    ("I like playing.", "playing", "playing baseball", "과거시제", "R-31", False),        # 다른 규칙이면 지어낸 단어
+    ("Let's biking around the park.", "biking", "go biking", "과거시제", "R-31", False),   # go 는 R-63 예문 공통 단어 — 다른 규칙이면 지어낸 단어
+    ("I am nine year old.", "nine year old", "nine years old", "나이 표현(years old)", "R-44", True),   # 시간 단어의 변형은 남은 것
     ("I go to the zoo yesterday.", "yesterday", "saw", "과거시제", "R-31", False),        # 문장 다른 곳 단어 끌어옴
     ("I go to the zoo lastyear.", "lastyear", "yesterday", "과거시제", "R-31", False),    # 다른 단어로 교체
     ("I sorry.", "I sorry", "I am very sorry", "형용사+be동사", "R-01", False),          # 내용어 지어냄
     ("I have a dog.", "dog", "cat", "관사", "R-38", False),
     ("I go to the zoo yesterday.", "go to the zoo yesterday", "went to the zoo", "과거시제", "R-31", False),   # 시간 표현 없앰
     ("She like cats.", "like", "like", "3인칭단수", "R-32", False),                      # 고친 게 없음
+    # 2026-09-16 PM 세션 평가(qwen2.5:32b, 360문장)에서 나온 오탐 3 + 잘 버린 것 4
+    ("He buyed a car his sister yesterday.", "buyed", "bought", "과거시제", "R-31", True),   # 규칙 변화로 잘못 만든 꼴 → 불규칙 과거형 (_lemmas)
+    ("He goed to school.", "goed", "went", "과거시제", "R-31", True),
+    ("She putted the book there.", "putted", "put", "과거시제", "R-31", True),              # 원형=과거형
+    ("Let's biking around the park.", "biking", "go biking", "활동 표현(go+동명사)", "R-63", True),   # 규칙 예문 공통 단어 go
+    ("I love my my dog.", "my my", "my", "소유격", "R-03", True),                            # 같은 단어 중복 지우기
+    ("He reads while breakfast every morning.", "while", "after", "기간 전치사(during)", "R-65", False),   # 문장 다시 쓰기
+    ("How's the lightning like tomorrow?", "How's the lightning like", "What's the weather like", "날씨 묻기(What's the weather like?)", "R-60", False),   # weather 는 새 단어, lightning 사라짐
+    ("We go to hospital every day.", "go to hospital", "work at a hospital", "근무 장소(work at/in)", "R-87", False),   # go 가 사라짐
+    ("I would like to a milk.", None, None, "정중한 요청(would like)", "R-51", False),       # wrong/fix 비어 있음
 ]
 
 

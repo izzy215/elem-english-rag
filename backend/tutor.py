@@ -52,7 +52,8 @@ except Exception as _e:  # noqa: BLE001
 
 ROOT = Path(__file__).resolve().parent.parent          # project/
 STUDENT_DIR = ROOT / "data" / "student"
-PROMPT_FILE = Path(__file__).parent / "prompts" / "fix_fallback.txt"
+PROMPT_FILE = Path(__file__).parent / "prompts" / ("fix_short.txt" if os.environ.get("FIX_PROMPT", "").strip().lower() == "short" else "fix_fallback.txt")   # FIX_PROMPT=short → 짧은 프롬프트 (9/16 실험)
+EXTRA_RULES_SHORT = os.environ.get("FIX_EXTRA_SHORT", "0") not in ("0", "false", "no", "")   # 유닛·공통 규칙(검색 상위 밖)은 한 줄 요약만 (9/16 실험)
 
 router = APIRouter(tags=["tutor"])
 _lock = threading.Lock()
@@ -79,12 +80,19 @@ def _render(template: str, **vars_: str) -> str:
     return template
 
 
-def _rules_block(rule_list: list[dict]) -> str:
+def _rules_block(rule_list: list[dict], compact_from: int | None = None, by_id: dict | None = None) -> str:
     """후보 규칙 한 줄씩. 예문 검색이 찾은 닮은 틀린 예문(example → fix/correct)이 붙어 있으면 같이 보여 준다 —
     9/14 gemini 120문장 실측: 정답 규칙이 후보에 있는데도 모델이 "맞는 문장"·OTHER 로 넘긴 18건 중 16건은 거의 같은 틀린 예문이 검색 1위였는데
-    프롬프트에 설명문만 넣어 모델이 못 봤다. 찾아온 증거를 보여 주는 것이 RAG 의 본뜻."""
+    프롬프트에 설명문만 넣어 모델이 못 봤다. 찾아온 증거를 보여 주는 것이 RAG 의 본뜻.
+    compact_from 이 있으면 그 순번부터(검색 상위 밖의 유닛·공통 규칙)는 설명문 대신 요약(short)+틀린 예 한 줄만 — 프롬프트 길이 실험 (FIX_EXTRA_SHORT=1)."""
     lines = []
-    for r in rule_list:
+    for i, r in enumerate(rule_list):
+        if compact_from is not None and i >= compact_from and r["id"] not in (SPELLING_RULE["id"], OTHER_RULE["id"]):
+            full = (by_id or {}).get(r["id"], r)
+            short = full.get("short") or r["type"]
+            wrong = full.get("wrong_example") or ""
+            lines.append(f"- [{r['id']}] {r['type']}: {short}." + (f" 틀린 예: {wrong}" if wrong else ""))
+            continue
         line = f"- [{r['id']}] {r['type']}: {r['text']}"
         if r.get("example"):
             fix = r.get("correct") or r.get("fix") or ""       # 고친 문장 전체가 있으면 그것("→ Close the window, please."), 없으면 고친 낱말만
@@ -165,7 +173,7 @@ _IRREGULAR_BASE = {"go": {"went", "goes", "going"}, "see": {"saw", "sees", "seei
                    "keep": {"kept"}, "sleep": {"slept"}, "leave": {"left"}, "bring": {"brought"}, "think": {"thought"}, "catch": {"caught"},
                    "teach": {"taught"}, "tell": {"told"}, "sell": {"sold"}, "find": {"found"}, "stand": {"stood"}, "win": {"won"}, "know": {"knew"},
                    "grow": {"grew"}, "throw": {"threw"}, "draw": {"drew"}, "fly": {"flew"}, "wear": {"wore"}, "speak": {"spoke"}, "break": {"broke"},
-                   "drive": {"drove"}, "hear": {"heard"}, "say": {"said"}, "pay": {"paid"}, "read": {"read"}, "lose": {"lost"}, "send": {"sent"},
+                   "drive": {"drove"}, "hear": {"heard"}, "say": {"said"}, "pay": {"paid"}, "read": {"read"}, "lose": {"lost"}, "send": {"sent"}, "choose": {"chose"},
                    "build": {"built"}, "hold": {"held"}, "fall": {"fell"}, "forget": {"forgot"}, "hide": {"hid"}, "bite": {"bit"}, "feed": {"fed"},
                    "this": {"these"}, "these": {"this"}, "that": {"those"}, "those": {"that"}, "much": {"many"}, "many": {"much"},
                    "a": {"an", "the"}, "an": {"a", "the"}, "the": {"a", "an"}, "child": {"children"}, "man": {"men"}, "woman": {"women"}, "foot": {"feet"}, "tooth": {"teeth"}, "mouse": {"mice"}}
@@ -198,9 +206,32 @@ def _same_edit(e1: tuple[list[str], list[str]], e2: tuple[list[str], list[str]])
     return False
 
 
+def _lemmas(w: str) -> set[str]:
+    """학생이 규칙 변화로 잘못 만든 꼴에서 원형 후보를 뽑는다: buyed→buy, goed→go, eated→eat, putted→put, tried→try, running→run.
+    원형 후보는 불규칙표 대조에만 쓴다 (buyed→bought 를 '같은 동사의 변형' 으로 보기 위해). 확실한 형태론이 아니라 후보 집합이다."""
+    out = {w}
+    for suf in ("ies", "ied", "ing", "es", "ed", "d", "s"):
+        if w.endswith(suf) and len(w) > len(suf) + 1:
+            stem = w[: -len(suf)]
+            if suf in ("ies", "ied"):
+                stem += "y"
+            out.add(stem)
+            if len(stem) >= 3 and stem[-1] == stem[-2]:          # putted→putt→put, stopped→stopp→stop
+                out.add(stem[:-1])
+            if suf in ("ing", "ed") and not stem.endswith("e"):  # hoped→hop 과 hope 둘 다 후보
+                out.add(stem + "e")
+    return out
+
+
 def _related_base(a: str, b: str) -> bool:
-    """같은 단어의 변형인가 — 코드만으로 판단 (어간 앞 2글자 또는 불규칙표). _allow 를 만들 때와 그 밖의 기본 검사에 쓴다."""
-    return a == b or (len(a) >= 2 and a[:2] == b[:2]) or b in _IRREGULAR_BASE.get(a, set()) or a in _IRREGULAR_BASE.get(b, set())
+    """같은 단어의 변형인가 — 코드만으로 판단 (어간 앞 2글자 또는 불규칙표). _allow 를 만들 때와 그 밖의 기본 검사에 쓴다.
+    불규칙표는 원형 후보(_lemmas) 로 대조한다: buyed→bought (buy→bought), goed→went, putted→put (원형이 같음)."""
+    if a == b or (len(a) >= 2 and a[:2] == b[:2]):
+        return True
+    la, lb = _lemmas(a), _lemmas(b)
+    if la & lb:                                              # putted / put, cutted / cut 처럼 원형이 같은 것
+        return True
+    return any(y in _IRREGULAR_BASE.get(x, set()) for x in la for y in lb) or any(x in _IRREGULAR_BASE.get(y, set()) for x in la for y in lb)
 
 
 _ALLOW: dict | None = None
@@ -213,10 +244,12 @@ def _allow() -> dict:
       added_by_rule  {규칙 id: 그 규칙 오답 예시가 덧붙인 단어}  → 그 규칙일 때만 (R-19: baseball, R-20: stamps)
       swap           2행 이상 나온 한 단어 교체 쌍 {a: {b, …}} 양방향        (this↔it, of↔about, is↔are, a↔an)
       swap_by_rule   {규칙 id: {a: {b}}} 1행뿐인 교체 쌍은 그 규칙일 때만
+      rule_words     {규칙 id: rules.jsonl 의 그 규칙 예문 모두에 나오는 단어} → 그 규칙일 때만 (R-63: go, R-17: wearing)
     철자 규칙(type 에 '철자')의 예시는 뺀다 — aple→apple 을 어형 변화로 오인해 철자 감지가 죽지 않게."""
     global _ALLOW, _ALLOW_KEY
     path = golden._dir() / "errors.jsonl"
-    key = (str(path), path.stat().st_mtime if path.exists() else None)
+    rpath = golden._dir() / "rules.jsonl"
+    key = (str(path), path.stat().st_mtime if path.exists() else None, rpath.stat().st_mtime if rpath.exists() else None)
     if _ALLOW is not None and key == _ALLOW_KEY:
         return _ALLOW
     from collections import defaultdict
@@ -242,7 +275,13 @@ def _allow() -> dict:
     for (a, b), ids in swap_rows.items():
         if len(ids) >= 2:
             swap[a].add(b)
+    rule_words: dict[str, set] = {}                          # 규칙 문서에서: 예문 모두에 나오는 단어 (R-63: go, R-17: wearing, R-51: would like)
+    for r in golden.rules():
+        ex = [set(_tokens(e)) for e in (r.get("examples") or []) if _tokens(e)]
+        common = set.intersection(*ex) if ex else set()
+        rule_words[r["id"]] = common                          # type 의 영어 구절은 안 씀 — "What's the weather like?" 처럼 문장 통째라 weather 같은 새 단어를 열어 버림
     _ALLOW = {"added": {w for w, ids in added_rows.items() if len(ids) >= 2},
+              "rule_words": rule_words,
               "added_by_rule": {k: set(v) for k, v in added_by_rule.items()},
               "swap": dict(swap),
               "swap_by_rule": {k: {a: set(b) for a, b in v.items()} for k, v in swap_by_rule.items()},
@@ -252,9 +291,10 @@ def _allow() -> dict:
 
 
 def _func_words(rule_id: str = "") -> set[str]:
-    """규칙이 덧붙일 수 있는 말 = 핵심 기능어 + 데이터가 2행 이상 보여 준 단어 (+ 이 규칙의 오답 예시가 보여 준 단어)."""
+    """규칙이 덧붙일 수 있는 말 = 핵심 기능어 + 데이터가 2행 이상 보여 준 단어
+    (+ 이 규칙의 오답 예시가 보여 준 단어 + 이 규칙 문서의 예문 모두에 나오는 단어: R-63 이면 go, R-17 이면 wearing)."""
     al = _allow()
-    return _CORE_ADD | al["added"] | al["added_by_rule"].get(rule_id, set())
+    return _CORE_ADD | al["added"] | al["added_by_rule"].get(rule_id, set()) | al["rule_words"].get(rule_id, set())
 
 
 def _related(a: str, b: str, rule_id: str = "") -> bool:
@@ -291,7 +331,7 @@ def _pair_problem(text: str, wrong: str | None, fix: str | None, rule_type: str 
         return f"wrong 이 너무 김 (4단어 초과): {wrong!r}"
     func = _func_words(rule_id)
     rel = lambda a, b: _related(a, b, rule_id)
-    lost_time = [t for t in w if t in _TIME_WORDS and t not in f]
+    lost_time = [t for t in w if t in _TIME_WORDS and not any(_related_base(t, x) for x in f)]   # year→years 는 남은 것
     if lost_time:                                            # 시간 표현을 없애거나 바꾼 답 (Good morning Mom → Good morning, Mom! 처럼 남아 있으면 통과)
         return f"wrong={wrong!r} 의 시간 표현 {lost_time} 을 없앰 (규칙이 바꾸는 대상이 아님 — 어순 변경 시도)"
     if set(f) <= set(w) and len(f) < len(w):                 # 말을 지우기만 함 (very too→too, went to go→went): 지어낸 단어가 없다
@@ -635,7 +675,7 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         PROMPT_FILE.read_text(encoding="utf-8"),
         mission=unit_row.get("mission") or "(미션 없음 — 미션 확인은 ok=true 로)",
         hint_words=", ".join(unit_row.get("hint_words") or []) or "(없음)",
-        all_rules=_rules_block(prompt_rules),
+        all_rules=_rules_block(prompt_rules, compact_from=(len(top_cands) if (EXTRA_RULES_SHORT and cands) else None), by_id={r["id"]: r for r in all_rules}),
         textbook="\n".join(f"- [{p['id']}] {p['text']}" + (f" ({p['meaning']})" if p.get("meaning") else "") for p in tb["patterns"]) if tb_hint else "(없음)",
         sentence=text,
     )

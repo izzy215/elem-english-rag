@@ -72,12 +72,6 @@ def search(q: str, level: int | None = None, k: int = 3):
     return {"query": q, "chunks": chunks, "threshold": None, "score_type": "cosine_similarity"}
 
 
-@router.post("/check")
-def check(body: CheckIn):
-    # TODO: golden words 에 없는 단어 → "범위 밖 단어: x", search score ≥ 0.85 → "유사 문장 nn%: ..."
-    # PRD-B 4.2 범위 밖(A안 잔재) — v0.2 work order가 이번 범위 제외로 명시. 손대지 않음.
-    return {"ok": True, "warnings": []}
-
 
 @router.get("/eval")
 def evaluate():
