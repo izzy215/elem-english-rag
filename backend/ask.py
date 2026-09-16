@@ -472,7 +472,14 @@ def _correctness_candidate_rules(sentence: str, k: int = 8) -> list[dict] | None
     CORRECTNESS_PROMPT가 규칙 100개를 통째로 넣어 ctx8k(8192토큰) 중 7,335토큰을 써버리던 위험을
     없애고, LLM이 100개 중 헤매지 않게 한다. k=8은 /fix의 RAG_TOP_K와 동일(5→8로 늘렸을 때
     82→84% 개선된 실측값 재사용). 검색 실패(색인 없음 등)하면 None — 호출부가 golden.rules()
-    전체로 폴백한다."""
+    전체로 폴백한다.
+
+    unit="ALL"(유닛 무관 공통 규칙, 100개 중 10개 — 과거시제 R-31 등)은 검색 순위와 무관하게
+    항상 포함한다 — /fix(tutor.py)도 이렇게 한다(extra_ids). 임베딩 검색이 이 학생 문장과
+    표면적으로 안 겹치면 순위에서 밀릴 수 있는데, 공통 규칙은 어느 문장에나 적용될 수 있어
+    놓치면 안 된다(2026-09-16 발견 — /fix식 검색을 흉내내면서 이 부분만 빠뜨렸었음). 유닛별
+    강제 포함(지금 화면의 유닛 규칙)까지는 안 함 — _check_correctness()가 애초에 unit을 안
+    받아서 범위가 더 크다, 우선 ALL만."""
     try:
         from backend import embedding, indexing, textbook
         from backend.rag import search_rules
@@ -486,7 +493,12 @@ def _correctness_candidate_rules(sentence: str, k: int = 8) -> list[dict] | None
         return None
     except Exception:
         return None
-    return textbook.merge_candidates(ex_cands, rule_cands, k=k) or None
+    merged = textbook.merge_candidates(ex_cands, rule_cands, k=k)
+    if not merged:
+        return None
+    seen = {c["id"] for c in merged}
+    merged += [r for r in golden.rules() if r.get("unit") == "ALL" and r["id"] not in seen]
+    return merged
 
 
 def _check_correctness(question: str, level: int = 3) -> dict:

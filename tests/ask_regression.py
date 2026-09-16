@@ -130,9 +130,17 @@ check("C1", "정오 판정이 검색 축소 후에도 정답 규칙(R-32) 찾음
       r_corr["offtopic"] is False and any(s["chunk_id"] == "R-32" for s in r_corr["source"]))
 
 from backend.ask import _correctness_candidate_rules  # noqa: E402
+from backend import golden as _golden  # noqa: E402
 narrowed = _correctness_candidate_rules("He like pizza")
+# k=8 검색 후보 + unit="ALL" 공통 규칙(강제 포함, 100개 중 10개) 합친 크기라 <=8은 아니지만
+# 규칙 전체(100개)보다는 훨씬 적어야 한다(2026-09-16, ALL 강제 포함 추가로 기준 조정).
 check("C2", "정오 판정용 규칙 후보가 100개 전체가 아니라 좁혀짐",
-      narrowed is not None and len(narrowed) <= 10, f"(len={len(narrowed) if narrowed else 0})")
+      narrowed is not None and len(narrowed) < len(_golden.rules()) / 2,
+      f"(len={len(narrowed) if narrowed else 0})")
+
+all_ids = {r["id"] for r in _golden.rules() if r.get("unit") == "ALL"}
+check("C3", "unit=ALL 공통 규칙은 검색 순위와 무관하게 항상 포함",
+      narrowed is not None and all_ids <= {r["id"] for r in narrowed})
 
 
 print("\n=== 요약 ===")
