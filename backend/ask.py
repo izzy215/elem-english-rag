@@ -181,8 +181,14 @@ def _followup_questions(rule_ids: list[str], faq_list: list[dict], exclude_id: s
     return out
 
 
-def _word_answer(entry: dict, note: str = "") -> dict:
-    answer = f"{note}{entry['word']}는 '{entry['meaning']}'라는 뜻이에요."
+def _word_answer(entry: dict, note: str = "", ctx_unit: str | None = None) -> dict:
+    # lookup_word() 결과는 unit을 담고 있어서(_word_match의 words_pool엔 없음 — golden.all_words()가
+    # unit을 안 줌), 여기서만 다른 유닛 안내를 붙일 수 있다. 패턴·단어 임베딩 검색+LLM 생성 경로가
+    # 이미 이 안내를 쓰고 있는 것과 통일(2026-09-16 발견 — 단어 조회만 조용히 답하고 있었음).
+    # "ALL"(유닛 무관 공통 자료)은 불일치로 안 본다.
+    unit_note = (f"{entry['unit']}에서 배우는 내용이에요. "
+                 if ctx_unit and entry.get("unit") and entry["unit"] not in (ctx_unit, "ALL") else "")
+    answer = f"{unit_note}{note}{entry['word']}는 '{entry['meaning']}'라는 뜻이에요."
     if entry.get("example"):
         answer += f" 예: {entry['example']}"
     return {"answer": answer, "source": [], "offtopic": False, "suggested": []}
@@ -228,12 +234,20 @@ def _pattern_match(question: str, patterns_pool: list[dict], faq_list: list[dict
 
 
 def _local_match(question: str, faq_list: list[dict], rule_list: list[dict],
-                  words_pool: dict[str, dict], patterns_pool: list[dict], level: int = 3) -> dict | None:
+                  words_pool: dict[str, dict], patterns_pool: list[dict], level: int = 3,
+                  ctx_unit: str | None = None) -> dict | None:
     """faq→rules→patterns→words 순으로 로컬 매칭, 전부 실패하면 None → 폴백.
 
     level: 단어장 조회(lookup_word)에 쓸 학년. _retrieval_answer()가 실패 시 같은 조회를 또
     하지 않도록(skip_word_lookup) 여기서도 _retrieval_answer()와 같은 값(ctx.level or 3)을
     받아써서 두 곳의 lookup_word 결과가 어긋나지 않게 한다(2026-09-16).
+
+    ctx_unit: 단어 조회(lookup_word) 결과가 다른 유닛 것이면 안내를 붙이는 데만 씀
+    (_word_answer 참고). FAQ·규칙 단어겹침·패턴 매칭(바로 아래)은 일부러 안 붙였다 — 그
+    셋은 원본 데이터 자체에 unit이 있어서 붙이는 건 가능하지만(2026-09-16 확인), FAQ 130개·
+    규칙 100개가 유닛 20개+ALL에 5~8개씩 흩어져 있어 "지금 유닛과 같을 확률"이 5~10%뿐이라,
+    붙이면 매칭 성공 시 거의 매번(90%+) 뜨는 상투어가 돼서 오히려 안내의 의미가 옅어진다.
+    단어 조회만 먼저 통일하고, FAQ·규칙·패턴까지 넓힐지는 실사용 데이터 더 보고 결정하기로 함.
 
     RAG 힌트로 불일치를 진단 로그로만 남기던 코드는 삭제함(2026-09-16) — 1단계가 성공한 답마다
     임베딩을 한 번 더 호출해 서버 상태에 좌우되게 만들었는데, 정작 그 힌트가 맞았던 적은
@@ -277,7 +291,7 @@ def _local_match(question: str, faq_list: list[dict], rule_list: list[dict],
             eng_in_q = w["word"].lower() in question.lower()
             asks_translation = bool(re.search(r"영어로|영어\s*(단어|낱말)", question))
             if eng_in_q or asks_translation:
-                return _word_answer(w)
+                return _word_answer(w, ctx_unit=ctx_unit)
         # lookup_word가 못 찾으면 오타로 보고 _word_match의 스펠체커 폴백을 재사용(lookup_word엔
         # 오타 교정이 없음 — "-s/-es/-ing/-ed" 어미 제거만 함, "pencl" 같은 오타는 못 잡음).
         word = _word_match(question, words_pool)
@@ -687,7 +701,7 @@ def _retrieval_answer(question: str, body: AskIn, skip_similar: bool = False,
             eng_in_q = w["word"].lower() in question.lower()
             asks_translation = bool(re.search(r"영어로|영어\s*(단어|낱말)", question))
             if eng_in_q or asks_translation:
-                return _word_answer(w)
+                return _word_answer(w, ctx_unit=ctx.unit)
 
     try:
         qvec = embedding.embed_query(question)
@@ -813,10 +827,13 @@ def _retrieval_answer(question: str, body: AskIn, skip_similar: bool = False,
             used_id = None
 
         # 다른 유닛 자료로 답했으면 거절 대신 어느 유닛 내용인지 앞에 붙인다(2026-09-14 계약 7번).
+        # "ALL"(유닛 무관 공통 규칙 — 100개 중 10개가 이 값)은 불일치로 안 본다. 안 걸러주면
+        # "ALL에서 배우는 내용이에요"라는 말이 안 되는 안내가 나간다(2026-09-16 구조 점검에서 발견,
+        # rule_alias_hits가 이 규칙들도 그대로 검색 대상이라 재현 가능했음).
         final_id = used_id or fallback_id
         used_cand = next((c for c in (patterns + words) if c["id"] == final_id), None)
         cand_unit = rule.get("unit") if (rule_ok and final_id == rule["id"]) else (used_cand.get("unit") if used_cand else None)
-        if cand_unit and ctx.unit and cand_unit != ctx.unit:
+        if cand_unit and ctx.unit and cand_unit not in (ctx.unit, "ALL"):
             answer = f"{cand_unit}에서 배우는 내용이에요. {answer}"
 
         return {"answer": answer, "source": [{"chunk_id": final_id}],
@@ -898,7 +915,8 @@ def _hybrid_answer(body: AskIn) -> dict:
     referential = _REFERENTIAL_PATTERN.search(question)
     word_lookup_attempted = not referential and len(re.findall(r"[A-Za-z']+", question)) <= 2
     if not referential:
-        local = _local_match(question, all_faqs, all_rules, words_pool, patterns_pool, level=level)
+        local = _local_match(question, all_faqs, all_rules, words_pool, patterns_pool, level=level,
+                              ctx_unit=body.context.unit)
         if local is not None:
             return local
 
