@@ -51,6 +51,14 @@ CASES = [
     ("How's the lightning like tomorrow?", "How's the lightning like", "What's the weather like", "날씨 묻기(What's the weather like?)", "R-60", False),   # weather 는 새 단어, lightning 사라짐
     ("We go to hospital every day.", "go to hospital", "work at a hospital", "근무 장소(work at/in)", "R-87", False),   # go 가 사라짐
     ("I would like to a milk.", None, None, "정중한 요청(would like)", "R-51", False),       # wrong/fix 비어 있음
+    # 2026-09-16 오후: 인칭대명사끼리 교체 허용 (_PRONOUNS). 대명사↔명사는 여전히 거절
+    ("hello nice to meet he", "he", "you", "초면 인사(Nice to meet you, too.)", "R-40", True),
+    ("I like she.", "she", "her", "목적격", "", True),
+    ("Me hobby is craft.", "Me", "My", "소유격", "R-03", True),
+    ("He buy new shoes yesterday.", "buy", "Tom", "과거시제", "R-31", False),               # 명사로 교체
+    ("He is my friend.", "He", "Tom", "소유격", "R-03", False),                             # 대명사→명사
+    ("Tom is my friend.", "Tom", "He", "소유격", "R-03", False),                             # 명사→대명사
+    ("I am bored of the game.", "bored of", "bored with", "관심 표현(be interested in)", "R-77", False),   # with 는 새 단어 (문장은 추정)
 ]
 
 

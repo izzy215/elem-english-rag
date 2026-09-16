@@ -177,6 +177,7 @@ _IRREGULAR_BASE = {"go": {"went", "goes", "going"}, "see": {"saw", "sees", "seei
                    "build": {"built"}, "hold": {"held"}, "fall": {"fell"}, "forget": {"forgot"}, "hide": {"hid"}, "bite": {"bit"}, "feed": {"fed"},
                    "this": {"these"}, "these": {"this"}, "that": {"those"}, "those": {"that"}, "much": {"many"}, "many": {"much"},
                    "a": {"an", "the"}, "an": {"a", "the"}, "the": {"a", "an"}, "child": {"children"}, "man": {"men"}, "woman": {"women"}, "foot": {"feet"}, "tooth": {"teeth"}, "mouse": {"mice"}}
+_PRONOUNS = {"i", "me", "my", "you", "your", "he", "him", "his", "she", "her", "it", "its", "we", "us", "our", "they", "them", "their"}   # 인칭대명사끼리는 교체 허용 (he→you, she→her, me→my). 대명사↔일반 명사(he→Tom)는 아님
 _TIME_WORDS = {"yesterday", "today", "tomorrow", "now", "ago", "last", "next", "week", "year", "month", "morning", "night"}   # 우리 규칙은 시간 표현을 없애거나 바꾸지 않는다
 
 
@@ -298,8 +299,11 @@ def _func_words(rule_id: str = "") -> set[str]:
 
 
 def _related(a: str, b: str, rule_id: str = "") -> bool:
-    """같은 단어의 변형이거나(draw/drew, lion/lions, read/red 같은 철자 차이 포함) 데이터가 보여 준 교체 쌍(this→it, of→about)인가."""
+    """같은 단어의 변형이거나(draw/drew, lion/lions, read/red 같은 철자 차이 포함) 데이터가 보여 준 교체 쌍(this→it, of→about)이거나
+    인칭대명사끼리의 교체(he→you, she→her, me→my — errors.jsonl 에 예가 없고 목적격 규칙도 없어 코드로 연다, 2026-09-16 팀장 결정)인가."""
     if _related_base(a, b):
+        return True
+    if a in _PRONOUNS and b in _PRONOUNS:
         return True
     al = _allow()
     return b in al["swap"].get(a, set()) or b in al["swap_by_rule"].get(rule_id, {}).get(a, set())
