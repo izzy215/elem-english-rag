@@ -364,9 +364,9 @@ def _history_block(student: str) -> str:
 
 _SIMILAR_PATTERN = re.compile(r"비슷한|다른\s*(거|것|게).{0,4}(있|알려|보여)|또\s*(없|있)|말고\s*또")
 
-# "그거 예문 더 보여줘"처럼 방금 대화를 가리키는 지시어 — PROMPT 6번 규칙이 원래 이런 질문을
-# 대화 맥락으로 이어서 답하라고 정의해뒀는데, _local_match의 FAQ/규칙 단어겹침이 먼저 걸려서
-# "예문"/"보여줘" 같은 흔한 단어로 무관한 항목을 확정 답변해버리는 문제가 있었음(2026-09-11).
+# "그거 예문 더 보여줘"처럼 방금 대화를 가리키는 지시어 — _local_match의 FAQ/규칙 단어겹침이
+# 먼저 걸려서 "예문"/"보여줘" 같은 흔한 단어로 무관한 항목을 확정 답변해버리는 문제가 있었음
+# (2026-09-11) — 검색 없이 직전 규칙 문서로 바로 답하게 아래 _referential_rule_answer()를 둠.
 _REFERENTIAL_PATTERN = re.compile(
     r"그거|그것|이거|이것|왜\s*그래|그렇게|"
     r"예문.{0,6}(더|다른|또)|(더|다른|또).{0,6}예문|"  # "다른 예문 있어?"도 방금 대화 이어가기(2026-09-11)
@@ -425,7 +425,7 @@ _CORRECTNESS_FALLBACK = {
     "source": [], "offtopic": False, "suggested": [],
 }
 
-CORRECTNESS_PROMPT = """너는 초등학교 3~4학년 영어 선생님이다. 학생이 문장이 맞는지 물어봤다.
+CORRECTNESS_PROMPT = """너는 초등학교 {grade}에게 영어를 가르치는 선생님이다. 학생이 문장이 맞는지 물어봤다.
 아래 문법 규칙만 근거로 그 문장을 판정해라(목록에 없는 문법은 판단하지 않는다).
 
 ## 문법 규칙
@@ -444,11 +444,15 @@ CORRECTNESS_PROMPT = """너는 초등학교 3~4학년 영어 선생님이다. �
 }}"""
 
 
-def _check_correctness(question: str) -> dict:
+def _check_correctness(question: str, level: int = 3) -> dict:
     """"맞는 문장이에요?" 류 질문을 /fix 를 부르지 않고 자체 판정한다(sentence_log/notebook 에
     기록 안 남김 — 궁금해서 물어본 거지 "내 문장 말하기" 연습이 아니라서). 실패하면 안내 문구로
-    폴백(호출부에서 처리)."""
-    prompt = CORRECTNESS_PROMPT.format(rules_block="\n".join(f"- [{r['id']}] {r['type']}: {r['text']}" for r in golden.rules()), question=question)
+    폴백(호출부에서 처리).
+
+    level: RETRIEVAL_PROMPT처럼 페르소나 문구("초등학교 N학년")에만 씀 — 이전엔 "3~4학년"으로
+    고정돼 있어서 6학년 학생한테도 그렇게 답했다(2026-09-16 발견)."""
+    prompt = CORRECTNESS_PROMPT.format(grade=f"{level}학년",
+                                        rules_block="\n".join(f"- [{r['id']}] {r['type']}: {r['text']}" for r in golden.rules()), question=question)
     out = llm.generate_json(prompt)
     llm_info = out.pop("_llm", {})
     ok = bool(out.get("ok", True))
@@ -848,7 +852,7 @@ def _hybrid_answer(body: AskIn) -> dict:
         if not settings.has_api_key:
             return {"answer": "", "source": [], "offtopic": True, "error": "GEMINI_API_KEY 미설정"}
         try:
-            return _check_correctness(question)
+            return _check_correctness(question, level=body.context.level or 3)
         except llm.LLMError:
             return _CORRECTNESS_FALLBACK
 
@@ -857,7 +861,7 @@ def _hybrid_answer(body: AskIn) -> dict:
         if not settings.has_api_key:
             return {"answer": "", "source": [], "offtopic": True, "error": "GEMINI_API_KEY 미설정"}
         try:
-            return _check_correctness(body.context.text)
+            return _check_correctness(body.context.text, level=body.context.level or 3)
         except llm.LLMError:
             return _CORRECTNESS_FALLBACK
 
