@@ -2,13 +2,16 @@
 물어보기 챗 (PRD 4.4, 화면/통합은 팀장 소관 · 백엔드가 아직 없어서 TTS 담당이 임시로 준비)
 
 POST /api/ask
-body: {"student", "question", "context": {"screen","unit","rule_id","log_id"}}
+body: {"student", "question", "context": {"screen","unit","rule_id","log_id","text","source","level"}}
 → {"answer", "source": [{"chunk_id"}], "offtopic", "suggested": [...]}
 (common.js 의 askChat() 이 이미 이 형식을 기다림 — 필드 바꾸면 그쪽도 같이 바꿔야 함)
 
-1) 로컬 매칭(faq.jsonl→rules.jsonl 단어 겹침) 먼저 — 되면 LLM 호출 없이 즉시 반환
-2) 안 되면 backend/llm.py 로 폴백(faq 전체를 프롬프트에 넣고 고르게 함 — Gemini 기본, .env
-   LLM_BACKEND=local 이면 강의실 서버 로컬 모델. rag.search 완성되면 1위 조각만 넣게 바꿀 수 있음)
+ask() → _hybrid_answer()(계약 문서 2-2절, TTS 담당 수정 목록 1번, 2026-09-16 연결):
+1) 결정적 예외처리 + 로컬 매칭(faq.jsonl→rules.jsonl→patterns→words, 단어 겹침) 먼저 —
+   되면 LLM 호출 없이 즉시 반환
+2) 안 되면 검색 기반 _retrieval_answer()로 — search_faq/search_rule_aliases/search_textbook이
+   후보를 좁히고, 그 안에서만 LLM이 답을 지음(옛 "FAQ 전체를 프롬프트에 넣고 고르게 함" 폴백은
+   삭제됨)
 
 context.log_id 가 있으면 sentence_log.jsonl 에서 그 순간의 원문·고친 문장을 찾아 프롬프트에
 넣는다("아까 말한 거 고쳐줘"에 다시 추론 안 하고 /fix 결과를 그대로 씀). student.py 의
@@ -421,75 +424,11 @@ def _alternative_response(student: str, faq_list: list[dict]) -> dict | None:
 
 
 def _similar_match(question: str, student: str, faq_list: list[dict]) -> dict | None:
-    """"비슷한 게 있을까요?" 류 요청을 정규식으로 미리 잡아 LLM 호출 없이 처리(빠른 경로).
-    정규식이 못 잡는 표현은 LLM 폴백의 wants_more 필드가 대신 잡는다(_answer 참고)."""
+    """"비슷한 게 있을까요?" 류 요청을 정규식으로 미리 잡아 LLM 호출 없이 처리한다(빠른 경로).
+    정규식이 못 잡는 표현은 여기서 놓치고 아래 검색 기반 경로(_retrieval_answer)로 넘어간다."""
     if not _SIMILAR_PATTERN.search(question):
         return None
     return _alternative_response(student, faq_list)
-
-
-def _faq_block(faq_list: list[dict]) -> str:
-    lines = []
-    for f in faq_list:
-        variants = ", ".join(f.get("variants") or [])
-        rule_ids = ", ".join(f.get("rule_ids") or []) or "없음"
-        lines.append(f"- [{f['id']}] Q: {f['question']} (비슷한 표현: {variants})\n  A: {f['answer']}  (근거 규칙: {rule_ids})")
-    return "\n".join(lines)
-
-
-PROMPT = """너는 초등학교 3~4학년에게 영어를 가르치는 다정한 선생님이다.
-학생이 질문을 하면, 아래 "참고 FAQ" 목록 안에서 가장 비슷한 질문을 찾아 그 답을 참고해서 대답한다.
-
-## 꼭 지킬 것
-1. 답의 근거는 반드시 "참고 FAQ" 목록 안에 있어야 한다. 목록에 없는 내용은 답하지 않는다.
-2. 목록 어디에도 관련된 게 없으면 offtopic=true 로, answer 는 "선생님한테 물어볼까?" 같은 부드러운 문장으로.
-3. 답변은 한국어, 초등학생이 이해할 수 있게 2~3문장 이내.
-4. "방금 학생이 만든 문장" 정보가 아래에 있고, 학생이 "아까 말한 거/그 문장 고쳐줘"처럼 그 문장을
-   가리키는 요청을 하면, 새로 추론하지 말고 거기 적힌 "고친 문장"을 그대로 답에 써라.
-5. "이 학생의 오답노트"는 기본적으로 답의 근거로 쓰지 않는다 — 어떤 걸 자주 틀리는지 알아서 설명
-   톤을 그 학생에 맞게 조절하는 참고 자료일 뿐이다(예: 그 학생이 잘 틀리는 부분이면 조금 더 친절하게).
-   단, 학생이 "내가 뭘 틀렸어?/뭘 자주 틀려?"처럼 오답노트 자체를 요약해달라고 물으면, 그때는
-   예외로 오답노트 내용을 답 근거로 그대로 써서 실제 자주 틀리는 규칙 이름을 답하라(1번 규칙의 예외).
-   규칙 이름만 말하지 말고, 오답노트에 적힌 "최근" 예문(예: 'I read friend.' → 'I read a friend.')도
-   최소 하나는 같이 짚어줘라 — 추상적인 규칙명보다 실제로 어떤 문장을 썼었는지 알려주는 게 학생에게
-   더 와닿는다.
-   이렇게 여러 규칙을 한 번에 요약해서 답했을 때는, suggested(8번 항목)에 "이거"처럼 뭘 가리키는지
-   불분명한 질문 대신 방금 답에서 언급한 규칙 이름을 넣어라(예: "This/These 단수복수는 왜 틀려?") —
-   안 그러면 학생이 "이거 왜 틀렸어?"라고 되물었을 때 어느 규칙인지 몰라 매번 같은 요약만 반복하게 된다.
-6. 학생 질문에 "그거/이거/왜 그래/그렇게" 같은 지시어가 있거나 "다시 설명해줘/더 쉽게 설명해줘"
-   처럼 새 주제 없이 방금 답을 다시 풀어달라는 요청이면, 엉뚱한 새 FAQ를 찾지 말고 "방금
-   나눈 대화"에서 마지막으로 다룬 내용을 이어서 답하라 — 그 대화 자체가 근거이니 FAQ에 안 나와도
-   offtopic 처리하지 않는다(1번 규칙의 예외). 예: 방금 대화가 farewell 뜻이었고 학생이 "그거 예문
-   보여줘"라 하면 farewell 예문으로 답한다. 특히 "왜 그래?/왜 그렇게 해?"처럼 이유를 물으면,
-   방금 한 말을 그대로 반복하지 말고 "왜 그런지"(이유·원리)를 새로 풀어서 설명하라 — 같은 문장을
-   되풀이하는 답은 이유를 물은 학생에게 의미가 없다. 단, 직전 답이 여러 규칙을 한 번에 요약한
-   것이라 "이거"가 정확히 뭘 가리키는지 알 수 없으면, 추측해서 아무거나 설명하지 말고 "어떤 규칙이
-   궁금한지" 되물어라(예: "This/These 얘기야, 아니면 형용사+be동사 얘기야?").
-7. 학생이 "그거 말고 다른 건?/비슷한 거 있어?/또 없어?"처럼 방금 다룬 것과 다른 걸 더 달라고
-   하면 wants_more=true (표현이 뭐든 의도만 판단하면 됨 — answer는 평소처럼 채워도 되고, 실제
-   답은 다른 로직이 대신 정할 수 있다).
-8. 출력은 아래 JSON 하나만. 다른 말은 쓰지 않는다.
-
-## 지금 상황
-화면: {screen} · 유닛: {unit} · 방금 나온 규칙: {rule_id}
-{log_block}{history_block}
-## 이 학생의 오답노트 (기본은 톤 참고용 — 요약 질문일 땐 5번 규칙 예외로 답 근거 사용)
-{notebook_block}
-
-## 참고 FAQ (이 안에서만 고른다)
-{faq_block}
-
-## 학생 질문
-{question}
-
-## 출력 JSON
-{{
-  "answer": "답변 2~3문장",
-  "faq_id": "가장 근거가 된 FAQ id (예: F-01). 없으면 null",
-  "offtopic": true 또는 false,
-  "wants_more": true 또는 false,
-  "suggested": ["이어서 물어볼 만한 짧은 질문 2개"]
-}}"""
 
 
 _CORRECTNESS_PATTERN = re.compile(
@@ -588,183 +527,13 @@ def _notebook_rule_answer(question: str, student: str) -> dict | None:
     return None
 
 
-def _answer(body: AskIn) -> dict:
-    question = body.question.strip()
-    if not question:
-        return {"answer": "", "source": [], "offtopic": True}
-
-    # "내가 뭘 틀렸나요?"처럼 판정할 영어 문장이 질문 안에 없는 메타 질문은 이 패턴에 걸려도
-    # _check_correctness가 답할 게 없어 "" 가 맞아요 처럼 빈 답을 냄(2026-09-11 오답노트 화면에서
-    # 재현) — 질문에 영어 알파벳이 실제로 있을 때만(판정 대상 문장이 있다는 뜻) 이 경로로 보낸다.
-    # "This/These 단수복수는 왜 틀렸어?"처럼 규칙 이름에 영어가 섞여 있을 뿐 "왜/어떻게"로 이유를
-    # 묻는 메타 질문도 있어서(2026-09-14 재현 — _check_correctness가 판정할 문장이 없으니 질문을
-    # 그대로 "fixed"로 착각해 "~"가 맞아요 처럼 의미 없는 답을 냄), "왜"/"어떻게"가 있으면 문장
-    # 판정이 아니라 이유 질문으로 보고 이 경로를 건너뛴다.
-    if (_CORRECTNESS_PATTERN.search(question) and re.search(r"[A-Za-z]", question)
-            and not re.search(r"왜|어떻게", question)):
-        if not settings.has_api_key:
-            return {"answer": "", "source": [], "offtopic": True, "error": "GEMINI_API_KEY 미설정"}
-        try:
-            return _check_correctness(question)
-        except llm.LLMError:
-            return _CORRECTNESS_FALLBACK
-
-    # "이거 맞아?"처럼 고쳐줘 누르기 전 입력한 문장("이거")을 가리키는 판정 질문 — 질문 자체엔
-    # 영어가 없어서 위 경로로 안 새지만, context.text(2026-09-14 tutor.js가 고쳐줘 전에도 보내기
-    # 시작함)에 그 문장이 있으면 그걸 판정 대상으로 써서 같은 방식으로 답한다.
-    if (_CORRECTNESS_PATTERN.search(question) and not re.search(r"[A-Za-z]", question)
-            and body.context.text and not re.search(r"왜|어떻게", question)):
-        if not settings.has_api_key:
-            return {"answer": "", "source": [], "offtopic": True, "error": "GEMINI_API_KEY 미설정"}
-        try:
-            return _check_correctness(body.context.text)
-        except llm.LLMError:
-            return _CORRECTNESS_FALLBACK
-
-    all_faqs = golden.faqs()
-    all_rules = golden.rules()
-    if not all_faqs and not all_rules:
-        return {"answer": "", "source": [], "offtopic": True, "error": "faq.jsonl/rules.jsonl 이 없음"}
-
-    # "내가 관사를 틀렸었나?"처럼 구체적 문법 주제를 콕 집어 물으면, 그 학생 오답노트에서 이름이
-    # 실제로 일치하는 규칙을 찾아 결정적으로 답한다 (LLM이 텍스트 생김새로 엉뚱한 규칙 예문을
-    # 고르는 걸 방지, 2026-09-14).
-    notebook_rule = _notebook_rule_answer(question, body.student)
-    if notebook_rule is not None:
-        return notebook_rule
-
-    # "왜때 틀렸어"처럼 구체적 규칙 언급 없이 막연하게 자기 오답을 묻는데 오답노트가 실제로 비어
-    # 있으면, LLM이 프롬프트 어딘가의 예문("I read friend." 등)을 "이 학생 개인 기록"으로 착각해
-    # 지어내 답하는 문제가 있었음(2026-09-14 재현 — 프롬프트 지침으론 못 막아서 코드로 차단).
-    # 질문에 규칙 이름 같은 구체적 내용어가 있으면(예: "This/These 단수복수는 왜 틀렸어?") 그건
-    # 진짜 규칙 설명 요청이니 여기 안 걸리게 내용어 3개 이하일 때만 "막연한 질문"으로 본다.
-    if re.search(r"틀렸|오답|자주\s*틀리|실수", question) and len(_content_words(question)) <= 3:
-        from backend.student import notebook_text
-        if notebook_text(body.student) == "아직 오답노트가 비어 있음.":
-            return {"answer": "아직 오답노트에 기록된 게 없어요! 문제를 몇 개 풀어보면 그때 자주 틀리는 것도 알려줄 수 있어요.",
-                    "source": [], "offtopic": False, "suggested": []}
-
-    # "elephant는 a예요 an이에요?" — LLM에게 맡기면 가끔 기본 규칙 자체를 틀리게 답해서
-    # (2026-09-14, "첫 글자가 자음이라 a" — 실제로는 모음 소리라 an이 맞음) 교재 어휘 기준으로
-    # 결정적으로 답한다.
-    a_an = _a_an_answer(question) or _a_an_followup_answer(question, body.student)
-    if a_an is not None:
-        return a_an
-
-    # "비슷한 거 있어?" 류는 LLM 자체 탐색이 신뢰도 낮아서(2026-09-10), 방금 답의 근거 규칙으로
-    # 결정적으로 찾아본다 — 찾으면 즉시 반환, 못 찾으면(근거 규칙 없음 등) 아래 로컬 매칭으로 폴백
-    similar = _similar_match(question, body.student, all_faqs)
-    if similar is not None:
-        return similar
-
-    words_pool = {w["word"].lower(): w for w in golden.all_words()}
-    patterns_pool = golden.all_patterns()
-
-    # 1) 로컬 매칭 먼저 — faq/rules/words/patterns 안에서 바로 찾아지면 Gemini 호출 없이 즉시 반환.
-    #    단, "그거/왜 그래"처럼 방금 대화를 가리키는 질문은 로컬 단어겹침 매칭이 무관한 항목에
-    #    걸릴 위험이 있어(2026-09-11 재현) 건너뛰고 대화 맥락을 보는 LLM 경로로 바로 넘긴다.
-    if not _REFERENTIAL_PATTERN.search(question):
-        local = _local_match(question, all_faqs, all_rules, words_pool, patterns_pool)
-        if local is not None:
-            return local
-
-    # 2) 로컬 매칭 실패 → llm.py 폴백 (faq 전체를 프롬프트에 넣고 고르게 함)
-    if not settings.has_api_key:
-        return {"answer": "", "source": [], "offtopic": True, "error": "GEMINI_API_KEY 미설정"}
-
-    ctx = body.context
-    # "그거/왜 그래?" 같은 이어가기 질문인데 화면이 rule_id를 안 줬으면, 방금 대화 로그에서
-    # 마지막으로 근거 규칙이 있던 턴의 rule_id를 가져와 채운다 — history_block(자연어 대화 기록)만
-    # 주면 LLM이 안 읽고 "뭘 말하는지 모르겠다"고 답하는 경우가 있어서(2026-09-14), "방금 나온
-    # 규칙" 필드에 구조적으로 명시해 더 확실히 전달한다.
-    rule_id = ctx.rule_id
-    if not rule_id and _REFERENTIAL_PATTERN.search(question):
-        last_grounded = next((t for t in reversed(_recent_chat_turns(body.student, max_turns=5)) if t.get("rule_ids")), None)
-        if last_grounded:
-            rule_id = last_grounded["rule_ids"][0]
-
-    # rule_id가 있으면 관련 FAQ를 목록 앞쪽에 둬서 프롬프트에서 더 눈에 띄게 함
-    if rule_id:
-        all_faqs = sorted(all_faqs, key=lambda f: rule_id not in (f.get("rule_ids") or []))
-
-    log = _log_entry(ctx.log_id) if ctx.log_id else None
-    log_block = ""
-    if log:
-        log_block = (
-            "\n## 방금 학생이 만든 문장\n"
-            f'원래 문장: {log.get("text", "")}\n'
-            f'고친 문장: {log.get("fixed", "")}\n'
-            "(둘이 같으면 원래 문장이 맞았다는 뜻)\n"
-        )
-    elif ctx.text:
-        # 고쳐줘를 아직 안 눌러서 log_id가 없는 경우(2026-09-14) — 아직 채점 전인 문장이니
-        # "고친 문장"은 없고, "이거/이 문장"이 뭘 가리키는지만 알려준다.
-        log_block = f"\n## 학생이 방금 입력했지만 아직 고쳐주기 전인 문장\n{ctx.text}\n"
-
-    try:
-        from backend.student import notebook_text
-        notebook_block = notebook_text(body.student)
-    except Exception:
-        notebook_block = "(모름)"
-
-    prompt = PROMPT.format(
-        screen=ctx.screen or "(모름)", unit=ctx.unit or "(모름)", rule_id=rule_id or "(없음)",
-        log_block=log_block, history_block=_history_block(body.student), notebook_block=notebook_block,
-        faq_block=_faq_block(all_faqs), question=question,
-    )
-    try:
-        out = llm.generate_json(prompt)
-    except llm.LLMError as e:
-        return {"answer": "", "source": [], "offtopic": True, "error": str(e)}
-    llm_info = out.pop("_llm", {})
-
-    if bool(out.get("wants_more")):
-        # 정규식(_similar_match)이 못 잡은 "비슷한/다른 거" 표현을 LLM이 의도로 잡아준 경우 —
-        # 실제 답은 LLM이 아니라 결정적 로직(_alternative_response)에 맡긴다(2026-09-10)
-        alt = _alternative_response(body.student, all_faqs)
-        if alt is not None:
-            alt["llm"] = llm_info
-            return alt
-
-    answer = out.get("answer") or ""
-
-    # LLM이 faq_id는 골라놓고 실제 answer 텍스트는 전혀 다른 내용으로 자유롭게 쓰는 경우가 있어서
-    # (예: faq_id=F-44(be동사 과거시제)를 골랐는데 답은 go/eat 같은 일반동사 얘기, 2026-09-11
-    # 오답노트 채팅에서 재현) — 답변과 그 FAQ 내용이 실제로 겹치는지 확인하고, 안 겹치면 그 FAQ의
-    # rule_ids를 근거로 붙이지 않는다(엉뚱한 규칙을 근거라고 우기는 걸 방지).
-    faq = next((f for f in all_faqs if f["id"] == out.get("faq_id")), None)
-    if faq and not (set(_content_words(answer)) & set(_content_words(faq["question"] + " " + faq["answer"]))):
-        print(f"[ask][진단] faq_id={faq['id']} 골랐는데 answer 내용이 안 겹쳐 근거로 안 붙임: {answer!r}", flush=True)
-        faq = None
-
-    source = [{"chunk_id": rid} for rid in (faq.get("rule_ids") or [])] if faq else []
-    if faq:
-        source.append({"chunk_id": faq["id"]})
-    if log and log.get("rule_id") and not any(s["chunk_id"] == log["rule_id"] for s in source):
-        source.append({"chunk_id": log["rule_id"]})
-    offtopic = bool(out.get("offtopic"))
-    if offtopic and answer.strip() and "선생님" not in answer:
-        # 모델이 offtopic=true 라면서도 answer 는 유용하게 주는 경우가 잦음 — 프롬프트가 정한
-        # 진짜 못 답한 응답("선생님한테 물어볼까?")만 그 문구를 쓰므로 길이 대신 이걸로 판단
-        print(f"[ask] offtopic=true인데 '선생님' 문구가 없어서 offtopic 취소: {answer!r}", flush=True)
-        offtopic = False
-
-    return {
-        "answer": answer,
-        "source": source,
-        "offtopic": offtopic,
-        "suggested": [q for q in (out.get("suggested") or []) if isinstance(q, str)][:2],
-        "llm": llm_info,
-    }
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # 검색 기반 답변 — docs/2026.09.14 검색 함수 계약 (textbook·examples·faq).md
-# ask()가 2026-09-16부터 _hybrid_answer()를 통해 이 경로를 부른다(계약 TTS 담당 수정 목록 1번).
+# ask()가 _hybrid_answer()를 통해 이 경로를 부른다(계약 TTS 담당 수정 목록 1번, 2026-09-16 연결).
 # search_faq/search_rule_aliases/search_textbook이 먼저 후보를 좁히고 faq_hit/rule_hit/절대점수로
-# "뚜렷한 게 있는지" 판정한 뒤, 있으면 그 안에서만 LLM이 답을 짓는다(옛 _answer()처럼 FAQ
-# 전체를 통째로 넣지 않는다). _answer()는 당분간 남겨두고(정리는 계약 9번), _hybrid_answer()가
-# 먼저 오늘까지 쌓인 결정적 로직을 시도한 뒤에만 여기로 넘어온다.
+# "뚜렷한 게 있는지" 판정한 뒤, 있으면 그 안에서만 LLM이 답을 짓는다 — 옛 폴백(FAQ 전체를
+# 프롬프트에 통째로 넣던 방식, _answer())은 정리 완료(계약 9번, 2026-09-16). _hybrid_answer()가
+# 먼저 오늘까지 쌓인 결정적 로직(_local_match 등)을 시도한 뒤에만 여기로 넘어온다.
 # ─────────────────────────────────────────────────────────────────────────────
 
 RETRIEVAL_PROMPT = """너는 초등학교 {grade}에게 영어를 가르치는 다정한 선생님이다.
@@ -1066,14 +835,11 @@ def _retrieval_answer(question: str, body: AskIn, skip_similar: bool = False) ->
 
 
 def _hybrid_answer(body: AskIn) -> dict:
-    """ask()가 실제로 부르는 함수(2026-09-16 연결, 계약 문서 TTS 담당 수정 목록 1번). 오늘 만든
-    결정적 예외처리(오답노트 규칙 라우팅·빈 노트 가드·a/an·비슷한 거 더·로컬 FAQ/규칙/패턴/단어
-    매칭)는 이미 검증됐으니 그대로 먼저 쓰고, 전부 실패했을 때만 검색 기반 _retrieval_answer()로
-    넘긴다 — 옛 _answer()의 최종 폴백("FAQ 전체를 프롬프트에 통째로 넣고 LLM이 고르게 함")만
-    검색 기반으로 바꾼 버전.
-
-    주의: _answer()를 그대로 두기로 해서 그 앞부분 로직을 복붙했다 — 당분간 둘 다 남겨두고
-    실제 서비스 결과를 지켜본 뒤, 문제없으면 _answer()와 옛 폴백을 정리한다(계약 9번)."""
+    """ask()가 실제로 부르는 함수(계약 문서 TTS 담당 수정 목록 1번, 2026-09-16 연결). 결정적
+    예외처리(오답노트 규칙 라우팅·빈 노트 가드·a/an·비슷한 거 더·로컬 FAQ/규칙/패턴/단어 매칭)를
+    먼저 시도하고, 전부 실패했을 때만 검색 기반 _retrieval_answer()로 넘긴다 — 옛 _answer()가
+    쓰던 "FAQ 전체를 프롬프트에 통째로 넣고 LLM이 고르게 함" 폴백은 검색 기반으로 완전히
+    대체돼서 삭제됐다(계약 9번, 2026-09-16)."""
     question = body.question.strip()
     if not question:
         return {"answer": "", "source": [], "offtopic": True}
