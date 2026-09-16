@@ -37,6 +37,8 @@ SENTENCE_LOG = Path(__file__).resolve().parent.parent / "data" / "student" / "se
 CHAT_LOG = Path(__file__).resolve().parent.parent / "data" / "student" / "chat_log.jsonl"
 CHAT_HISTORY_WINDOW_SEC = 180   # 이 안이면 "같은 대화"로 보고 그거/이거 지시어 힌트로 씀
 CHAT_HISTORY_MAX_TURNS = 2
+DEFAULT_LEVEL = 3   # ctx.level 이 없을 때(화면이 안 보냈거나 None) 쓰는 기본 학년 — 5곳에 흩어져
+                    # 있던 "or 3" 리터럴을 하나로 모음(2026-09-16)
 
 
 class AskContext(BaseModel):
@@ -189,7 +191,7 @@ def _followup_questions(rule_ids: list[str], faq_list: list[dict], exclude_id: s
     return out
 
 
-def _word_answer(entry: dict, note: str = "", ctx_unit: str | None = None) -> dict:
+def _word_answer(entry: dict, note: str = "", ctx_unit: str | None = None, level: int = DEFAULT_LEVEL) -> dict:
     # lookup_word() 결과는 unit을 담고 있어서(_word_match의 words_pool엔 없음 — golden.all_words()가
     # unit을 안 줌), 여기서만 다른 유닛 안내를 붙일 수 있다. 패턴·단어 임베딩 검색+LLM 생성 경로가
     # 이미 이 안내를 쓰고 있는 것과 통일(2026-09-16 발견 — 단어 조회만 조용히 답하고 있었음).
@@ -199,7 +201,24 @@ def _word_answer(entry: dict, note: str = "", ctx_unit: str | None = None) -> di
     answer = f"{unit_note}{note}{entry['word']}는 '{entry['meaning']}'라는 뜻이에요."
     if entry.get("example"):
         answer += f" 예: {entry['example']}"
-    return {"answer": answer, "source": [], "offtopic": False, "suggested": []}
+    # 단어 조회는 가장 흔한 질문 유형인데 suggested가 항상 비어있었다(2026-09-16 발견) — 같은
+    # 유닛의 교과서 패턴 하나를 추천 질문으로 준다. _word_match(words_pool)의 항목엔 unit이
+    # 없어서(golden.all_words()가 안 줌) 그 경로는 자연히 그대로 빈 채로 남는다. "다른 예문
+    # 보여줘"류 이어가기 문구는 일부러 안 쓴다 — 이 답의 source가 []라(단어엔 rule_id가 없음)
+    # _referential_rule_answer가 직전 맥락을 못 찾아 엉뚱한 FAQ로 새는 문제(2026-09-16 실사용
+    # 테스트에서 재현)가 있어서, 검색 없이 바로 답 가능한 새 질문만 추천한다.
+    suggested = []
+    if entry.get("unit"):
+        try:
+            patterns = golden.patterns(entry.get("level") or level, entry["unit"])
+            # words.csv·patterns.csv가 같은 교재 문장을 id만 다르게(w-0081/p-0081) 담아둔 경우가
+            # 있어서, 방금 답의 예문과 똑같은 패턴을 또 추천하지 않게 다음 걸로 넘어간다.
+            pat = next((p for p in patterns if p["text"] != entry.get("example")), None)
+            if pat:
+                suggested = [f"{pat['text']} 무슨 뜻이에요?"]
+        except Exception:
+            pass
+    return {"answer": answer, "source": [], "offtopic": False, "suggested": suggested}
 
 
 def _word_match(question: str, words_pool: dict[str, dict]) -> dict | None:
@@ -247,8 +266,8 @@ def _local_match(question: str, faq_list: list[dict], rule_list: list[dict],
     """faq→rules→patterns→words 순으로 로컬 매칭, 전부 실패하면 None → 폴백.
 
     level: 단어장 조회(lookup_word)에 쓸 학년. _retrieval_answer()가 실패 시 같은 조회를 또
-    하지 않도록(skip_word_lookup) 여기서도 _retrieval_answer()와 같은 값(ctx.level or 3)을
-    받아써서 두 곳의 lookup_word 결과가 어긋나지 않게 한다(2026-09-16).
+    하지 않도록(skip_word_lookup) 여기서도 _retrieval_answer()와 같은 값(ctx.level or
+    DEFAULT_LEVEL)을 받아써서 두 곳의 lookup_word 결과가 어긋나지 않게 한다(2026-09-16).
 
     ctx_unit: 단어 조회(lookup_word) 결과가 다른 유닛 것이면 안내를 붙이는 데만 씀
     (_word_answer 참고). FAQ·규칙 단어겹침·패턴 매칭(바로 아래)은 일부러 안 붙였다 — 그
@@ -299,7 +318,7 @@ def _local_match(question: str, faq_list: list[dict], rule_list: list[dict],
             eng_in_q = w["word"].lower() in question.lower()
             asks_translation = bool(re.search(r"영어로|영어\s*(단어|낱말)", question))
             if eng_in_q or asks_translation:
-                return _word_answer(w, ctx_unit=ctx_unit)
+                return _word_answer(w, ctx_unit=ctx_unit, level=level)
         # lookup_word가 못 찾으면 오타로 보고 _word_match의 스펠체커 폴백을 재사용(lookup_word엔
         # 오타 교정이 없음 — "-s/-es/-ing/-ed" 어미 제거만 함, "pencl" 같은 오타는 못 잡음).
         word = _word_match(question, words_pool)
@@ -549,12 +568,23 @@ def ask(body: AskIn):
     return result
 
 
-_NOTEBOOK_TRIGGER = re.compile(r"틀렸|틀린|틀리는|틀려|오답|자주\s*틀리|실수")
+# 어간 "틀리"를 넣어서 틀리는/틀리나요/틀리죠/틀리지 등을 한 번에 잡는다 — "틀림"(명사형, "나 뭐
+# 자주 틀림?")은 "틀리"가 그 안에 부분문자열로도 안 들어있어서(한글 음절 "리"≠"림") 별도로
+# 추가해야 했다(2026-09-16 실사용 테스트에서 재현 — 이 표현만 트리거가 아예 안 걸렸음).
+_NOTEBOOK_TRIGGER = re.compile(r"틀렸|틀린|틀려|틀림|틀리|오답|실수")
 _TRAILING_PARTICLE = re.compile(r"(는|은|이|가|을|를|도|만|의|랑|와|과|에서|에게|에)$")
 # "내가 뭘 자주 틀려?"의 "자주"처럼 진짜 문법 주제가 아니라 오답노트 질문에 흔히 붙는 부사 —
 # topic_words에 남으면 "구체적 주제를 물었다"고 오판해서 요약 답변이 안 나가게 된다(2026-09-16
-# _notebook_summary_answer 추가하면서 발견).
+# _notebook_summary_answer 추가하면서 발견). "요즘 계속"/"맨날"처럼 이런 부사가 두 개 겹치면
+# 내용어 개수(3개 이하) 문턱까지 넘겨버려서 아예 거절되는 문제도 있어서(2026-09-16 실사용
+# 테스트 재발견) _notebook_content_word_count()에서도 이 집합을 뺀다.
 _NOTEBOOK_FILLER_WORDS = {"자주", "자꾸", "요즘", "가끔", "맨날", "만날", "매번", "계속", "여전히", "아직도"}
+
+
+def _notebook_content_word_count(question: str) -> int:
+    """오답노트 질문이 "막연한지 구체적인지" 가르는 내용어 개수 — "요즘"/"자꾸" 같은 흔한 부사는
+    구체적 주제가 아니므로 안 센다."""
+    return len([w for w in _content_words(question) if w not in _NOTEBOOK_FILLER_WORDS])
 
 
 def _notebook_rule_answer(question: str, student: str) -> dict | None:
@@ -600,7 +630,7 @@ def _notebook_summary_answer(question: str, student: str) -> dict | None:
     하면 학생이 자기가 물어본 주제에 답을 들었다고 착각한다(2026-09-16 실사용 테스트에서 재현).
     _notebook_rule_answer와 같은 방식으로 topic_words를 다시 뽑아, 구체적 주제가 있었으면 정직하게
     "기록에 없다"고 답하고, 진짜 막연한 질문(topic_words 없음)일 때만 top-2 요약을 준다."""
-    if not _NOTEBOOK_TRIGGER.search(question) or len(_content_words(question)) > 3:
+    if not _NOTEBOOK_TRIGGER.search(question) or _notebook_content_word_count(question) > 3:
         return None
     topic_words = [_TRAILING_PARTICLE.sub("", w) for w in _content_words(question)]
     topic_words = [w for w in topic_words if len(w) >= 2 and not _NOTEBOOK_TRIGGER.search(w)
@@ -776,7 +806,7 @@ def _retrieval_answer(question: str, body: AskIn, skip_similar: bool = False,
     이미 시도하고 실패한 뒤에 호출할 때 True — lookup_word는 결정적이라 같은 질문·같은 level로
     또 불러봐야 같은 결과라서 낭비다(2026-09-16 발견, _similar_match와 같은 종류의 문제)."""
     ctx = body.context
-    level = ctx.level or 3
+    level = ctx.level or DEFAULT_LEVEL
 
     # 0) 의도 가르기 — 검색 전에 코드로. 인사·감사·감정은 고정 답, 이어가기는 직전 규칙 문서로.
     fixed = _intent_fixed_reply(question)
@@ -815,7 +845,7 @@ def _retrieval_answer(question: str, body: AskIn, skip_similar: bool = False,
             eng_in_q = w["word"].lower() in question.lower()
             asks_translation = bool(re.search(r"영어로|영어\s*(단어|낱말)", question))
             if eng_in_q or asks_translation:
-                return _word_answer(w, ctx_unit=ctx.unit)
+                return _word_answer(w, ctx_unit=ctx.unit, level=level)
 
     try:
         qvec = embedding.embed_query(question)
@@ -991,7 +1021,7 @@ def _hybrid_answer(body: AskIn) -> dict:
         if not settings.has_api_key:
             return {"answer": "", "source": [], "offtopic": True, "error": "GEMINI_API_KEY 미설정"}
         try:
-            return _check_correctness(question, level=body.context.level or 3)
+            return _check_correctness(question, level=body.context.level or DEFAULT_LEVEL)
         except llm.LLMError:
             return _CORRECTNESS_FALLBACK
 
@@ -1000,7 +1030,7 @@ def _hybrid_answer(body: AskIn) -> dict:
         if not settings.has_api_key:
             return {"answer": "", "source": [], "offtopic": True, "error": "GEMINI_API_KEY 미설정"}
         try:
-            return _check_correctness(body.context.text, level=body.context.level or 3)
+            return _check_correctness(body.context.text, level=body.context.level or DEFAULT_LEVEL)
         except llm.LLMError:
             return _CORRECTNESS_FALLBACK
 
@@ -1013,7 +1043,7 @@ def _hybrid_answer(body: AskIn) -> dict:
     if notebook_rule is not None:
         return notebook_rule
 
-    if _NOTEBOOK_TRIGGER.search(question) and len(_content_words(question)) <= 3:
+    if _NOTEBOOK_TRIGGER.search(question) and _notebook_content_word_count(question) <= 3:
         from backend.student import notebook_text
         if notebook_text(body.student) == "아직 오답노트가 비어 있음.":
             return {"answer": "아직 오답노트에 기록된 게 없어요! 문제를 몇 개 풀어보면 그때 자주 틀리는 것도 알려줄 수 있어요.",
@@ -1037,7 +1067,7 @@ def _hybrid_answer(body: AskIn) -> dict:
 
     words_pool = {w["word"].lower(): w for w in golden.all_words()}
     patterns_pool = golden.all_patterns()
-    level = body.context.level or 3
+    level = body.context.level or DEFAULT_LEVEL
     # _local_match의 단어장 조회(lookup_word)는 영단어가 2개 이하일 때만 도는데, 그게 돌고도
     # 실패했다면 _retrieval_answer()가 같은 level로 또 불러봐야 결과가 같으므로(결정적 함수)
     # 건너뛴다 — 2개 넘게 섞인 질문은 _local_match가 애초에 안 돌렸으니 거기서 처음이자

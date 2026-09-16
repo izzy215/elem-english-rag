@@ -157,6 +157,22 @@ r_unknown_topic = a("A", "관계대명사 틀렸었나?", screen="notebook")
 check("D3", "오답노트에 없는 구체적 주제를 물으면 다른 주제로 안 바꿔치기하고 정직하게 답",
       "없어요" in r_unknown_topic["answer"] and r_unknown_topic["source"] == [])
 
+r_filler = a("D4", "요즘 계속 틀리는 게 뭐야?", screen="notebook")
+check("D4", '"요즘"+"계속" 같은 부사 2개가 겹쳐도 내용어 과다로 거절되지 않고 오답노트 처리됨',
+      r_filler["offtopic"] is False and "교과서" not in r_filler["answer"])
+
+check("D5", '"틀림"(부분문자열로 "틀리"를 안 담은 활용형)도 오답노트 트리거로 인식',
+      bool(askmod._NOTEBOOK_TRIGGER.search("나 뭐 자주 틀림?")))
+
+
+# ── 2026-09-16 단어 조회 suggested 추가 + level 기본값 상수화 ────────────────
+r_word_sugg = a("D6", "bus가 뭐예요?", unit="Unit15", level=3)
+check("D6", "단어 조회 답변에도 suggested가 채워짐(전엔 항상 빈 배열)",
+      len(r_word_sugg.get("suggested") or []) >= 1)
+
+check("D7", "DEFAULT_LEVEL 상수가 실제로 쓰임(literal 'or 3' 잔재 없음)",
+      hasattr(askmod, "DEFAULT_LEVEL") and askmod.DEFAULT_LEVEL == 3)
+
 
 print("\n=== 요약 ===")
 passed = sum(1 for _, _, c, _ in results if c)
