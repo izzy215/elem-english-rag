@@ -551,6 +551,10 @@ def ask(body: AskIn):
 
 _NOTEBOOK_TRIGGER = re.compile(r"틀렸|틀린|틀리는|틀려|오답|자주\s*틀리|실수")
 _TRAILING_PARTICLE = re.compile(r"(는|은|이|가|을|를|도|만|의|랑|와|과|에서|에게|에)$")
+# "내가 뭘 자주 틀려?"의 "자주"처럼 진짜 문법 주제가 아니라 오답노트 질문에 흔히 붙는 부사 —
+# topic_words에 남으면 "구체적 주제를 물었다"고 오판해서 요약 답변이 안 나가게 된다(2026-09-16
+# _notebook_summary_answer 추가하면서 발견).
+_NOTEBOOK_FILLER_WORDS = {"자주", "자꾸", "요즘", "가끔", "맨날", "만날", "매번", "계속", "여전히", "아직도"}
 
 
 def _notebook_rule_answer(question: str, student: str) -> dict | None:
@@ -589,9 +593,21 @@ def _notebook_summary_answer(question: str, student: str) -> dict | None:
     이 문장을 들고 있는데도 안 됐음). 옛 _answer()의 PROMPT 5번 규칙이 LLM에게 자유 요약을
     맡겼던 걸(2026-09-16 삭제 전 확인), 지금 결정적 매칭 기조에 맞춰 notebook_summary()로 직접
     만든다 — 아직 안 극복한(overcome 제외) 규칙 중 많이 틀린 순으로 최대 2개, 그 중 1위는
-    최근 예문도 같이."""
+    최근 예문도 같이.
+
+    "관계대명사 틀렸었나?"처럼 구체적 주제를 짚었는데 그 학생이 실제론 안 틀린 경우(_notebook_
+    rule_answer가 이름 매칭에 실패해 여기로 넘어옴), 조용히 다른 주제(top-2 요약)로 답을 바꿔치기
+    하면 학생이 자기가 물어본 주제에 답을 들었다고 착각한다(2026-09-16 실사용 테스트에서 재현).
+    _notebook_rule_answer와 같은 방식으로 topic_words를 다시 뽑아, 구체적 주제가 있었으면 정직하게
+    "기록에 없다"고 답하고, 진짜 막연한 질문(topic_words 없음)일 때만 top-2 요약을 준다."""
     if not _NOTEBOOK_TRIGGER.search(question) or len(_content_words(question)) > 3:
         return None
+    topic_words = [_TRAILING_PARTICLE.sub("", w) for w in _content_words(question)]
+    topic_words = [w for w in topic_words if len(w) >= 2 and not _NOTEBOOK_TRIGGER.search(w)
+                   and w not in _NOTEBOOK_FILLER_WORDS]
+    if topic_words:
+        return {"answer": "그 부분은 아직 오답노트에 없어요. 문제를 몇 개 더 풀어보면 알 수 있을 거예요!",
+                "source": [], "offtopic": False, "suggested": []}
     from backend.student import notebook_summary
     items = sorted(notebook_summary(student, max_examples=1)["active"],
                    key=lambda it: it["count"], reverse=True)[:2]
@@ -656,7 +672,9 @@ def _candidates_block(patterns: list[dict], words: list[dict], rule: dict | None
 # ── 의도 가르기 (계약 문서 2-1절 0번, 2026-09-14 저녁) — 검색 전에 코드로 먼저 가른다 ──────────
 _INTENT_FILLER = r"(?:나는?|저는?|오늘|요즘|진짜|너무|정말)\s*"
 _INTENT_REPLIES = [
-    (re.compile(r"^(안녕|hi|hello|하이)[!~.\s]*$", re.IGNORECASE), "안녕! 오늘 배우는 것에 대해 뭐든 물어봐 😊"),
+    # "안녕"만 잡고 "안녕하세요"(오히려 더 흔한 존댓말 인사)는 안 잡혀서 검색으로 새고 있었다
+    # (2026-09-16 실사용 테스트 재현 — "Good morning!"이라는 뜬금없는 답이 나감).
+    (re.compile(r"^(안녕(하세요|하십니까|하신가요)?|hi|hello|하이)[!~.\s]*$", re.IGNORECASE), "안녕! 오늘 배우는 것에 대해 뭐든 물어봐 😊"),
     (re.compile(rf"^({_INTENT_FILLER})*(고마워|고맙습니다|감사해요|감사합니다)[요]?[!~.\s]*$"), "천만에! 더 궁금한 거 있으면 또 물어봐."),
     (re.compile(rf"^({_INTENT_FILLER})*(피곤해|졸려|힘들어|배고파)[요]?[ㅠㅜ!~.\s]*$"), "조금 쉬었다 해도 괜찮아! 준비되면 다시 물어봐줘."),
     (re.compile(rf"^({_INTENT_FILLER})*(심심해|재미없어)[요]?[!~.\s]*$"), "그럼 문제 하나 풀어볼까? 궁금한 거 있으면 물어봐도 좋고!"),
@@ -831,8 +849,18 @@ def _retrieval_answer(question: str, body: AskIn, skip_similar: bool = False,
         # 0.85를 걸러준 뒤라 길이를 낮춰도 무관한 매칭이 새어들 위험은 낮다.
         qwords = _content_words(question)
         fwords = _content_words(f["question"] + " " + f["matched"])
-        overlap = any(len(w) >= 2 and len(x) >= 2 and abs(len(w) - len(x)) <= 2 and (w in x or x in w)
-                      for w in qwords for x in fwords)
+        # "go랑 went 뭐가 달라요?"가 "go+동명사" FAQ(변형에 "go"가 우연히 들어있음)에 매칭되던
+        # 문제(2026-09-16 재현) — 질문에 영단어가 2개 이상이면(비교 질문 가능성) 그중 하나만
+        # 겹쳐선 안 되고 전부 겹쳐야 인정한다. "in이랑 on 차이"처럼 진짜 관련 FAQ는 in/on 둘 다
+        # 들어있어서 여전히 통과하고("F-12" 확인됨), "go"만 우연히 겹친 무관한 FAQ는 "went"가
+        # 없어서 걸러진다.
+        eng_tokens = set(re.findall(r"[a-z]+", question.lower()))
+        if len(eng_tokens) >= 2:
+            fwords_eng = set(re.findall(r"[a-z]+", (f["question"] + " " + f["matched"]).lower()))
+            overlap = eng_tokens <= fwords_eng
+        else:
+            overlap = any(len(w) >= 2 and len(x) >= 2 and abs(len(w) - len(x)) <= 2 and (w in x or x in w)
+                          for w in qwords for x in fwords)
         if overlap:
             source = [{"chunk_id": rid} for rid in f["rule_ids"]] + [{"chunk_id": f["id"]}]
             suggested = _followup_questions(f["rule_ids"], all_faqs, exclude_id=f["id"])

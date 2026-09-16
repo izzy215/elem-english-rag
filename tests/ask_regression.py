@@ -143,6 +143,21 @@ check("C3", "unit=ALL 공통 규칙은 검색 순위와 무관하게 항상 포�
       narrowed is not None and all_ids <= {r["id"] for r in narrowed})
 
 
+# ── 2026-09-16 유닛/오답노트 화면 반복 사용자 테스트로 발견·수정한 것들 ──────
+check("D1", '"안녕하세요"(존댓말)도 인사 고정답으로 인식', "안녕" in a("D1", "안녕하세요")["answer"])
+
+r_gowent = a("D2", "go랑 went 뭐가 달라요?")
+check("D2", '영단어 2개 이상 질문은 FAQ가 그 전부와 안 겹치면 폐기(go+ing FAQ 오매칭 방지)',
+      not any(s.get("chunk_id") == "F-93" for s in r_gowent["source"]))
+r_inon = a("D2b", "in이랑 on 차이가 뭐예요?")
+check("D2b", "위 필터 강화 후에도 진짜 다단어 매칭(in/on)은 회귀 없음",
+      r_inon["offtopic"] is False and "in" in r_inon["answer"].lower())
+
+r_unknown_topic = a("A", "관계대명사 틀렸었나?", screen="notebook")
+check("D3", "오답노트에 없는 구체적 주제를 물으면 다른 주제로 안 바꿔치기하고 정직하게 답",
+      "없어요" in r_unknown_topic["answer"] and r_unknown_topic["source"] == [])
+
+
 print("\n=== 요약 ===")
 passed = sum(1 for _, _, c, _ in results if c)
 print(f"{passed}/{len(results)} 통과")
