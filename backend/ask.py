@@ -537,7 +537,7 @@ def _check_correctness(question: str) -> dict:
 
 @router.post("/ask")
 def ask(body: AskIn):
-    result = _answer(body)
+    result = _hybrid_answer(body)
     _log_chat_turn(body.student, body.question.strip(), result.get("answer", ""), result.get("source"))
     return result
 
@@ -745,11 +745,12 @@ def _answer(body: AskIn) -> dict:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 검색 기반 답변 (비교 전용, 2026-09-14) — docs/2026.09.14 검색 함수 계약 (textbook·examples·faq).md
-# ask()/_answer() 는 아직 이 경로를 안 부른다. search_faq/search_textbook 이 먼저 후보를 좁히고
-# sharp() 로 "뚜렷한 게 있는지" 판정한 뒤, 있으면 그 안에서만 LLM 이 답을 짓는다(없으면 위
-# faq_block 통째로 넣는 방식과 이 부분이 다름). 기존 정규식 기반 로직과 나란히 비교해보고
-# 전환 여부를 정할 예정 — 스크래치패드 비교 스크립트 참고.
+# 검색 기반 답변 — docs/2026.09.14 검색 함수 계약 (textbook·examples·faq).md
+# ask()가 2026-09-16부터 _hybrid_answer()를 통해 이 경로를 부른다(계약 TTS 담당 수정 목록 1번).
+# search_faq/search_rule_aliases/search_textbook이 먼저 후보를 좁히고 faq_hit/rule_hit/절대점수로
+# "뚜렷한 게 있는지" 판정한 뒤, 있으면 그 안에서만 LLM이 답을 짓는다(옛 _answer()처럼 FAQ
+# 전체를 통째로 넣지 않는다). _answer()는 당분간 남겨두고(정리는 계약 9번), _hybrid_answer()가
+# 먼저 오늘까지 쌓인 결정적 로직을 시도한 뒤에만 여기로 넘어온다.
 # ─────────────────────────────────────────────────────────────────────────────
 
 RETRIEVAL_PROMPT = """너는 초등학교 {grade}에게 영어를 가르치는 다정한 선생님이다.
@@ -1042,14 +1043,14 @@ def _retrieval_answer(question: str, body: AskIn) -> dict:
 
 
 def _hybrid_answer(body: AskIn) -> dict:
-    """비교/실험용(2026-09-14): 오늘 만든 결정적 예외처리(오답노트 규칙 라우팅·빈 노트 가드·
-    a/an·비슷한 거 더)는 이미 검증됐으니 그대로 먼저 쓰고, 전부 실패했을 때만 검색 기반
-    _retrieval_answer()로 넘긴다 — 기존 _answer()의 최종 폴백("FAQ 전체를 프롬프트에 통째로
-    넣고 LLM이 고르게 함")만 검색 기반으로 바꾼 버전.
+    """ask()가 실제로 부르는 함수(2026-09-16 연결, 계약 문서 TTS 담당 수정 목록 1번). 오늘 만든
+    결정적 예외처리(오답노트 규칙 라우팅·빈 노트 가드·a/an·비슷한 거 더·로컬 FAQ/규칙/패턴/단어
+    매칭)는 이미 검증됐으니 그대로 먼저 쓰고, 전부 실패했을 때만 검색 기반 _retrieval_answer()로
+    넘긴다 — 옛 _answer()의 최종 폴백("FAQ 전체를 프롬프트에 통째로 넣고 LLM이 고르게 함")만
+    검색 기반으로 바꾼 버전.
 
-    주의: _answer()를 안 건드리기로 해서(비교 단계) 그 앞부분 로직을 그대로 복붙했다 — _answer()가
-    나중에 바뀌면 여기도 같이 손봐야 한다(또는 그때 공통 헬퍼로 리팩터). ask()/_answer()는 여전히
-    이 함수를 안 부른다."""
+    주의: _answer()를 그대로 두기로 해서 그 앞부분 로직을 복붙했다 — 당분간 둘 다 남겨두고
+    실제 서비스 결과를 지켜본 뒤, 문제없으면 _answer()와 옛 폴백을 정리한다(계약 9번)."""
     question = body.question.strip()
     if not question:
         return {"answer": "", "source": [], "offtopic": True}
