@@ -870,7 +870,7 @@ def _hybrid_answer(body: AskIn) -> dict:
     if notebook_rule is not None:
         return notebook_rule
 
-    if re.search(r"틀렸|오답|자주\s*틀리|실수", question) and len(_content_words(question)) <= 3:
+    if _NOTEBOOK_TRIGGER.search(question) and len(_content_words(question)) <= 3:
         from backend.student import notebook_text
         if notebook_text(body.student) == "아직 오답노트가 비어 있음.":
             return {"answer": "아직 오답노트에 기록된 게 없어요! 문제를 몇 개 풀어보면 그때 자주 틀리는 것도 알려줄 수 있어요.",
