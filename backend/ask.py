@@ -872,6 +872,27 @@ def _retrieval_answer(question: str, body: AskIn, skip_similar: bool = False,
         if last:
             rule_id = last["rule_ids"][0]
 
+    # 절대 점수만 보는 검색(FAQ 0.85·규칙별칭 0.86·패턴 0.80·단어 0.78)은 전부 의미상 가까운
+    # 딴 걸 오매칭하는 같은 위험이 있어서(2026-09-16 재현 — "치킨이 영어로 뭐야?"가 "cook"에,
+    # "숫자 세는 법 알려줘"가 "seven"에 매칭돼 확신에 찬 오답이 나감) 질문과 후보 자신의 낱말이
+    # 하나도 안 겹치면 찾은 걸로 안 친다. 아래 여러 곳(FAQ·규칙별칭·패턴·단어)이 같이 쓴다.
+    qwords = _content_words(question)
+
+    def _overlaps_question(cand_text: str) -> bool:
+        cwords = _content_words(cand_text)
+        for w in qwords:
+            for x in cwords:
+                if len(w) < 2 or len(x) < 2:
+                    continue
+                if w == x or (abs(len(w) - len(x)) <= 2 and (w in x or x in w)):
+                    return True
+                # 어미·조사만 다른 같은 어근("인사한다는" vs "인사예요")도 겹침으로 인정 — 완전
+                # substring 조건만 쓰면 이런 활용형 차이를 못 잡아서 정답까지 걸러버렸다(2026-09-16,
+                # "선생님을 만나면 인사한다는 문장" 회귀로 발견).
+                if len(w) >= 3 and len(x) >= 3 and w[:2] == x[:2]:
+                    return True
+        return False
+
     # 1) FAQ는 질문 형식이 다 비슷해 점수 분포가 늘 촘촘해서(sharp의 격차 기준이 안 통함) 절대
     # 점수로만 판정하는 faq_hit()를 쓴다(2026-09-14, RAG 담당 실측 — sharp() 대신).
     faq_hits = textbook.search_faq(question, k=3, rule_id=rule_id, qvec=qvec)
@@ -913,16 +934,18 @@ def _retrieval_answer(question: str, body: AskIn, skip_similar: bool = False,
     # 직접 돌리는 건 신뢰 못 함(9/14 실측 — "can" 질문에 R-15 will이 1위) 대신 이름·요약을 별도
     # 색인한 rule_hit(0.86)로 판정.
     rule_alias_hits = textbook.search_rule_aliases(question, k=3, qvec=qvec)
-    rule_ok = textbook.rule_hit([r["score"] for r in rule_alias_hits])
-    rule = golden.find_rule(rule_alias_hits[0]["id"]) if rule_ok else None
+    rule = golden.find_rule(rule_alias_hits[0]["id"]) if rule_alias_hits and textbook.rule_hit([r["score"] for r in rule_alias_hits]) else None
+    rule_ok = bool(rule) and _overlaps_question(f'{rule["type"]} {rule.get("short", "")} {rule["text"]}')
     rule_examples = rule_alias_hits[0].get("examples") if rule_ok else None
 
     # 4) 패턴·단어 — sharp()는 한국어 질문에서 격차가 0.01~0.04라 한 번도 안 통과해서(2026-09-14
     # 팀 실측) 절대 점수(패턴 0.80/단어 0.78)로 바꾼다. 지금 유닛의 패턴·단어(golden.patterns/words,
     # 임베딩 없이 결정적)도 최대 5개씩 더해서 후보를 넓힌다.
     tb = textbook.search_textbook(question, level=level, k_pattern=3, k_word=3, qvec=qvec)
-    pattern_ok = bool(tb["patterns"]) and tb["patterns"][0]["score"] >= 0.80
-    word_ok = bool(tb["words"]) and tb["words"][0]["score"] >= 0.78
+    pattern_ok = (bool(tb["patterns"]) and tb["patterns"][0]["score"] >= 0.80
+                  and _overlaps_question(f'{tb["patterns"][0]["text"]} {tb["patterns"][0]["meaning"]}'))
+    word_ok = (bool(tb["words"]) and tb["words"][0]["score"] >= 0.78
+               and _overlaps_question(f'{tb["words"][0]["word"]} {tb["words"][0]["meaning"]}'))
 
     if rule_ok or pattern_ok or word_ok:
         patterns, words = list(tb["patterns"]), list(tb["words"])
