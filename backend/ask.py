@@ -598,6 +598,14 @@ def _intent_fixed_reply(question: str) -> dict | None:
     return None
 
 
+def _with_rule_examples(text: str, examples: list[str] | None) -> str:
+    # 규칙 100개 중 81개가 text 안에 이미 "예: ..." 형태로 examples를 담고 있어서, 그 위에 또
+    # examples를 붙이면 같은 예문이 두 번 나간다(2026-09-16, "다른 예문 보여줘" 실사용 테스트에서
+    # 발견). text에 이미 있는 예문은 빼고 붙인다.
+    new_examples = [ex for ex in (examples or [])[:2] if ex not in text]
+    return f"{text} 예: {' / '.join(new_examples)}" if new_examples else text
+
+
 def _referential_rule_answer(question: str, student: str, ctx_rule_id: str | None) -> dict | None:
     """"다른 예문 보여줘"/"다시 설명해줘"/"왜요?" 같은 이어가기(_REFERENTIAL_PATTERN)는 검색하면
     무관한 FAQ에 걸리기 쉬워서(2026-09-14 팀 실측 — "다른 예문 보여줘"가 FAQ에 잘못 매칭됨)
@@ -614,10 +622,7 @@ def _referential_rule_answer(question: str, student: str, ctx_rule_id: str | Non
     rule = golden.find_rule(rule_id)
     if not rule:
         return None
-    answer = rule["text"]
-    examples = rule.get("examples") or []
-    if examples:
-        answer += " 예: " + " / ".join(examples[:2])
+    answer = _with_rule_examples(rule["text"], rule.get("examples"))
     return {"answer": answer, "source": [{"chunk_id": rule["id"]}], "offtopic": False, "suggested": []}
 
 
@@ -815,9 +820,7 @@ def _retrieval_answer(question: str, body: AskIn, skip_similar: bool = False,
         if not grounded:
             print(f"[ask][진단] 검색 후보와 답변 내용이 안 겹쳐 LLM 답 버리고 1위 후보로 답함: {answer!r}", flush=True)
             if rule_ok:
-                answer = rule["text"]
-                if rule_examples:
-                    answer += " 예: " + " / ".join(rule_examples[:2])
+                answer = _with_rule_examples(rule["text"], rule_examples)
             elif pattern_ok:
                 top = tb["patterns"][0]
                 answer = f'{top["text"]} — {top["meaning"]}' if top["meaning"] else top["text"]
