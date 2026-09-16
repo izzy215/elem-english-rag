@@ -43,6 +43,7 @@ class AskContext(BaseModel):
     log_id: str | None = None
     text: str | None = None     # 고쳐줘 누르기 전 입력·들린 문장 (log_id 아직 없을 때, 2026-09-14 tutor.js)
     source: str | None = None   # text 가 어디서 왔는지(타이핑/음성) — 지금은 참고용, 답에는 안 씀
+    level: int | None = None    # 학생 학년 (2026-09-14 common.js) — search_textbook(level=)에 씀, 없으면 3
 
 
 class AskIn(BaseModel):
@@ -751,7 +752,7 @@ def _answer(body: AskIn) -> dict:
 # 전환 여부를 정할 예정 — 스크래치패드 비교 스크립트 참고.
 # ─────────────────────────────────────────────────────────────────────────────
 
-RETRIEVAL_PROMPT = """너는 초등학교 3~4학년에게 영어를 가르치는 다정한 선생님이다.
+RETRIEVAL_PROMPT = """너는 초등학교 {grade}에게 영어를 가르치는 다정한 선생님이다.
 아래 "검색된 자료"만 근거로 학생 질문에 답한다. 자료에 없는 내용은 답하지 않는다.
 
 ## 검색된 자료 (이 안에서만 답을 짓는다)
@@ -778,16 +779,100 @@ def _candidates_block(patterns: list[dict], words: list[dict], rule: dict | None
     lines = [f"- [{p['id']}] (교과서 문장) {p['text']} — {p['meaning']}" for p in patterns]
     lines += [f"- [{w['id']}] (단어) {w['word']} — {w['meaning']} (예: {w['example']})" for w in words]
     if rule:
-        lines.append(f"- [{rule['id']}] (문법 규칙) {rule['type']}: {rule['text']}")
+        line = f"- [{rule['id']}] (문법 규칙) {rule['type']}: {rule['text']}"
+        examples = rule.get("examples") or []
+        if examples:
+            line += " 예: " + " / ".join(examples[:2])
+        lines.append(line)
     return "\n".join(lines) if lines else "(없음)"
+
+
+# ── 의도 가르기 (계약 문서 2-1절 0번, 2026-09-14 저녁) — 검색 전에 코드로 먼저 가른다 ──────────
+_INTENT_FILLER = r"(?:나는?|저는?|오늘|요즘|진짜|너무|정말)\s*"
+_INTENT_REPLIES = [
+    (re.compile(r"^(안녕|hi|hello|하이)[!~.\s]*$", re.IGNORECASE), "안녕! 오늘 배우는 것에 대해 뭐든 물어봐 😊"),
+    (re.compile(rf"^({_INTENT_FILLER})*(고마워|고맙습니다|감사해요|감사합니다)[요]?[!~.\s]*$"), "천만에! 더 궁금한 거 있으면 또 물어봐."),
+    (re.compile(rf"^({_INTENT_FILLER})*(피곤해|졸려|힘들어|배고파)[요]?[ㅠㅜ!~.\s]*$"), "조금 쉬었다 해도 괜찮아! 준비되면 다시 물어봐줘."),
+    (re.compile(rf"^({_INTENT_FILLER})*(심심해|재미없어)[요]?[!~.\s]*$"), "그럼 문제 하나 풀어볼까? 궁금한 거 있으면 물어봐도 좋고!"),
+]
+
+
+def _intent_fixed_reply(question: str) -> dict | None:
+    """인사·감사·감정 표현은 검색 없이 고정 문구로 — 앞에 "나는/오늘/너무" 같은 흔한 꾸밈말만
+    허용하고 그 뒤로는 끝까지 일치해야 걸림("안녕이 영어로 뭐야?"는 지식 질문이라 안 걸리고,
+    "나 오늘 피곤해"는 걸림 — 2026-09-16, 문장 전체 일치만으론 후자를 놓쳐서 lookup_word가
+    "오늘"을 단어 뜻 질문으로 착각하는 문제 재현됨)."""
+    q = question.strip()
+    for pattern, reply in _INTENT_REPLIES:
+        if pattern.match(q):
+            return {"answer": reply, "source": [], "offtopic": False, "suggested": []}
+    return None
+
+
+def _referential_rule_answer(question: str, student: str, ctx_rule_id: str | None) -> dict | None:
+    """"다른 예문 보여줘"/"다시 설명해줘"/"왜요?" 같은 이어가기(_REFERENTIAL_PATTERN)는 검색하면
+    무관한 FAQ에 걸리기 쉬워서(2026-09-14 팀 실측 — "다른 예문 보여줘"가 FAQ에 잘못 매칭됨)
+    검색 없이 직전 규칙 문서로 바로 답한다."""
+    if not _REFERENTIAL_PATTERN.search(question):
+        return None
+    rule_id = ctx_rule_id
+    if not rule_id:
+        last = next((t for t in reversed(_recent_chat_turns(student, max_turns=5)) if t.get("rule_ids")), None)
+        if last:
+            rule_id = last["rule_ids"][0]
+    if not rule_id:
+        return None
+    rule = golden.find_rule(rule_id)
+    if not rule:
+        return None
+    answer = rule["text"]
+    examples = rule.get("examples") or []
+    if examples:
+        answer += " 예: " + " / ".join(examples[:2])
+    return {"answer": answer, "source": [{"chunk_id": rule["id"]}], "offtopic": False, "suggested": []}
+
+
+_CASUAL_CHAT_PATTERN = re.compile(
+    r"(날씨|기분|컨디션)\s*(가|이)?\s*(어때|어떄)|"
+    r"(점심|저녁|아침|간식|급식)\s*(이|가)?\s*(뭐|뭘)|"
+    r"숙제\s*있"
+)
+
+
+def _casual_chat_reject(question: str) -> dict | None:
+    """"오늘 날씨 어때?"/"점심 뭐 먹지?" 류 일상 잡담 — 교과서 단어(sunny/homework 등)와
+    우연히 겹쳐서 검색이 "찾았다"고 오판하기 쉽다(2026-09-16 재현 — sharp()의 격차 조건을
+    없애고 절대점수만 보게 되면서 word 0.81 같은 진짜 교과서 단어 점수가 그대로 통과해버림).
+    "영어로"/영어 낱말이 있으면 진짜 학습 질문("날씨를 영어로 어떻게 말해요?")일 수 있어서
+    안 걸리게 한다."""
+    if re.search(r"[A-Za-z]|영어", question):
+        return None
+    if _CASUAL_CHAT_PATTERN.search(question):
+        return {"answer": "그건 우리 교과서에서 배우는 내용이 아니에요. 선생님께 물어볼까?",
+                "source": [], "offtopic": True, "suggested": []}
+    return None
 
 
 def _retrieval_answer(question: str, body: AskIn) -> dict:
     """계약 문서 2-1절(2026-09-14 개정): search_faq + search_textbook 이 먼저 후보를 좁힌다.
-    FAQ는 질문 형식이 다 비슷해 점수가 늘 촘촘해서 sharp() 대신 절대 점수 기준인 faq_hit()로
-    판정. 패턴·단어는 sharp()(1위-5위 격차) 그대로. 규칙 힌트는 한국어 질문으로 rag.search_rules를
-    직접 돌리지 않고(신뢰 못 함, RAG 담당 실측) FAQ 검색 1위의 rule_ids를 재사용. 어디에도
-    없으면 "우리 교과서에 없다"로 거절(유닛 필터는 안 함 — 색인이 유닛별이 아님)."""
+    9/15 저녁 개정판 순서: 0) 의도 가르기(인사·감정 고정답, 이어가기는 직전 규칙) 1) FAQ+faq_hit
+    2) 규칙 별칭+rule_hit 3) 단어장 lookup_word(임베딩 없음) 4) search_textbook(학년별, sharp
+    대신 절대점수 0.80/0.78 + 현재 유닛 자료 보강) 5) 거절. 어디에도 없으면 "우리 교과서에 없다"로
+    거절(유닛 필터는 검색 자체엔 안 함 — 색인이 유닛별이 아님, 안내 문구에만 씀)."""
+    ctx = body.context
+    level = ctx.level or 3
+
+    # 0) 의도 가르기 — 검색 전에 코드로. 인사·감사·감정은 고정 답, 이어가기는 직전 규칙 문서로.
+    fixed = _intent_fixed_reply(question)
+    if fixed is not None:
+        return fixed
+    referential = _referential_rule_answer(question, body.student, ctx.rule_id)
+    if referential is not None:
+        return referential
+    casual = _casual_chat_reject(question)
+    if casual is not None:
+        return casual
+
     # "비슷한 거 있어?/다른 건 없어?" 류는 검색 없이 기존 로직 그대로 — 방금 답의 근거 규칙으로
     # 결정적으로 찾는 게 이미 검증돼 있고 검색보다 안전하다(2026-09-14).
     all_faqs = golden.faqs()
@@ -797,19 +882,33 @@ def _retrieval_answer(question: str, body: AskIn) -> dict:
 
     from backend import embedding, textbook
 
+    # 3) 단어장 조회 — 임베딩 전에, 결정적. 영어→뜻·한국어→영어 둘 다 이 하나로 (기존 _word_match
+    # 는 여기서 제거 — lookup_word가 그 역할을 대신함, 2026-09-15 팀 결정).
+    word_hits = textbook.lookup_word(question, level=level)
+    if word_hits:
+        w = word_hits[0]
+        # lookup_word의 한국어 뜻 매칭은 순수 부분일치라 "형"(뜻)이 "과거형"/"형용사" 안에도 걸려서
+        # 완전히 무관한 답이 나가는 문제가 있었다(2026-09-16 재현 — "과거형이 뭐예요?"가 brother로
+        # 답함, "오늘 날씨 어때?"/"숙제 있어?"가 today/homework 뜻풀이로 새버림). 영어 낱말이 질문에
+        # 그대로 있는 정방향(예: "bus가 뭐예요?")은 안전하니 그대로 믿고, 역방향(한국어→영어)은
+        # "영어로" 같은 번역 의도 표시가 있을 때만 믿는다.
+        eng_in_q = w["word"].lower() in question.lower()
+        asks_translation = bool(re.search(r"영어로|영어\s*(단어|낱말)", question))
+        if eng_in_q or asks_translation:
+            return _word_answer(w)
+
     try:
         qvec = embedding.embed_query(question)
     except Exception as e:
         return {"answer": "", "source": [], "offtopic": True, "error": f"임베딩 실패: {e}"}
 
-    ctx = body.context
     rule_id = ctx.rule_id
     if not rule_id:
         last = next((t for t in reversed(_recent_chat_turns(body.student, max_turns=5)) if t.get("rule_ids")), None)
         if last:
             rule_id = last["rule_ids"][0]
 
-    # FAQ는 질문 형식이 다 비슷해 점수 분포가 늘 촘촘해서(_sharp의 격차 기준이 안 통함) 절대
+    # 1) FAQ는 질문 형식이 다 비슷해 점수 분포가 늘 촘촘해서(sharp의 격차 기준이 안 통함) 절대
     # 점수로만 판정하는 faq_hit()를 쓴다(2026-09-14, RAG 담당 실측 — sharp() 대신).
     faq_hits = textbook.search_faq(question, k=3, rule_id=rule_id, qvec=qvec)
     if textbook.faq_hit([f["score"] for f in faq_hits]):
@@ -833,19 +932,33 @@ def _retrieval_answer(question: str, body: AskIn) -> dict:
             suggested = _followup_questions(f["rule_ids"], all_faqs, exclude_id=f["id"])
             return {"answer": f["answer"], "source": source, "offtopic": False, "suggested": suggested}
         print(f"[ask][진단] faq_hit={f['id']} 통과했는데 질문과 내용어 안 겹쳐 폐기: {f['matched']!r}", flush=True)
+        # FAQ가 문턱 미달이면 그 rule_ids를 규칙 힌트로도 안 쓴다(2026-09-14 계약 8번) — 2)
+        # 규칙 별칭 검색이 이 역할을 대신하므로 부정확한 소스가 될 뿐이다.
 
-    tb = textbook.search_textbook(question, level=3, k_pattern=3, k_word=3, qvec=qvec)
-    pattern_sharp = textbook.sharp([p["score"] for p in tb["patterns"]])
-    word_sharp = textbook.sharp([w["score"] for w in tb["words"]])
-    if pattern_sharp or word_sharp:
-        # 규칙 힌트는 한국어 질문으로 rag.search_rules를 직접 돌리는 대신(2026-09-14, RAG 담당
-        # 실측 — "can" 질문에 R-15(will)가 1위로 잘못 나옴, 믿을 수 없음) FAQ 검색 1위의 rule_ids를
-        # 쓴다 — FAQ가 faq_hit()엔 못 미쳤어도 1위가 아예 무관하진 않을 때가 많다.
-        rule_ids = faq_hits[0]["rule_ids"] if faq_hits else []
-        rule = golden.find_rule(rule_ids[0]) if rule_ids else None
+    # 2) 규칙 별칭 — "과거시제가 뭐예요?" 같은 문법 용어 질문. 한국어 질문으로 rag.search_rules를
+    # 직접 돌리는 건 신뢰 못 함(9/14 실측 — "can" 질문에 R-15 will이 1위) 대신 이름·요약을 별도
+    # 색인한 rule_hit(0.86)로 판정.
+    rule_alias_hits = textbook.search_rule_aliases(question, k=3, qvec=qvec)
+    rule_ok = textbook.rule_hit([r["score"] for r in rule_alias_hits])
+    rule = golden.find_rule(rule_alias_hits[0]["id"]) if rule_ok else None
+    rule_examples = rule_alias_hits[0].get("examples") if rule_ok else None
 
-        # 입구별 상태 — 계약 문서 2-1절 표: "더 물어보기"는 방금 고친 결과(또는 고쳐주기 전
-        # 입력 문장), "오답노트"는 오답노트 요약을 검색 결과와 별도로 대화 상태로 얹는다.
+    # 4) 패턴·단어 — sharp()는 한국어 질문에서 격차가 0.01~0.04라 한 번도 안 통과해서(2026-09-14
+    # 팀 실측) 절대 점수(패턴 0.80/단어 0.78)로 바꾼다. 지금 유닛의 패턴·단어(golden.patterns/words,
+    # 임베딩 없이 결정적)도 최대 5개씩 더해서 후보를 넓힌다.
+    tb = textbook.search_textbook(question, level=level, k_pattern=3, k_word=3, qvec=qvec)
+    pattern_ok = bool(tb["patterns"]) and tb["patterns"][0]["score"] >= 0.80
+    word_ok = bool(tb["words"]) and tb["words"][0]["score"] >= 0.78
+
+    if rule_ok or pattern_ok or word_ok:
+        patterns, words = list(tb["patterns"]), list(tb["words"])
+        if ctx.unit:
+            seen_p, seen_w = {p["id"] for p in patterns}, {w["id"] for w in words}
+            patterns += [{**p, "unit": ctx.unit} for p in golden.patterns(level, ctx.unit)[:5] if p["id"] not in seen_p]
+            words += [{**w, "unit": ctx.unit} for w in golden.words(level, ctx.unit)[:5] if w["id"] not in seen_w]
+
+        rule_for_prompt = {**rule, "examples": rule_examples} if rule else None
+
         log = _log_entry(ctx.log_id) if ctx.log_id else None
         log_block = ""
         if log:
@@ -865,7 +978,7 @@ def _retrieval_answer(question: str, body: AskIn) -> dict:
             notebook_block = "(모름)"
 
         prompt = RETRIEVAL_PROMPT.format(
-            candidates_block=_candidates_block(tb["patterns"], tb["words"], rule),
+            grade=f"{level}학년", candidates_block=_candidates_block(patterns, words, rule_for_prompt),
             log_block=log_block, notebook_block=notebook_block,
             history_block=_history_block(body.student), question=question,
         )
@@ -875,24 +988,27 @@ def _retrieval_answer(question: str, body: AskIn) -> dict:
             return {"answer": "", "source": [], "offtopic": True, "error": str(e)}
         answer = out.get("answer") or ""
         used_id = out.get("used_id")
-        fallback_id = tb["patterns"][0]["id"] if pattern_sharp else tb["words"][0]["id"]
-        suggested = _followup_questions([rule["id"]], all_faqs) if rule else []
+        fallback_id = rule["id"] if rule_ok else (tb["patterns"][0]["id"] if pattern_ok else tb["words"][0]["id"])
+        suggest_rule_id = rule["id"] if rule_ok else (tb["patterns"][0].get("rule_id") if pattern_ok else None)
+        suggested = _followup_questions([suggest_rule_id], all_faqs) if suggest_rule_id else []
 
         # LLM이 검색된 자료를 무시하고 완전히 무관한 답을 짓는 경우가 있어서(2026-09-14 재현 —
         # "pencil이 뭐예요?"가 검색은 pencil을 맞게 찾았는데 답은 소유격 얘기를 함) — 답변이 검색된
-        # 후보(패턴·단어·규칙) 중 최소 하나와 실제로 내용이 겹치는지 확인한다. 기존 _answer()의
-        # faq_id 겹침 검증과 같은 방식. 안 겹치면 LLM 자유 답변을 버리고 1위 후보로 결정적으로
-        # 답한다 — 검색 자체(pattern_sharp/word_sharp)는 이미 신뢰할 만하다고 판정됐으니 버릴
-        # 필요 없다.
-        candidate_texts = [f'{p["text"]} {p["meaning"]}' for p in tb["patterns"]]
-        candidate_texts += [f'{w["word"]} {w["meaning"]}' for w in tb["words"]]
-        if rule:
-            candidate_texts.append(f'{rule["type"]} {rule["text"]}')
+        # 후보(패턴·단어·규칙) 중 최소 하나와 실제로 내용이 겹치는지 확인한다. 안 겹치면 LLM 자유
+        # 답변을 버리고 1위 후보로 결정적으로 답한다 — 검색 자체는 이미 신뢰할 만하다고 판정됐다.
+        candidate_texts = [f'{p["text"]} {p["meaning"]}' for p in patterns]
+        candidate_texts += [f'{w["word"]} {w["meaning"]}' for w in words]
+        if rule_for_prompt:
+            candidate_texts.append(f'{rule_for_prompt["type"]} {rule_for_prompt["text"]}')
         grounded = any(set(_content_words(answer)) & set(_content_words(t)) for t in candidate_texts)
 
         if not grounded:
             print(f"[ask][진단] 검색 후보와 답변 내용이 안 겹쳐 LLM 답 버리고 1위 후보로 답함: {answer!r}", flush=True)
-            if pattern_sharp:
+            if rule_ok:
+                answer = rule["text"]
+                if rule_examples:
+                    answer += " 예: " + " / ".join(rule_examples[:2])
+            elif pattern_ok:
                 top = tb["patterns"][0]
                 answer = f'{top["text"]} — {top["meaning"]}' if top["meaning"] else top["text"]
             else:
@@ -900,12 +1016,19 @@ def _retrieval_answer(question: str, body: AskIn) -> dict:
                 answer = f'{top["word"]}는 \'{top["meaning"]}\'라는 뜻이에요.' + (f' 예: {top["example"]}' if top.get("example") else "")
             used_id = None
 
-        return {"answer": answer, "source": [{"chunk_id": used_id or fallback_id}],
+        # 다른 유닛 자료로 답했으면 거절 대신 어느 유닛 내용인지 앞에 붙인다(2026-09-14 계약 7번).
+        final_id = used_id or fallback_id
+        used_cand = next((c for c in (patterns + words) if c["id"] == final_id), None)
+        cand_unit = rule.get("unit") if (rule_ok and final_id == rule["id"]) else (used_cand.get("unit") if used_cand else None)
+        if cand_unit and ctx.unit and cand_unit != ctx.unit:
+            answer = f"{cand_unit}에서 배우는 내용이에요. {answer}"
+
+        return {"answer": answer, "source": [{"chunk_id": final_id}],
                 "offtopic": bool(out.get("offtopic")) if grounded else False, "suggested": suggested}
 
-    # sharp() 기준(1위 0.85 이상 + 5위와 격차)엔 못 미쳐도, 1위 점수가 어느 정도(0.8) 있으면
-    # "완전 무관"은 아니라고 보고 그 유닛을 알려준다 — 진짜 엉뚱한 질문(예: "오늘 날씨 어때?")까지
-    # 아무 유닛이나 갖다 붙이지 않기 위한 최소선(임시값, sharp()의 top/gap처럼 실측 조정 필요).
+    # 5) 전부 실패 — 1위 점수가 어느 정도(0.8) 있으면 "완전 무관"은 아니라고 보고 유닛을 알려준다.
+    # 진짜 엉뚱한 질문(예: "오늘 날씨 어때?")까지 아무 유닛이나 갖다 붙이지 않기 위한 최소선
+    # (임시값, sharp()의 top/gap처럼 실측 조정 필요).
     top_pattern = tb["patterns"][0] if tb["patterns"] else None
     top_word = tb["words"][0] if tb["words"] else None
     best = max([x for x in (top_pattern, top_word) if x], key=lambda x: x["score"], default=None)
