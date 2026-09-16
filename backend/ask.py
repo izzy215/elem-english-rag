@@ -166,16 +166,6 @@ def _best_match(question: str, items: list[dict], candidates_of) -> tuple[dict |
     return best, best_score
 
 
-def _rag_hint_rule_id(question: str) -> tuple[str | None, float]:
-    """질문과 가장 가까운 규칙 id·score(RAG 검색). 색인 없음 등 실패하면 (None, 0.0) — 게이트를 그냥 통과시킴."""
-    try:
-        from backend.rag import search_rules
-        hits = search_rules(question, k=1)
-        return (hits[0]["id"], hits[0]["score"]) if hits else (None, 0.0)
-    except Exception:
-        return (None, 0.0)
-
-
 def _followup_questions(rule_ids: list[str], faq_list: list[dict], exclude_id: str | None = None) -> list[str]:
     """rule_ids 와 연결된 다른 FAQ 질문 최대 2개(방금 답한 FAQ 자신은 제외) — tutor.py 의
     _suggest_questions() 와 같은 목적, 로컬 매칭·정오 판정 답변도 항상 빈 채로 안 남게."""
@@ -239,36 +229,25 @@ def _pattern_match(question: str, patterns_pool: list[dict], faq_list: list[dict
 
 def _local_match(question: str, faq_list: list[dict], rule_list: list[dict],
                   words_pool: dict[str, dict], patterns_pool: list[dict], level: int = 3) -> dict | None:
-    """faq→rules→patterns→words 순으로 로컬 매칭, 전부 실패하면 None → 폴백. RAG 힌트는 답을
-    좌우하지 않고 불일치 시 로그만 남긴다(신뢰도가 검증되기 전까진 관찰용, 2026-09-11).
+    """faq→rules→patterns→words 순으로 로컬 매칭, 전부 실패하면 None → 폴백.
 
     level: 단어장 조회(lookup_word)에 쓸 학년. _retrieval_answer()가 실패 시 같은 조회를 또
     하지 않도록(skip_word_lookup) 여기서도 _retrieval_answer()와 같은 값(ctx.level or 3)을
-    받아써서 두 곳의 lookup_word 결과가 어긋나지 않게 한다(2026-09-16)."""
-    _rag_cache: dict[str, tuple[str | None, float]] = {}
+    받아써서 두 곳의 lookup_word 결과가 어긋나지 않게 한다(2026-09-16).
 
-    def _log_rag_disagreement(rule_ids: list[str], match_id: str, match_score: float) -> None:
-        # 예전엔 여기서 불일치 시 로컬 매칭을 버리고 폴백시켰는데(게이트), RAG 힌트 점수 자체가
-        # 가끔 자신 있게 틀려서(단순 단어 질문에도 0.83 확신으로 엉뚱한 규칙 지목, 프로덕션 로그
-        # 기준 24번 중 1번만 실제로 유용) 답을 바꾸는 데는 더 이상 안 쓰고 관찰용 로그만 남긴다
-        # (2026-09-11 — 판단 근거: [[project_rag_rerank_ensemble_findings]]).
-        if "v" not in _rag_cache:
-            _rag_cache["v"] = _rag_hint_rule_id(question)
-        rag_rule_id, rag_score = _rag_cache["v"]
-        if rule_ids and rag_rule_id is not None and rag_score >= 0.5 and rag_rule_id not in rule_ids:
-            print(f"[ask][진단] 로컬 매칭 {match_id}(단어겹침 {match_score:.2f}) 이 RAG 힌트({rag_rule_id}, {rag_score:.2f})와 다름 - 답은 그대로 로컬 매칭 사용", flush=True)
-
+    RAG 힌트로 불일치를 진단 로그로만 남기던 코드는 삭제함(2026-09-16) — 1단계가 성공한 답마다
+    임베딩을 한 번 더 호출해 서버 상태에 좌우되게 만들었는데, 정작 그 힌트가 맞았던 적은
+    24번 중 1번뿐이라(2026-09-11 실측, [[project_rag_rerank_ensemble_findings]]) 답에도 전혀
+    안 쓰였다 — 1단계의 "서버 없이도 동작" 이라는 목적과 맞지 않아 정리."""
     faq, faq_score = _best_match(question, faq_list, lambda f: [f["question"]] + (f.get("variants") or []))
     if faq_score >= 0.5:
         faq_rule_ids = faq.get("rule_ids") or []
-        _log_rag_disagreement(faq_rule_ids, faq["id"], faq_score)
         source = [{"chunk_id": rid} for rid in faq_rule_ids] + [{"chunk_id": faq["id"]}]
         suggested = _followup_questions(faq_rule_ids, faq_list, exclude_id=faq["id"])
         return {"answer": faq["answer"], "source": source, "offtopic": False, "suggested": suggested}
 
     rule, rule_score = _best_match(question, rule_list, lambda r: [r["type"], r.get("short", "")])
     if rule_score >= 0.5:
-        _log_rag_disagreement([rule["id"]], rule["id"], rule_score)
         # rule["short"]는 UI 라벨용 압축 태그라("숫자 2 이상+복수형") 챗봇 답으로 그대로 쓰면
         # 문장이 아니라 조각처럼 끝남(2026-09-14 재현, "형용사는 명사 앞에") — 완전한 설명
         # 문장인 rule["text"]를 쓴다.
