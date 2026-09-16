@@ -641,7 +641,8 @@ def _casual_chat_reject(question: str) -> dict | None:
     return None
 
 
-def _retrieval_answer(question: str, body: AskIn, skip_similar: bool = False) -> dict:
+def _retrieval_answer(question: str, body: AskIn, skip_similar: bool = False,
+                       all_faqs: list[dict] | None = None) -> dict:
     """계약 문서 2-1절(2026-09-14 개정): search_faq + search_textbook 이 먼저 후보를 좁힌다.
     9/15 저녁 개정판 순서: 0) 의도 가르기(인사·감정 고정답, 이어가기는 직전 규칙) 1) FAQ+faq_hit
     2) 규칙 별칭+rule_hit 3) 단어장 lookup_word(임베딩 없음) 4) search_textbook(학년별, sharp
@@ -650,7 +651,11 @@ def _retrieval_answer(question: str, body: AskIn, skip_similar: bool = False) ->
 
     skip_similar: _hybrid_answer()가 이미 _similar_match를 같은 인자로 확인하고 실패한 뒤에
     호출할 때 True — 똑같은 결정적 함수를 똑같은 입력으로 또 부르는 낭비를 없앤다(2026-09-16
-    발견). _retrieval_answer()를 단독으로 부를 때(비교 스크립트 등)는 기본값 False로 그대로 확인."""
+    발견). _retrieval_answer()를 단독으로 부를 때(비교 스크립트 등)는 기본값 False로 그대로 확인.
+
+    all_faqs: _hybrid_answer()가 이미 golden.faqs()로 읽어둔 걸 넘겨줄 때 사용 — 안 넘기면
+    (단독 호출 시) 여기서 직접 읽는다. golden.faqs()는 캐싱이 없어 매번 파일을 다시 읽고
+    파싱하므로, 호출부가 이미 읽어둔 걸 또 읽는 낭비를 없앤다(2026-09-16 발견)."""
     ctx = body.context
     level = ctx.level or 3
 
@@ -667,7 +672,8 @@ def _retrieval_answer(question: str, body: AskIn, skip_similar: bool = False) ->
 
     # "비슷한 거 있어?/다른 건 없어?" 류는 검색 없이 기존 로직 그대로 — 방금 답의 근거 규칙으로
     # 결정적으로 찾는 게 이미 검증돼 있고 검색보다 안전하다(2026-09-14).
-    all_faqs = golden.faqs()
+    if all_faqs is None:
+        all_faqs = golden.faqs()
     if not skip_similar:
         similar = _similar_match(question, body.student, all_faqs)
         if similar is not None:
@@ -892,6 +898,7 @@ def _hybrid_answer(body: AskIn) -> dict:
         if local is not None:
             return local
 
-    # 여기까지 전부 실패해야만 검색 기반 경로로 — 바로 위에서 _similar_match를 이미 확인했으니
-    # skip_similar=True로 중복 호출 없앤다(2026-09-16).
-    return _retrieval_answer(question, body, skip_similar=True)
+    # 여기까지 전부 실패해야만 검색 기반 경로로 — 바로 위에서 _similar_match를 이미 확인했고
+    # (skip_similar=True), all_faqs도 이미 읽어뒀으니(golden.faqs() 재호출 방지) 그대로 넘긴다
+    # (2026-09-16).
+    return _retrieval_answer(question, body, skip_similar=True, all_faqs=all_faqs)
