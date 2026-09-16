@@ -19,11 +19,17 @@ from pydantic import BaseModel
 
 app = FastAPI()
 _models: dict[str, "whisper.Whisper"] = {}   # 모델 이름별 캐시 — 여러 개 요청해도 한 번만 로드
+# GPU는 WHISPER_SERVER_DEVICE로 고른다(기본 cuda:0, embed_server.py의 EMBED_SERVER_DEVICE와 같은
+# 패턴) — 이 서버는 team1/다른 실험과 같은 장비를 공유해서, GPU 0이 이미 꽉 차 있으면(다른 팀
+# 프로세스가 10GiB+ 점유) large-v3 로드가 CUDA OOM으로 실패한다(2026-09-16 재현 — whisper_server.log에
+# "CUDA out of memory... GPU 0 has ... of which 9.38 MiB is free" 확인). `nvidia-smi`로 여유 있는
+# GPU 번호를 확인해 WHISPER_SERVER_DEVICE=cuda:1 처럼 지정하고 재시작.
+DEVICE = os.environ.get("WHISPER_SERVER_DEVICE", "cuda:0")
 
 
 def _get_model(name: str):
     if name not in _models:
-        _models[name] = whisper.load_model(name)
+        _models[name] = whisper.load_model(name, device=DEVICE)
     return _models[name]
 
 
@@ -53,7 +59,7 @@ def transcribe(body: TranscribeIn):
 
 @app.get("/health")
 def health():
-    return {"ok": True, "models_loaded": list(_models.keys())}
+    return {"ok": True, "models_loaded": list(_models.keys()), "device": DEVICE}
 
 
 if __name__ == "__main__":

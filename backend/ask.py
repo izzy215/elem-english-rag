@@ -57,6 +57,16 @@ class AskIn(BaseModel):
     context: AskContext = AskContext()
 
 
+def _ira_neun(text: str) -> str:
+    """"'{뜻}'라는 뜻이에요"에 쓸 조사. 받침 있으면 "이라는", 없으면 "라는"(예: "가족'이라는" vs
+    "버스'라는") — 지금까지 "라는"으로 고정돼 있어서 받침 있는 뜻(교재 단어 400개 중 224개,
+    2026-09-16 실측)의 절반 이상이 문법 오류로 나가고 있었다."""
+    ch = text.strip()[-1] if text.strip() else ""
+    if "가" <= ch <= "힣" and (ord(ch) - 0xAC00) % 28 != 0:
+        return "이라는"
+    return "라는"
+
+
 def _norm_words(text: str) -> list[str]:
     # "make+목적어+형용사가"처럼 "+"/"/"로 붙은 단어가 공백 split()으론 하나로 뭉쳐서, _best_match의
     # "후보 단어 2개 이상인데 1개만 겹치면 스킵" 안전장치를 우연히 피해가는 문제가 있었음(2026-09-11,
@@ -198,7 +208,7 @@ def _word_answer(entry: dict, note: str = "", ctx_unit: str | None = None, level
     # "ALL"(유닛 무관 공통 자료)은 불일치로 안 본다.
     unit_note = (f"{entry['unit']}에서 배우는 내용이에요. "
                  if ctx_unit and entry.get("unit") and entry["unit"] not in (ctx_unit, "ALL") else "")
-    answer = f"{unit_note}{note}{entry['word']}는 '{entry['meaning']}'라는 뜻이에요."
+    answer = f"{unit_note}{note}{entry['word']}는 '{entry['meaning']}'{_ira_neun(entry['meaning'])} 뜻이에요."
     if entry.get("example"):
         answer += f" 예: {entry['example']}"
     # 단어 조회는 가장 흔한 질문 유형인데 suggested가 항상 비어있었다(2026-09-16 발견) — 같은
@@ -255,7 +265,7 @@ def _pattern_match(question: str, patterns_pool: list[dict], faq_list: list[dict
     if best_score < 0.6:
         return None
     rule_ids = [best["rule_id"]] if best.get("rule_id") else []
-    return {"answer": f"{best['text']}는 '{best['meaning']}'라는 뜻이에요.",
+    return {"answer": f"{best['text']}는 '{best['meaning']}'{_ira_neun(best['meaning'])} 뜻이에요.",
             "source": [{"chunk_id": rid} for rid in rule_ids], "offtopic": False,
             "suggested": _followup_questions(rule_ids, faq_list)}
 
@@ -975,8 +985,18 @@ def _retrieval_answer(question: str, body: AskIn, skip_similar: bool = False,
                 answer = f'{top["text"]} — {top["meaning"]}' if top["meaning"] else top["text"]
             else:
                 top = tb["words"][0]
-                answer = f'{top["word"]}는 \'{top["meaning"]}\'라는 뜻이에요.' + (f' 예: {top["example"]}' if top.get("example") else "")
+                answer = f'{top["word"]}는 \'{top["meaning"]}\'{_ira_neun(top["meaning"])} 뜻이에요.' + (f' 예: {top["example"]}' if top.get("example") else "")
             used_id = None
+
+        if grounded and bool(out.get("offtopic")):
+            # 후보와 답변 내용은 겹치지만(grounded) LLM 스스로 offtopic이라고 판단한 경우 —
+            # 지금까지는 이 answer를 그대로 내보내서 "모른다면서 무관한 후보 내용을 억지로
+            # 덧붙이는" 이상한 문장이 나갔다(2026-09-16 "저녁메뉴 뭐야?"가 아침식사 관련 패턴에
+            # 0.80으로 오매칭되며 재현 — "저녁 메뉴는 모르지만 아침 식사는 중요한 끼니예요!").
+            # 후보 자체가 오매칭이라 답을 억지로 짜맞출 근거가 없으니, 5)와 같은 깔끔한 거절로
+            # 통일한다.
+            return {"answer": "그건 우리 교과서에서 배우는 내용이 아니에요. 선생님께 물어볼까?",
+                    "source": [], "offtopic": True, "suggested": []}
 
         # 다른 유닛 자료로 답했으면 거절 대신 어느 유닛 내용인지 앞에 붙인다(2026-09-14 계약 7번).
         # "ALL"(유닛 무관 공통 규칙 — 100개 중 10개가 이 값)은 불일치로 안 본다. 안 걸러주면
@@ -988,8 +1008,7 @@ def _retrieval_answer(question: str, body: AskIn, skip_similar: bool = False,
         if cand_unit and ctx.unit and cand_unit not in (ctx.unit, "ALL"):
             answer = f"{cand_unit}에서 배우는 내용이에요. {answer}"
 
-        return {"answer": answer, "source": [{"chunk_id": final_id}],
-                "offtopic": bool(out.get("offtopic")) if grounded else False, "suggested": suggested}
+        return {"answer": answer, "source": [{"chunk_id": final_id}], "offtopic": False, "suggested": suggested}
 
     # 5) 전부 실패 — 1위 점수가 어느 정도(0.8) 있으면 "완전 무관"은 아니라고 보고 유닛을 알려준다.
     # 진짜 엉뚱한 질문(예: "오늘 날씨 어때?")까지 아무 유닛이나 갖다 붙이지 않기 위한 최소선

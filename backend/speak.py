@@ -343,7 +343,9 @@ def speak(body: SpeakIn):
             else:
                 heard = whisper_stt(body.audio_base64, body.mime, language)
     except Exception as e:
-        return {"heard": "", "expected": expected, "score": 0, "passed": False, "error": str(e)}
+        # str(e)가 빈 문자열인 예외(예: 인자 없이 raise된 경우)도 있어서, 그때도 error 필드가
+        # ""로 비어 "성공"과 구분이 안 되는 걸 막기 위해 타입명으로라도 채운다.
+        return {"heard": "", "expected": expected, "score": 0, "passed": False, "error": str(e) or type(e).__name__}
 
     score = similarity(heard, expected)
     result = {"heard": heard, "expected": expected, "score": score, "passed": score >= PASS_SCORE}
