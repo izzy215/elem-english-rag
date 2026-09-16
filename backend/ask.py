@@ -280,6 +280,20 @@ def _local_match(question: str, faq_list: list[dict], rule_list: list[dict],
     # 했으나 점수 자체가 신뢰하기엔 너무 자주 틀려서(단순 단어 질문에도 0.83으로 확신) 대신
     # 질문에 영단어가 2개를 넘으면(비교·복문 가능성) 단어 매칭을 건너뛰고 LLM 폴백으로 넘긴다.
     if len(re.findall(r"[A-Za-z']+", question)) <= 2:
+        # 계약 문서(2026-09-15) — 영어→뜻은 lookup_word()로 대체(한국어→영어 역방향도 덤으로
+        # 지원). 단, lookup_word의 한국어 뜻 매칭은 순수 부분일치라 "형"이 "과거형/형용사"
+        # 안에도 걸리는 오탐이 있어서(2026-09-16 재현) _retrieval_answer()와 같은 안전장치를
+        # 그대로 쓴다: 영어 낱말이 질문에 그대로 있거나 "영어로" 표시가 있을 때만 신뢰.
+        from backend import textbook
+        hits = textbook.lookup_word(question)
+        if hits:
+            w = hits[0]
+            eng_in_q = w["word"].lower() in question.lower()
+            asks_translation = bool(re.search(r"영어로|영어\s*(단어|낱말)", question))
+            if eng_in_q or asks_translation:
+                return _word_answer(w)
+        # lookup_word가 못 찾으면 오타로 보고 _word_match의 스펠체커 폴백을 재사용(lookup_word엔
+        # 오타 교정이 없음 — "-s/-es/-ing/-ed" 어미 제거만 함, "pencl" 같은 오타는 못 잡음).
         word = _word_match(question, words_pool)
         if word is not None:
             return word
