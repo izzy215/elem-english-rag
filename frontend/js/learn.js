@@ -71,6 +71,50 @@ function loadTeacherWave(p) {
   teacherWaveP = fetch(`/api/tts/${p.id}`).then(r => r.ok ? r.blob() : null).then(b => b ? waveFromBlob(b) : null).catch(() => null).then(w => (teacherWave = w));
   return teacherWaveP;
 }
+// /speak 결과를 화면에 그린다 (9/17). 돌려주는 값: true=통과, false=점수는 나왔지만 미달, null=점수 없이 안내만.
+//   heard 가 비어 있으면 "(안 들렸어요)" — Whisper 가 아무 말도 못 알아들은 경우(무음·너무 짧음)
+//   한글만 있으면 "영어로 말해 주세요", 한글과 영어가 섞여 있으면 "영어로만 한 번 더" — 따라 말하기는 영어 문장이라 점수를 매기지 않는다
+// 영어(라틴 글자)가 아닌 글자가 있으면 어느 말인지 이름을 돌려준다 (없으면 ''). Whisper 가 중국어·아랍어로 알아듣는 일도 있어서 한글만 보지 않는다
+const SCRIPT_NAMES = [['Hangul', '한국어'], ['Han', '중국어'], ['Hiragana', '일본어'], ['Katakana', '일본어'], ['Arabic', '아랍어'], ['Cyrillic', '러시아어'], ['Thai', '태국어'], ['Devanagari', '힌디어'], ['Hebrew', '히브리어'], ['Greek', '그리스어']];
+// 라틴 글자를 쓰는 다른 말(불어·스페인어·독일어·이탈리아어·포르투갈어)은 글자로 못 가르니 흔한 낱말로 추정 — 두 개 이상 겹치고 영어 점수가 낮을 때만
+const LATIN_LANGS = [
+  ['프랑스어', 'le la les des un une est et je tu il elle nous vous ils sont pas ne que qui dans avec pour mon ma mes ton ta bonjour merci oui non très'],
+  ['스페인어', 'el la los las un una es y yo tú él ella nosotros son no que con para mi mis hola gracias sí muy pero está'],
+  ['독일어', 'der die das ein eine ist und ich du er sie wir sind nicht mit für mein meine hallo danke ja nein sehr aber'],
+  ['이탈리아어', 'il lo la gli le un una è e io tu lui lei noi sono non che con per mio mia ciao grazie sì molto ma'],
+  ['포르투갈어', 'o os as um uma é e eu tu ele ela nós são não que com para meu minha olá obrigado sim muito mas'],
+].map(([n, w]) => [n, new Set(w.split(' '))]);
+const ACCENTS = /[àâäáãåæçèéêëìíîïñòóôöõøùúûüýÿœß]/i;
+function latinLanguage(text) {
+  const words = text.toLowerCase().replace(/[^\p{L}' ]/gu, ' ').split(/\s+/).filter(Boolean);
+  let best = ['', 0];
+  for (const [name, set] of LATIN_LANGS) { const n = words.filter(w => set.has(w)).length; if (n > best[1]) best = [name, n]; }
+  if (best[1] >= 2) return best[0];
+  return ACCENTS.test(text) && best[1] >= 1 ? best[0] : '';
+}
+const LANG_NAMES = { ko: '한국어', zh: '중국어', ja: '일본어', ar: '아랍어', ru: '러시아어', fr: '프랑스어', es: '스페인어', de: '독일어', it: '이탈리아어', pt: '포르투갈어', th: '태국어', hi: '힌디어', vi: '베트남어' };
+function otherLanguage(text, r) {
+  if (r && r.language && r.language !== 'en') return LANG_NAMES[r.language] || '다른 언어';   // 서버가 감지한 언어가 응답에 오면 그걸 믿는다 (TTS 담당에게 요청)
+  for (const [script, name] of SCRIPT_NAMES) if (new RegExp('\\p{Script=' + script + '}', 'u').test(text)) return name;
+  if ([...text].some(c => /\p{L}/u.test(c) && !/\p{Script=Latin}/u.test(c))) return '다른 언어';
+  return (r && (r.score || 0) < 40) ? latinLanguage(text) : '';
+}
+function renderSpeakResult(r, p) {
+  const heard = (r.heard || '').trim(), other = otherLanguage(heard, r), hasKo = !!other;
+  const hasEn = /\p{Script=Latin}/u.test(heard) && !LATIN_LANGS.some(([n]) => n === other);   // 라틴 글자를 쓰는 다른 말로 판정됐으면 '영어 섞임'이 아니라 '영어 아님'으로
+  $('#shHeard').style.display = 'block'; $('#shHeardS').textContent = heard || '(안 들렸어요)';
+  $('#shLike').style.display = 'none';
+  const el = $('#shResult'); el.style.display = 'block';
+  if (r.error) { el.style.display = 'none'; showResult('#learnResult', '채점 실패: ' + esc(r.error), 'bad'); return null; }
+  if (!heard) { el.innerHTML = `<div class="type">🎙 소리가 안 들렸어요</div><div class="why">마이크에 가까이 대고 또박또박 말해 볼까요? 원문: ${esc(r.expected || p.text)}</div>`; hideResult('#learnResult'); return null; }
+  if (hasKo && !hasEn) { el.innerHTML = `<div class="type">🗣️ 영어로 말해 주세요</div><div class="why">${esc(other)}로 들렸어요. 이 문장을 영어로 따라 말해 봐요: <b>${esc(r.expected || p.text)}</b><br>들린 말: ${esc(heard)}</div>`; hideResult('#learnResult'); return null; }
+  if (hasKo && hasEn) { el.innerHTML = `<div class="type">✕ 한 번 더 해볼까요?</div><div class="why">${esc(other)}와 영어가 섞여 들렸어요. 영어로만 말해 봐요: <b>${esc(r.expected || p.text)}</b><br>들린 말: ${esc(heard)}</div>`; hideResult('#learnResult'); return null; }
+  const ok = !!r.passed;
+  el.innerHTML = `<div class="type ${ok ? 'ok' : ''}">${ok ? '✓ 잘 들렸어요' : '✕ 한 번 더 해볼까요?'}</div><div class="fixed" style="color:${ok ? 'var(--primary)' : 'var(--danger)'}">${esc(r.score)}점</div><div class="why">원문: ${esc(r.expected)}<br>들린 말: ${esc(heard)}</div>`;
+  if (r.pronunciation_level || r.pronunciation_score != null) { const lv = likeLevel(r); $('#shLike').style.display = 'block'; $('#shLv').innerHTML = [1, 2, 3].map(i => `<span class="${i <= lv ? 'on' : ''}"></span>`).join('') + `<b>${LIKE[lv][0]}</b>`; $('#shLikeMsg').textContent = LIKE[lv][1]; }
+  hideResult('#learnResult');
+  return ok;
+}
 async function record() {
   const p = pats[pi]; if (!p || BUSY) return; const btn = $('#shRec');
   if (p.noAudio) { showResult('#learnResult', '이 패턴은 서버에 없는 화면 샘플이라 채점이 안 돼요', 'todo'); return; }
@@ -84,12 +128,9 @@ async function record() {
     if (!teacherWave) await (teacherWaveP || loadTeacherWave(p));   // 듣기를 안 눌렀어도 선생님 파형은 그린다
     $('#shWave').style.display = 'block'; drawWave($('#wvT'), teacherWave); drawWave($('#wvM'), myWave);
     $('#wvTTxt').textContent = teacherWave ? p.text : '(선생님 음원 없음)'; $('#wvMTxt').textContent = r.heard || '';
-    $('#shHeard').style.display = 'block'; $('#shHeardS').textContent = r.heard || '(안 들렸어요)';
-    if (r.error) { showResult('#learnResult', '채점 실패: ' + esc(r.error), 'bad'); return; }
-    const ok = r.passed; const el = $('#shResult'); el.style.display = 'block';
-    el.innerHTML = `<div class="type ${ok ? 'ok' : ''}">${ok ? '✓ 잘 들렸어요' : '✕ 한 번 더 해볼까요?'}</div><div class="fixed" style="color:${ok ? 'var(--primary)' : 'var(--danger)'}">${esc(r.score)}점</div><div class="why">원문: ${esc(r.expected)}<br>들린 말: ${esc(r.heard)}</div>`;
-    if (r.pronunciation_level || r.pronunciation_score != null) { const lv = likeLevel(r); $('#shLike').style.display = 'block'; $('#shLv').innerHTML = [1, 2, 3].map(i => `<span class="${i <= lv ? 'on' : ''}"></span>`).join('') + `<b>${LIKE[lv][0]}</b>`; $('#shLikeMsg').textContent = LIKE[lv][1]; }
-    hideResult('#learnResult'); localStorage.setItem(`spoken_${state.student}_${state.unit.unit}_${p.id}_${Date.now()}`, '1');
+    const ok = renderSpeakResult(r, p);
+    if (ok == null) { if (autoAll) toggleAll(false); return; }          // 안 들림·한국어·섞임: 점수 없이 안내만, 통과 아님
+    localStorage.setItem(`spoken_${state.student}_${state.unit.unit}_${p.id}_${Date.now()}`, '1');
     if (ok) { markDone(p.id); renderStep(); }
     if (autoAll && ok && pi < pats.length - 1) setTimeout(() => { if (!autoAll) return; movePat(1); record(); }, 1300);   // 전부 따라 말하기: 통과하면 다음 문장으로 이어서
     else if (autoAll && pi === pats.length - 1) toggleAll(false);
