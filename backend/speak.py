@@ -23,6 +23,8 @@ import difflib
 import json
 import os
 import re
+import threading
+import time
 import urllib.request
 from datetime import datetime
 from pathlib import Path
@@ -40,6 +42,11 @@ from backend.tts import ensure_tts
 STT_BACKEND = os.environ.get("STT_BACKEND", "gemini")
 WHISPER_SERVER_URL = os.environ.get("WHISPER_SERVER_URL", "").strip()   # 있으면 GPU 서버(whisper_server.py)로, 없으면 로컬
 SENTENCE_LOG = Path(__file__).resolve().parent.parent / "data" / "student" / "sentence_log.jsonl"
+# STT 정확도(WER) 평가용 로그·오디오 (docs/2026.09.14 검색 함수 계약.md 11번, 팀장과 약속된 스키마).
+# tests/eval_stt.py 가 speak_log.jsonl 을 읽어 실제 학생 목소리 WER 을 잰다.
+SPEAK_LOG = Path(__file__).resolve().parent.parent / "data" / "student" / "speak_log.jsonl"
+SPEAK_AUDIO_DIR = Path(__file__).resolve().parent.parent / "data" / "student" / "speak_audio"
+_speak_log_lock = threading.Lock()
 
 router = APIRouter(tags=["speak"])
 #통과 기준 주어진 단어나 문장 대비 70% 이상 유사하면 통과로 간주합니다
@@ -395,6 +402,49 @@ def similarity(heard: str, expected: str) -> int:
     return round(ratio * 100)
 
 
+def _whisper_backend_label() -> str:
+    """실제로 쓰인 whisper 경로를 speak_log.jsonl의 backend 필드 형식으로("whisper-server:large-v3"
+    / "whisper-local:base"). _transcribe()가 서버 실패 시 로컬로 조용히 대체하는 것까지는 여기서
+    못 잡지만(2a69a79의 eval_stt.py run_synth/run_service도 같은 방식으로 판단해서 일관성 맞춤),
+    WHISPER_SERVER_URL 미설정 시엔 애초에 로컬만 타므로 그 경우는 정확하다."""
+    if WHISPER_SERVER_URL:
+        return "whisper-server:large-v3"
+    return f"whisper-local:{os.environ.get('WHISPER_MODEL', 'base')}"
+
+
+def _save_speak_audio(log_id: str, audio_base64: str, mime: str) -> str:
+    """받은 오디오를 data/student/speak_audio/<log_id>.<ext>로 저장하고 프로젝트 기준 상대경로를 돌려준다."""
+    SPEAK_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+    ext = ".webm" if "webm" in mime else ".wav"
+    (SPEAK_AUDIO_DIR / f"{log_id}{ext}").write_bytes(base64.b64decode(audio_base64))
+    return f"data/student/speak_audio/{log_id}{ext}"
+
+
+def _log_speak(row: dict) -> None:
+    SPEAK_LOG.parent.mkdir(parents=True, exist_ok=True)
+    with _speak_log_lock, SPEAK_LOG.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+
+def _log_speak_result(log_id: str, body: SpeakIn, expected: str, result: dict,
+                       language: str | None, backend_used: str, t0: float) -> None:
+    """/speak 결과를 speak_log.jsonl에 한 줄 남기고 오디오를 speak_audio/에 저장한다(docs 11번,
+    팀장의 tests/eval_stt.py가 이 로그로 실제 학생 목소리 WER을 잰다). item_id 없는 자유 문장도
+    expected=""로 남긴다 — 오디오 저장이 실패해도(디스크 등) 로그 자체는 남긴다."""
+    try:
+        audio_path = _save_speak_audio(log_id, body.audio_base64, body.mime)
+    except Exception as e:
+        print(f"[speak] 오디오 저장 실패({e})", flush=True)
+        audio_path = ""
+    _log_speak({
+        "ts": datetime.now().isoformat(timespec="seconds"), "log_id": log_id, "student": body.student,
+        "item_id": body.item_id or "", "expected": expected, "heard": result.get("heard", ""),
+        "score": result.get("score", 0), "passed": result.get("passed", False),
+        "language": language or "", "backend": backend_used, "ms": int((time.time() - t0) * 1000),
+        "audio": audio_path,
+    })
+
+
 @router.post("/speak")
 def speak(body: SpeakIn):
     item = golden.find_item(body.item_id)
@@ -403,20 +453,30 @@ def speak(body: SpeakIn):
     if STT_BACKEND != "whisper" and not settings.has_api_key:
         return {"heard": "", "expected": expected, "score": 0, "passed": False, "error": "GEMINI_API_KEY 미설정"}
 
+    log_id = "S-" + datetime.now().strftime("%Y%m%d-%H%M%S%f")[:-3]
+    t0 = time.time()
+    language = body.language
+    backend_used = ""
     try:
         if STT_BACKEND == "whisper":
-            heard = whisper_stt(body.audio_base64, body.mime, body.language)
+            language = language or "en"
+            heard = whisper_stt(body.audio_base64, body.mime, language)
+            backend_used = _whisper_backend_label()
         else:
             # 프론트가 language 를 안 보내면(아직 common.js 가 안 바뀐 화면 포함) 오디오만 듣고 자동 판단
-            language = body.language or _detect_language(body.audio_base64, body.mime)
+            language = language or _detect_language(body.audio_base64, body.mime)
             if language == "ko":
                 heard = hybrid_stt(body.audio_base64, body.mime, body.student)
+                backend_used = "hybrid"
             else:
                 heard = whisper_stt(body.audio_base64, body.mime, language)
+                backend_used = _whisper_backend_label()
     except Exception as e:
         # str(e)가 빈 문자열인 예외(예: 인자 없이 raise된 경우)도 있어서, 그때도 error 필드가
         # ""로 비어 "성공"과 구분이 안 되는 걸 막기 위해 타입명으로라도 채운다.
-        return {"heard": "", "expected": expected, "score": 0, "passed": False, "error": str(e) or type(e).__name__}
+        result = {"heard": "", "expected": expected, "score": 0, "passed": False, "error": str(e) or type(e).__name__}
+        _log_speak_result(log_id, body, expected, result, language, backend_used or "error", t0)
+        return result
 
     score = similarity(heard, expected)
     result = {"heard": heard, "expected": expected, "score": score, "passed": score >= PASS_SCORE}
@@ -429,4 +489,5 @@ def speak(body: SpeakIn):
         except Exception:
             pass  # 참고용 지표라 실패해도 전체 응답은 그대로 반환
 
+    _log_speak_result(log_id, body, expected, result, language, backend_used, t0)
     return result
