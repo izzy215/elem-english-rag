@@ -24,6 +24,7 @@ notebook_text() 도 개인화 참고 자료로 넣는다(답 근거는 여전히
 import difflib
 import json
 import math
+import os
 import re
 import time
 from pathlib import Path
@@ -306,14 +307,16 @@ def _word_answer(entry: dict, note: str = "", ctx_unit: str | None = None, level
     return {"answer": answer, "source": [], "offtopic": False, "suggested": suggested}
 
 
-def _word_match(question: str, words_pool: dict[str, dict]) -> dict | None:
-    """질문에 등장한 영단어가 words.csv(교재 어휘 전체, ~400개)에 정확히 있으면 그 뜻으로 답한다.
-    FAQ에 없는 대다수 교재 단어(예: play)가 계속 offtopic 처리되던 걸 확인해서 추가(2026-09-10)."""
+def _find_word_entry(question: str, words_pool: dict[str, dict]) -> tuple[dict | None, str]:
+    """질문에 등장한 영단어를 words.csv(교재 어휘 전체, ~400개)에서 정확히·오타 허용해서 찾는다.
+    (entry, note) 튜플 — note는 오타 교정으로 찾았을 때만 채워진다. _word_match()와
+    _llm_first_materials()가 같이 쓴다(2026-09-17 분리 — 후자엔 이 조회가 아예 없어서 "elephant/
+    water/brother"류 기본 단어가 검색 실패 시 통째로 LLM 자체 지식으로 새던 문제가 있었음)."""
     eng_words = re.findall(r"[A-Za-z']+", question)
     for w in eng_words:
         entry = words_pool.get(w.lower())
         if entry:
-            return _word_answer(entry)
+            return entry, ""
 
     # 정확히 못 찾으면 오타로 보고 tutor.py가 이미 만들어둔 철자 사전을 재사용해 교정 시도
     # (2026-09-14 — "pencl이 뭐예요?"가 지금까지 그냥 offtopic으로 빠지던 문제, ask.py엔 철자
@@ -330,8 +333,15 @@ def _word_match(question: str, words_pool: dict[str, dict]) -> dict | None:
                 continue
             fixed = sp.correction(lw)
             if fixed and fixed != lw and fixed in words_pool:
-                return _word_answer(words_pool[fixed], note=f"혹시 {words_pool[fixed]['word']}를 말씀하신 거죠? ")
-    return None
+                return words_pool[fixed], f"혹시 {words_pool[fixed]['word']}를 말씀하신 거죠? "
+    return None, ""
+
+
+def _word_match(question: str, words_pool: dict[str, dict]) -> dict | None:
+    """질문에 등장한 영단어가 words.csv에 있으면(정확히·오타 허용) 그 뜻으로 답한다.
+    FAQ에 없는 대다수 교재 단어(예: play)가 계속 offtopic 처리되던 걸 확인해서 추가(2026-09-10)."""
+    entry, note = _find_word_entry(question, words_pool)
+    return _word_answer(entry, note=note) if entry else None
 
 
 def _pattern_match(question: str, patterns_pool: list[dict], faq_list: list[dict]) -> dict | None:
@@ -750,7 +760,8 @@ def _check_correctness(question: str, level: int = 3) -> dict:
 
 @router.post("/ask")
 def ask(body: AskIn):
-    result = _hybrid_answer(body)
+    # [실험 9/17, 팀장 요청] 모델 우선 경로가 기본. 옛 경로(규칙 기반 가로채기 → 검색)는 .env 에 ASK_LEGACY=1
+    result = _hybrid_answer(body) if os.environ.get("ASK_LEGACY", "").strip() == "1" else _llm_first_answer(body)
     _log_chat_turn(body.student, body.question.strip(), result.get("answer", ""), result.get("source"))
     return result
 
@@ -1350,3 +1361,291 @@ def _hybrid_answer(body: AskIn) -> dict:
     # 전부 중복 호출을 없앤다(2026-09-16, is_comparison 조건은 2026-09-17 추가).
     return _retrieval_answer(question, body, skip_similar=True, all_faqs=all_faqs,
                               skip_word_lookup=word_lookup_attempted)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 모델 우선 경로 (실험 9/17, 팀장 요청 — 커밋 전 검토용. 옛 경로는 ASK_LEGACY=1)
+#   원칙: 코드가 답을 정하지 않는다. 지금 유닛 자료 + 검색 자료 + 오답노트 + 최근 대화를 모델에 주고
+#   모델이 답·출처·교과서 밖 여부를 정한다. 자료에 없어도 초등 영어 질문이면 답하고 "교과서 밖" 표시.
+#   남긴 코드 판정: 인사·감정 고정 답(_intent_fixed_reply), 영어 문장 판정(_check_correctness).
+# ══════════════════════════════════════════════════════════════════════════════
+LLM_FIRST_PROMPT = """너는 초등학교 {grade}에게 영어를 가르치는 다정한 선생님 챗봇이다. 학생은 지금 {where} 화면에 있다.
+
+## 답하는 원칙
+1. 아래 "교과서 자료"에 답이 있으면 그걸로 답하고 used_ids 에 실제로 쓴 자료의 id 를 적는다 (from_textbook=true).
+2. 자료에 없어도 초등 영어 공부 질문(단어 뜻, 숫자·요일·색깔·인사 같은 기본 표현, 짧은 문장의 뜻, "OO 를 영어로", 문법, 문장이 맞는지)이면 네가 아는 대로 정확하게 답한다 (from_textbook=false, used_ids 는 빈 목록).
+3. 영어 공부와 상관없는 질문(오늘 메뉴, 날씨, 게임 등)은 offtopic=true 로 하고 answer 에 "그건 영어 공부 질문이 아니라서 답하기 어려워. 영어로 뭐라고 하는지 궁금한 게 있으면 물어봐!" 처럼 한 문장만 쓴다.
+4. 인사·기분 표현에는 짧고 다정하게 한 문장 (offtopic=false).
+5. 문장이 맞는지 물으면 맞는지 말하고, 틀렸으면 고친 문장을 보여 준다. 근거는 자료의 문법 규칙이 있으면 그것.
+6. 자주 틀리는 것·뭘 틀렸는지 물으면 "이 학생의 오답노트"로 답한다. 비어 있으면 아직 기록이 없다고 한다.
+7. "지금 무슨 유닛이야" 같은 화면 상황 질문은 위 화면 정보로 답한다.
+8. answer 는 한국어 2~3문장, 초등학생이 읽기 쉽게. 영어는 영어 그대로. 목록을 물으면(숫자 1~5 등) 짧은 목록으로 써도 된다. 없는 내용을 지어내지 않는다.
+
+## 교과서 자료 (지금 유닛 것 + 검색으로 찾은 것. [id] (종류·유닛) 내용)
+{materials}
+{log_block}
+## 이 학생의 오답노트
+{notebook_block}
+{history_block}
+## 학생 질문
+{question}
+
+## 출력 JSON 하나만
+{{"answer": "...", "used_ids": ["p-0121"], "from_textbook": true 또는 false, "own_knowledge": true 또는 false, "offtopic": true 또는 false}}
+own_knowledge 는 자료에 없어서 네가 아는 영어 지식으로 답했을 때만 true. 화면 정보·오답노트·대화 내용으로 답했으면 false."""
+
+_OUT_OF_TEXTBOOK_PREFIX = "📖 교과서엔 없지만 알려줄게요. "
+
+
+def _llm_first_materials(question: str, ctx: AskContext, student: str, level: int) -> tuple[str, dict[str, str], dict[str, list[str]]]:
+    """모델에 줄 자료 블록과 (id → 유닛), (FAQ id → rule_ids) 를 만든다. 검색 실패해도 지금 유닛 자료는 준다."""
+    from backend import embedding, textbook
+    lines: list[str] = []
+    seen: set[str] = set()
+    unit_of: dict[str, str] = {}
+    faq_rules: dict[str, list[str]] = {}
+
+    def add(mid: str, unit: str | None, text: str) -> None:
+        if not mid or mid in seen:
+            return
+        seen.add(mid)
+        if unit:
+            unit_of[mid] = unit
+        lines.append(f"- [{mid}] {text}")
+
+    # 지금 유닛 단어·문장 (결정적, 검색 없이)
+    if ctx.unit:
+        for w in golden.words(level, ctx.unit)[:12]:
+            add(w["id"], ctx.unit, f'(단어·{ctx.unit}) {w["word"]} — {w["meaning"]}' + (f' (예: {w["example"]})' if w.get("example") else ""))
+        for pt in golden.patterns(level, ctx.unit)[:8]:
+            add(pt["id"], ctx.unit, f'(교과서 문장·{ctx.unit}) {pt["text"]} — {pt.get("meaning", "")}')
+    # 방금 규칙(화면이 넘긴 rule_id 또는 직전 대화의 규칙)
+    rule_id = ctx.rule_id
+    if not rule_id:
+        last = next((t for t in reversed(_recent_chat_turns(student, max_turns=5)) if t.get("rule_ids")), None)
+        if last:
+            rule_id = last["rule_ids"][0]
+    if rule_id:
+        r = golden.find_rule(rule_id)
+        if r:
+            add(r["id"], r.get("unit"), f'(방금 다룬 문법 규칙·{r.get("unit", "")}) {r["type"]}: {r["text"]}' + (" 예: " + " / ".join((r.get("examples") or [])[:2]) if r.get("examples") else ""))
+    # 질문의 영어 낱말이 본문·예문에 든 문법 규칙 (임베딩 없이 100개 훑기): "go 랑 went" → R-31
+    for r in _rules_by_english_words(question, golden.rules()):
+        add(r["id"], r.get("unit"), f'(문법 규칙·{r.get("unit", "")}) {r["type"]}: {r["text"]}' + (" 예: " + " / ".join((r.get("examples") or [])[:2]) if r.get("examples") else ""))
+    # 단어장 정확 조회 (임베딩 없이, 전 학년): "안녕하세요 영어로" → hello (Unit01). 검색 점수가 문턱을 못 넘어도 여기서 잡힌다
+    try:
+        for w in textbook.lookup_word(question, level=6)[:5]:
+            add(w["id"], w.get("unit"), f'(단어·{w.get("unit", "")}) {w["word"]} — {w["meaning"]}' + (f' (예: {w["example"]})' if w.get("example") else ""))
+    except Exception as e:  # noqa: BLE001
+        print(f"[ask][llm-first] 단어장 조회 실패: {e}", flush=True)
+    # 검색 (FAQ · 규칙 별칭 · 교과서 문장·단어)
+    try:
+        qvec = embedding.embed_query(question)
+    except Exception as e:  # noqa: BLE001
+        print(f"[ask][llm-first] 임베딩 실패 → 지금 유닛 자료만: {e}", flush=True)
+        qvec = None
+    if qvec is not None:
+        try:
+            for f in textbook.search_faq(question, k=3, rule_id=rule_id, qvec=qvec):
+                if f.get("score", 0) >= 0.70:
+                    faq_rules[f["id"]] = list(f.get("rule_ids") or [])
+                    add(f["id"], f.get("unit"), f'(자주 묻는 질문) Q: {f["question"]} → A: {f["answer"]}')
+            for h in textbook.search_rule_aliases(question, k=3, qvec=qvec):
+                r = golden.find_rule(h["id"]) if h.get("score", 0) >= 0.70 else None
+                if r:
+                    add(r["id"], r.get("unit"), f'(문법 규칙·{r.get("unit", "")}) {r["type"]}: {r["text"]}' + (" 예: " + " / ".join((r.get("examples") or [])[:2]) if r.get("examples") else ""))
+            tb = textbook.search_textbook(question, level=level, k_pattern=4, k_word=4, qvec=qvec)
+            for pt in tb.get("patterns") or []:
+                if pt.get("score", 0) >= 0.70:
+                    add(pt["id"], pt.get("unit"), f'(교과서 문장·{pt.get("unit", "")}) {pt["text"]} — {pt.get("meaning", "")}')
+            for w in tb.get("words") or []:
+                if w.get("score", 0) >= 0.70:
+                    add(w["id"], w.get("unit"), f'(단어·{w.get("unit", "")}) {w["word"]} — {w["meaning"]}' + (f' (예: {w["example"]})' if w.get("example") else ""))
+        except Exception as e:  # noqa: BLE001
+            print(f"[ask][llm-first] 검색 실패 → 지금 유닛 자료만: {e}", flush=True)
+    return ("\n".join(lines) if lines else "(없음)"), unit_of, faq_rules
+
+
+def _rule_search_text(r: dict) -> str:
+    return " ".join([r.get("text") or "", *(r.get("examples") or []), r.get("wrong_example") or ""]).lower()
+
+
+def _rules_by_english_words(question: str, rules: list[dict], k: int = 3) -> list[dict]:
+    """질문에 든 영어 낱말(go, went, an…)이 본문·예문에 단어 단위로 들어 있는 규칙을 겹친 수 순으로 k개.
+    규칙 100개를 그냥 훑는다(1ms 안팎) — "go 랑 went 랑 뭐가 달라" 처럼 한·영이 섞인 짧은 질문은 임베딩이
+    엉뚱한 걸 높은 점수로 올리고 R-31(과거시제)을 놓쳐서(9/17 실측) 낱말 검색이 더 정확하다."""
+    words = {w.lower() for w in re.findall(r"[A-Za-z]+(?:'[A-Za-z]+)?", question) if len(w) >= 2 and w.lower() not in _EN_STOP}
+    if not words:
+        return []
+    scored = []
+    for r in rules:
+        text = _rule_search_text(r)
+        body = (r.get("text") or "").lower()
+        # 영어 낱말 경계는 영문자 기준 — 파이썬 \b 는 한글도 글자로 봐서 "go는" 의 go 를 못 잡는다
+        hit = sum(1 for w in words if re.search(rf"(?<![a-z]){re.escape(w)}(?![a-z])", text))
+        if hit:
+            in_body = sum(1 for w in words if re.search(rf"(?<![a-z]){re.escape(w)}(?![a-z])", body))   # 본문(설명)에 든 낱말을 예문에만 든 것보다 우선
+            scored.append((hit, in_body, r))
+    scored.sort(key=lambda x: (-x[0], -x[1]))
+    return [r for _, _, r in scored[:k]]
+
+
+_TB_INDEX: dict | None = None
+_EN_STOP = {"i", "a", "an", "the", "to", "is", "am", "are", "was", "were", "you", "it", "in", "on", "at", "and", "or", "my", "your",
+            "this", "that", "of", "for", "with", "he", "she", "we", "they", "do", "does", "have", "has", "not", "yes", "no", "ok", "unit"}
+
+
+def _norm_en(text: str) -> str:
+    return " ".join(re.sub(r"[^a-z' ]+", " ", (text or "").lower()).split())
+
+
+def _textbook_index() -> dict:
+    """전 학년·전 유닛 단어장/패턴 색인 (한 번만 만든다). word → (id, unit), 패턴 정규화 문장 → (id, unit), id → (종류, 본문, unit)."""
+    global _TB_INDEX
+    if _TB_INDEX is None:
+        words, pats, by_id = {}, {}, {}
+        for lv in golden.levels():
+            for u in golden.units(lv["level"]):
+                for w in golden.words(lv["level"], u["unit"]):
+                    words.setdefault(w["word"].lower(), (w["id"], u["unit"]))
+                    by_id[w["id"]] = ("word", w["word"].lower(), u["unit"])
+                for pt in golden.patterns(lv["level"], u["unit"]):
+                    pats.setdefault(_norm_en(pt["text"]), (pt["id"], u["unit"]))
+                    by_id[pt["id"]] = ("pattern", _norm_en(pt["text"]), u["unit"])
+        _TB_INDEX = {"words": words, "patterns": pats, "by_id": by_id}
+    return _TB_INDEX
+
+
+def _textbook_coverage(answer: str, used_ids: list[str]) -> tuple[list[str], list[str], float]:
+    """답에 실제로 든 영어가 교과서에 있는지 코드로 대조한다.
+    돌려주는 것: (답 내용과 맞는 자료 id 들, 그 자료들의 유닛, 답의 영어 내용어 중 교과서 단어 비율).
+    모델이 적은 used_ids 는 그 자료의 본문이 답에 실제로 있을 때만 인정한다 (단어면 그 단어, 문장이면 그 문장; 규칙·FAQ 는 그대로)."""
+    idx = _textbook_index()
+    norm_ans = _norm_en(answer)
+    tokens = [t for t in dict.fromkeys(re.findall(r"[a-z]+(?:'[a-z]+)?", answer.lower())) if len(t) >= 2 and t not in _EN_STOP]   # 따옴표('Hello!')는 낱말에 안 붙게
+    ids: list[str] = []
+    for u in used_ids:
+        kind, body_text, _unit = idx["by_id"].get(u, (None, None, None))
+        if kind is None:
+            if u.startswith(("R-", "F-")):
+                ids.append(u)
+            continue
+        if (kind == "word" and re.search(rf"\b{re.escape(body_text)}\b", norm_ans)) or (kind == "pattern" and body_text and body_text in norm_ans):
+            ids.append(u)
+    hit = 0
+    for t in tokens:
+        if t in idx["words"]:
+            hit += 1
+            wid = idx["words"][t][0]
+            if wid not in ids and not any(idx["by_id"].get(i, ("",))[0] == "word" for i in ids):
+                ids.append(wid)
+    for ptxt, (pid, _unit) in idx["patterns"].items():
+        if len(ptxt.split()) >= 2 and ptxt in norm_ans and pid not in ids:
+            ids.append(pid)
+    if tokens and not any(i.startswith("R-") for i in ids):
+        best, best_hit = None, 0
+        for r in golden.rules():
+            text = _rule_search_text(r)
+            h = sum(1 for t in tokens if re.search(rf"(?<![a-z]){re.escape(t)}(?![a-z])", text))
+            if h > best_hit:
+                best, best_hit = r, h
+        if best is not None and best_hit >= 2:
+            ids.append(best["id"])
+    units = [idx["by_id"][i][2] for i in ids if i in idx["by_id"]]
+    for i in ids:
+        if i.startswith("R-"):
+            r = golden.find_rule(i)
+            if r and r.get("unit"):
+                units.append(r["unit"])
+    ratio = hit / len(tokens) if tokens else 0.0
+    return ids, units, ratio
+
+
+def _llm_first_answer(body: AskIn) -> dict:
+    question = _normalize_filler_typos(body.question.strip())
+    if not question:
+        return {"answer": "", "source": [], "offtopic": True}
+    ctx = body.context
+    level = ctx.level or DEFAULT_LEVEL
+
+    # 코드가 정하는 건 두 가지만: 인사·감정 고정 답, 영어 문장 판정(전용 프롬프트가 더 정확 — 9/16 실측 93%)
+    fixed = _intent_fixed_reply(question)
+    if fixed is not None:
+        return fixed
+    asks_check = bool(_CORRECTNESS_PATTERN.search(question)) and not re.search(r"왜|어떻게", question)
+    if asks_check and re.search(r"[A-Za-z]", question):
+        try:
+            return _check_correctness(question, level=level)
+        except llm.LLMError:
+            return _CORRECTNESS_FALLBACK
+    if asks_check and (ctx.text or "").strip() and len(question) <= 15 and not re.search(r"[A-Za-z]", question):   # "이거 맞아?" 처럼 짧게 방금 문장을 가리킬 때만
+        try:
+            return _check_correctness(ctx.text.strip(), level=level)
+        except llm.LLMError:
+            return _CORRECTNESS_FALLBACK
+
+    materials, unit_of, faq_rules = _llm_first_materials(question, ctx, body.student, level)
+    unit_row = golden.find_unit(level, ctx.unit) if ctx.unit else None
+    where = f'{ctx.unit} "{unit_row["title"]}"' if unit_row else (ctx.unit or "유닛 미정")
+    screen_name = {"notebook": "오답노트", "shadow": "따라 말하기", "learn": "표현 익히기", "tutor": "문장 고쳐주기"}.get(ctx.screen or "", ctx.screen or "")
+    if screen_name:
+        where += f" · {screen_name}"
+
+    log = _log_entry(ctx.log_id) if ctx.log_id else None
+    if log:
+        log_block = f'\n## 방금 학생이 만든 문장\n원래 문장: {log.get("text", "")}\n고친 문장: {log.get("fixed", "")}\n(둘이 같으면 원래 문장이 맞았다는 뜻)\n'
+    elif ctx.text:
+        log_block = f"\n## 학생이 방금 입력한 문장 (아직 안 고침)\n{ctx.text}\n"
+    else:
+        log_block = ""
+    try:
+        from backend.student import notebook_text
+        notebook_block = notebook_text(body.student)
+    except Exception:  # noqa: BLE001
+        notebook_block = "(모름)"
+
+    prompt = LLM_FIRST_PROMPT.format(grade=f"{level}학년", where=where, materials=materials, log_block=log_block,
+                                     notebook_block=notebook_block, history_block=_history_block(body.student), question=question)
+    try:
+        out = llm.generate_json(prompt)
+    except llm.LLMError as e:
+        return {"answer": "지금 선생님 챗봇이 잠깐 쉬고 있어요. 조금 뒤에 다시 물어봐 줄래?", "source": [], "offtopic": True, "suggested": [], "error": str(e)}
+
+    answer = str(out.get("answer") or "").strip()
+    claimed = [u for u in (out.get("used_ids") or []) if isinstance(u, str) and (u in unit_of or u.startswith(("F-", "R-", "p-", "w-")))]
+    offtopic = bool(out.get("offtopic"))
+    if not answer:
+        return {"answer": "음, 그 질문은 잘 모르겠어. 다른 말로 다시 물어봐 줄래?", "source": [], "offtopic": True, "suggested": []}
+    # 교과서 여부는 모델 말이 아니라 코드가 대조해서 정한다 — 답에 든 영어 단어·문장이 교과서 단어장/패턴에 있으면 교과서 내용
+    used, hit_units, ratio = _textbook_coverage(answer, claimed)
+    # 질문의 영어 낱말이 전부 든 규칙("go 랑 went" → R-31)이 있으면 모델이 다른 규칙을 적었어도 그걸 첫 출처로 — 유닛 안내도 이 규칙 기준
+    q_words = {w.lower() for w in re.findall(r"[A-Za-z]+(?:'[A-Za-z]+)?", question) if len(w) >= 2 and w.lower() not in _EN_STOP}
+    q_rule = next(iter(_rules_by_english_words(question, golden.rules(), k=1)), None) if q_words else None
+    if q_rule and all(re.search(rf"(?<![a-z]){re.escape(w)}(?![a-z])", _rule_search_text(q_rule)) for w in q_words):
+        used = [q_rule["id"]] + [u for u in used if u != q_rule["id"]]
+    has_english = bool(re.search(r"[A-Za-z]{2,}", answer))
+    from_textbook = bool(used) and (ratio >= 0.5 or any(u.startswith(("R-", "F-", "p-")) for u in used))
+    if not offtopic:
+        # 유닛 안내는 규칙·FAQ·교과서 문장 기준. 단어만으로는 답의 영어가 거의 다(0.8 이상) 교과서 단어일 때만 (예문에 쓴 yesterday 하나로 "Unit14" 라고 하지 않게)
+        note_unit = None
+        for u in used:
+            if u.startswith("R-"):
+                r = golden.find_rule(u); note_unit = (r or {}).get("unit"); break
+            if u.startswith(("F-", "p-")):
+                note_unit = unit_of.get(u) or _textbook_index()["by_id"].get(u, (None, None, None))[2]; break
+        if note_unit is None and ratio >= 0.8:
+            counts: dict[str, int] = {}
+            for u in hit_units:
+                if u and u != "ALL":
+                    counts[u] = counts.get(u, 0) + 1
+            note_unit = max(counts, key=counts.get) if counts else None
+        if from_textbook and note_unit and note_unit != "ALL" and ctx.unit and note_unit != ctx.unit:
+            answer = f"{note_unit}에서 배우는 내용이에요. {answer}"
+        elif not from_textbook and has_english and bool(out.get("own_knowledge")):   # 자료 밖의 영어 지식 답에만 표시 (화면 상황·오답노트·인사 답엔 안 붙임)
+            answer = _OUT_OF_TEXTBOOK_PREFIX + answer
+    rule_ids = [u for u in used if u.startswith("R-")]
+    for u in used:
+        rule_ids += faq_rules.get(u, [])
+    suggested = _followup_questions(list(dict.fromkeys(rule_ids)), golden.faqs()) if rule_ids else []
+    return {"answer": answer, "source": [{"chunk_id": u} for u in used[:6]], "offtopic": offtopic, "suggested": suggested,
+            "from_textbook": from_textbook, "coverage": round(ratio, 2), "llm": out.get("_llm")}
