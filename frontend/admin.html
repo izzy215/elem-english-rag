@@ -5,66 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>초등 영어 · 관리자</title>
 <link rel="stylesheet" href="css/app.css">
-<style>
-  /* 관리자는 데스크톱(발표 화면)에서 보므로 폭을 넓힌다 — docs/plan-B/mockup.html 관리자 웹 구성 */
-  .app{max-width:900px}
-  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;margin-top:14px}
-  .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-top:14px}
-  .grid2 .panel{margin-top:0}
-  .panel h2{font-size:1rem;font-weight:800;margin:0 0 4px}
-  .panel .d{color:var(--muted);font-size:.82rem;margin-bottom:12px}
-  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-  .kpi{background:var(--bg);border-radius:10px;padding:12px 10px;text-align:center}
-  .kpi .num{font-size:1.5rem;font-weight:800;color:var(--primary);font-variant-numeric:tabular-nums}
-  .kpi .num.na{color:var(--muted);font-size:1rem}
-  .kpi .lbl{font-size:.72rem;color:var(--muted)}
-  .bars{display:grid;gap:8px;margin-top:12px}
-  .bar{display:grid;grid-template-columns:200px 1fr 48px auto;align-items:center;gap:10px;font-size:.82rem}
-  .bar .lb{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .bar .sub{font-size:.72rem;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
-  .bars .d.sub{font-size:.75rem;color:var(--muted)}
-  #evalRuns tr.sep td{border-top:2px solid var(--muted)}
-  #evalRuns tr.best td{background:var(--primary-soft);font-weight:700}
-  #evalRuns tr.best td.n b,#evalRuns tr.best td{color:var(--primary)}
-  /* 두 표는 고정 레이아웃 + 100% 폭 — 열이 내용 때문에 패널 밖으로 넘치지 않게. 부모(.bars · .tw)의 overflow-x:auto 는 보험 (정상 폭에선 스크롤 없음) */
-  #evalRuns,#missTable,#fixRuns,#fixMiss,#tbTable{table-layout:fixed;width:100%}
-  #tbTable td{overflow-wrap:anywhere} #tbTable tr.top td{background:var(--primary-soft);font-weight:700}
-  #fixRuns td,#fixMiss td{overflow-wrap:anywhere} #fixRuns tr.best td{background:var(--primary-soft);font-weight:700;color:var(--primary)}
-  #evalRuns th,#missTable th{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #evalRuns th,#evalRuns td,#missTable th,#missTable td{padding-left:6px;padding-right:6px}   /* 430px 폭에서 hit@3 · 재랭킹 · 정답 규칙 머리글이 잘리지 않게 */
-  #evalRuns td .sm{display:block;font-size:.85em;color:var(--muted);font-weight:400}   /* 시험지 칸 둘째 줄: 측정일 */
-  #evalRuns td{overflow-wrap:anywhere} #evalRuns td.m{word-break:break-all} #evalRuns td.n{white-space:normal}
-  #missTable td{overflow-wrap:anywhere} #missTable td.c{word-break:keep-all}
-  .bars,.tw{overflow-x:auto}
-  .bar .track{height:10px;border-radius:5px;background:var(--line);overflow:hidden}
-  .bar .track i{display:block;height:100%;background:var(--primary)}
-  .bar .track i.best{background:var(--accent)}
-  .bar .v{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
-  .bars .d{margin:8px 0 0}
-  table.mini{width:100%;border-collapse:collapse;font-size:.83rem;margin-top:8px}
-  table.mini th,table.mini td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
-  table.mini th{font-size:.72rem;color:var(--muted);font-weight:600}
-  table.mini td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-  table.mini td.n b{color:var(--primary)}
-  table.mini td.f{white-space:nowrap;font-family:ui-monospace,Consolas,monospace;font-size:.8rem}
-  .pill{display:inline-block;font-size:.72rem;font-weight:700;padding:2px 9px;border-radius:999px;margin-right:4px}
-  .pill.ok{background:var(--primary-soft);color:var(--primary)} .pill.warn{background:var(--accent-soft);color:#B07514} .pill.idx{background:var(--sky);color:#2A5B8A}
-  .head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
-  select.small{width:auto;flex:0 0 auto;font:inherit;font-size:.8rem;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
-  .empty{color:var(--muted);font-size:.85rem;padding:10px 0}
-  .row3{display:flex;gap:6px;align-items:center}
-  .head.wrap{flex-wrap:wrap} #evalCtl{flex-wrap:wrap;max-width:100%} #evalCtl select{flex:1 1 140px;min-width:0;max-width:100%}   /* 검색 평가 실행 줄: 좁은 패널에서 줄바꿈 (모델 이름이 길어 패널 밖으로 삐져나오던 것) */
-  input.small{font:inherit;font-size:.8rem;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
-  .btn.small{margin:0;padding:6px 14px;font-size:.82rem;width:auto}
-  table.mini td.ok{color:var(--primary)} table.mini td.bad{color:#B07514}
-</style>
+<link rel="stylesheet" href="css/admin.css">
 </head>
 <body>
 <div class="app">
   <header class="topbar" id="topbar"></header>
   <main>
     <h1>관리자</h1>
-    <p class="sub">골든 데이터 · RAG 검색 정확도 · STT 정확도 · 학생 문장 로그</p>
+    <p class="sub">서비스 상태 · 골든 데이터 · 학생 문장 로그 · 학생별 현황 · 주간 리포트 · 데이터팀 안건</p>
+    <div class="switch"><a href="admin.html" class="cur">관리자</a><a href="lab.html" class="">실험실</a></div>
+    <!-- 서비스 상태 (GET /api/health · /api/admin/fix_run 의 backends · /api/admin/golden 의 색인 · /api/admin/log 의 처리 모델) -->
+    <section class="panel" style="margin-top:14px">
+      <h2>서비스 상태</h2>
+      <div class="d">지금 서버가 무엇으로 돌아가는지 (서버가 읽은 .env 기준 — 바꾸면 재시작)</div>
+      <div class="stat" id="svcStat"><div class="it"><div class="k">확인 중</div><div class="v na">…</div></div></div>
+      <div class="hint" id="svcHint"></div>
+    </section>
 
     <div class="grid2">
       <!-- 골든 데이터 (GET /api/admin/golden) -->
@@ -76,90 +32,14 @@
         <div class="hint" id="indexStatus"></div>
       </section>
 
-      <!-- RAG 정확도 (GET /api/rag/eval · 막대는 GET /api/admin/eval_history 의 latest) -->
-      <section class="panel">
-        <h2>RAG 정확도 — 문장 → 규칙 찾기</h2>
-        <div class="d" id="evalDesc">시험지(eval.csv) 문장마다 검색을 돌려, 정답 규칙이 상위 3개 안에 들면 맞힘</div>
-        <div class="kpis">
-          <div class="kpi"><div class="num na" id="hit3">–</div><div class="lbl">hit@3</div></div>
-          <div class="kpi"><div class="num na" id="hit1">–</div><div class="lbl">hit@1</div></div>
-          <div class="kpi"><div class="num na" id="evalN">–</div><div class="lbl">채점 문장</div></div>
-        </div>
-        <div class="bars" id="runs"></div>
-        <div class="head wrap" style="margin-top:10px">
-          <h2 style="font-size:.95rem">검색 평가 실행 — 임베딩 모델 · 재랭킹 골라서 시험지 채점</h2>
-          <div class="row3" id="evalCtl">
-            <select class="small" id="evBackend" title="임베딩 백엔드"></select>
-            <select class="small" id="evModel" title="임베딩 모델 (.env 표)"></select>
-            <select class="small" id="evCorpus" title="검색 대상 — 규칙 설명문(지금 서비스) / 틀린 예문(errors.jsonl → 규칙) / 둘 합침"></select>
-            <select class="small" id="evRerank" title="재랭킹"></select>
-            <input class="small" id="evTopn" type="number" min="5" max="30" value="10" style="width:56px" title="재랭킹에 넣을 검색 상위 개수">
-            <button class="btn small" id="evBtn" onclick="runEval()">실행</button>
-          </div>
-        </div>
-        <div class="d" id="evNote">고른 모델로 시험지 문장을 이 자리에서 임베딩해 채점해요. <b>검색 대상</b>은 규칙 설명문(지금 서비스) / 틀린 예문(errors.jsonl 400 + 규칙 틀린 예 100 → 규칙) / 둘 합침 중 고를 수 있어요. 서비스가 쓰는 색인과 <code>.env</code> 는 안 바뀌어요. 결과는 위 비교 표에 한 줄로 붙어요.</div>
-        <div class="hint" id="evStatus"></div>
-        <div class="hint" id="evalHint"></div>
-        <div class="tw"><table class="mini" id="missTable"></table></div>
-        <div class="hint" id="missHint"></div>
-      </section>
-    </div>
-
-    <section class="panel" style="margin-top:14px">
-      <div class="head wrap">
-        <h2>튜터 정확도 — /fix 끝까지 (검색 → 모델 → 검증 → 정답 규칙과 비교)</h2>
-        <div class="row3" id="fixCtl">
-          <select class="small" id="fxBackend" title="답변 모델 (LLM)"></select>
-          <select class="small" id="fxSize" title="문장 수"><option value="1">규칙당 1문장 + 정상 20 (120)</option><option value="2">규칙당 2문장 + 정상 40 (240)</option><option value="all">전체 시험지 (360)</option></select>
-          <input class="small" id="fxLimit" type="number" min="0" max="360" value="0" style="width:64px" title="앞 N문장만 (0 = 위 선택대로 전부)">
-          <select class="small" id="fxRag" title="검색(RAG) 사용 여부"><option value="rag">검색 5개 + 유닛·공통 규칙 (실제 서비스)</option><option value="norag">검색 없이 규칙 100개 전부 (기준선)</option></select>
-          <select class="small" id="fxTb" title="교과서 검색(패턴 힌트) 사용 여부 — 서버가 지원하면 유효"><option value="1">교과서 검색 있음</option><option value="0">교과서 검색 없음</option></select>
-          <button class="btn small" id="fxBtn" onclick="runFix()">실행</button>
-        </div>
-      </div>
-      <div class="d">시험지 문장을 실제 튜터에 넣고 <b>모델이 고른 규칙</b>이 정답 규칙과 같은지 봐요. 위 "RAG 정확도"는 후보 안에 정답이 들어갔나(1단계)이고, 여기는 끝까지 맞혔나(2단계)예요.
-        정상 문장 60개는 "고칠 게 없다"고 해야 맞음 — 그 비율이 <b>정상 유지율</b>이고, 고치겠다고 나선 게 <b>오교정</b>이에요. "빠르게"(120문장)는 강의실 32b 로 15분쯤, 전체 360문장은 40분 넘게 걸려요.</div>
-      <div class="hint" id="fxStatus"></div>
-      <div class="kpis">
-        <div class="kpi"><div class="num na" id="fxRuleAcc">–</div><div class="lbl">규칙 정답률</div></div>
-        <div class="kpi"><div class="num na" id="fxKept">–</div><div class="lbl">정상 유지율</div></div>
-        <div class="kpi"><div class="num na" id="fxFail">–</div><div class="lbl">실패</div></div>
-        <div class="kpi"><div class="num na" id="fxTbUse">–</div><div class="lbl">교과서 표현으로 고침</div></div>
-        <div class="kpi"><div class="num na" id="fxOut">–</div><div class="lbl">학년 밖 단어 나옴</div></div>
-      </div>
-      <div class="hint" id="fxHint"></div>
-      <div class="tw"><table class="mini" id="fixRuns"></table></div>
-      <div class="tw"><table class="mini" id="fixMiss"></table></div>
-      <div class="hint" id="fxMissHint"></div>
-    </section>
-
-    <section class="panel" style="margin-top:14px">
-      <div class="head wrap">
-        <h2>교과서 검색 시험 — 학생 문장에 가까운 패턴·단어 (모델이 모르는 우리 자료)</h2>
-        <div class="row3" id="tbCtl">
-          <input class="small" id="tbQ" type="text" placeholder="예: I go to school by bus." style="flex:1 1 220px;min-width:0">
-          <select class="small" id="tbLevel" title="학년 (이 학년 이하 자료만)"><option value="3">3학년까지</option><option value="4">4학년까지</option><option value="5">5학년까지</option><option value="6">6학년까지</option></select>
-          <button class="btn small" id="tbBtn" onclick="runTextbook()">검색</button>
-        </div>
-      </div>
-      <div class="d">규칙 색인과 별개로 patterns.csv 462 + words.csv 400 을 색인한 것(backend/textbook.py, 프로토타입). 문장을 넣으면 학년 이하 자료 중 뜻이 가까운 패턴 5 · 단어 5 가 점수와 함께 나와요.
-        엉뚱한 문장을 넣어 점수가 얼마나 떨어지는지 보면 문턱(min_score)을 정할 수 있어요. 아직 /fix 프롬프트에는 안 들어가요.</div>
-      <div class="hint" id="tbStatus"></div>
-      <div class="result" id="tbJudge"></div>
-      <div class="tw"><table class="mini" id="tbTable"></table></div>
-    </section>
-
-    <!-- STT 정확도 — TTS 담당 실험 결과 자리 (API 미정) -->
+    <!-- 학생별 오답노트 현황 (GET /api/notebook?student=) -->
     <section class="panel">
-      <h2>STT 정확도 — 아이 목소리로 얼마나 잘 받아쓰나</h2>
-      <div class="d">테스트 녹음(팀원·지인 아동 목소리) · 단어 오류율(WER) 낮을수록 좋음 · 자체 STT 실험은 TTS 담당</div>
-      <div class="kpis">
-        <div class="kpi"><div class="num na">측정 전</div><div class="lbl">WER · Gemini 오디오 입력 (현재)</div></div>
-        <div class="kpi"><div class="num na">측정 전</div><div class="lbl">WER · 자체 STT 모델 (실험)</div></div>
-        <div class="kpi"><div class="num na">–</div><div class="lbl">테스트 녹음</div></div>
-      </div>
-      <div class="hint">TTS 담당의 자체 STT 실험 결과를 여기서 Gemini와 같은 잣대(WER)로 비교. 결과 파일 형식이 정해지면 숫자를 붙인다.</div>
+      <h2>학생별 현황</h2>
+      <div class="d">오답노트에 쌓인 규칙 · 극복한 규칙 · 말한 문장 수 (data/student/notebook.json · sentence_log.jsonl)</div>
+      <table class="mini" id="stuTable"></table>
+      <div class="hint" id="stuHint"></div>
     </section>
+    </div>
 
     <!-- 학생 문장 로그 (GET /api/admin/log?days=N) -->
     <section class="panel">
@@ -175,23 +55,36 @@
       <div class="d" id="logDesc">튜터에 들어온 문장과 진단 결과</div>
       <table class="mini" id="logTable"></table>
       <div class="hint" id="logHint"></div>
+    </section>
+
+    <!-- 주간 리포트 (GET /api/admin/report?days=N) — BigQuery 집계 + LLM 4문장. 설정 전엔 서버 파일 집계로 같은 패널 (docs/plan-B/bigquery-report-plan.md) -->
+    <section class="panel">
+      <div class="head">
+        <h2>주간 리포트 (BigQuery) · 선생님께 보내는 4문장</h2>
+        <select class="small" id="rpDays" onchange="loadReport()">
+          <option value="7" selected>최근 7일</option>
+          <option value="30">최근 30일</option>
+          <option value="3650">전체</option>
+        </select>
+      </div>
+      <div class="d" id="rpDesc">학생 문장 로그를 BigQuery SQL 로 집계하고, 그 표만 보고 모델이 리포트를 써요 (표에 없는 숫자를 쓴 문장은 버림)</div>
+      <div class="rp-kpis" id="rpKpis"></div>
+      <div id="rpReport"></div>
+      <div class="rp-grid">
+        <div><div class="rp-cap">자주 걸린 규칙</div><table class="mini" id="rpRules"></table></div>
+        <div><div class="rp-cap">날짜별</div><table class="mini" id="rpDaysTbl"></table></div>
+      </div>
+      <div class="rp-students"><div class="rp-cap">학생별 자주 걸린 규칙</div><table class="mini" id="rpStudents"></table></div>
+      <div class="hint" id="rpHint"></div>
+    </section>
+
+    <!-- 데이터팀 안건 (GET /api/admin/log 의 gaps) -->
+    <section class="panel">
       <h2 style="margin-top:16px;font-size:.95rem">우리 규칙으로 못 짚은 문장 · 데이터팀 안건</h2>
       <div class="d">튜터가 우리 규칙으로 설명하지 못한 문장들. 여기 자주 나오는 문법이 다음에 추가할 규칙이에요</div>
       <table class="mini" id="gapTable"></table>
       <div class="hint" id="gapHint"></div>
 
-      <div class="head" style="margin-top:18px">
-        <h2 style="font-size:.95rem">생성 점검 — 모델이 만든 틀린 문장으로 튜터 시험하기</h2>
-        <div class="row3">
-          <select class="small" id="genBackend"></select>
-          <input class="small" id="genN" type="number" min="1" max="60" value="20" style="width:64px">
-          <button class="btn small" id="genBtn" onclick="runGen()">실행</button>
-        </div>
-      </div>
-      <div class="d">고른 모델이 초등학생 문장을 만들어요. 절반은 우리 규칙 38개에 <b>있는</b> 오류, 절반은 규칙에 <b>없는</b> 오류로요. 그 문장을 같은 모델이 튜터로 진단해요.
-        규칙에 없는 오류인데 튜터가 "맞는 문장"이라고 하면 그게 추가할 규칙 후보예요. 결과는 학생 GEN 으로 로그에 쌓이고 위 표에 "생성 점검"으로 올라와요. 1~3분 걸려요</div>
-      <div class="hint" id="genStatus"></div>
-      <table class="mini" id="genTable"></table>
     </section>
   </main>
   <div class="status" id="status"></div>

@@ -104,6 +104,72 @@ def latest() -> dict | None:
 
 
 # ── 관리자 화면 버튼용 백그라운드 작업 (한 번에 하나) ──
+def delete(indices: list[int] | None = None, everything: bool = False) -> dict:
+    """생성 점검 결과 지우기 (9/17). everything=True: 결과 파일 전부(gen_gaps_*.json + _latest) 와 학생 GEN 의 sentence_log 행·notebook 항목을 지운다.
+    indices: 최근 결과(_latest)에서 그 번호(0부터)의 문장만 빼고, 그 문장의 GEN 로그 행도 지운다. 시간 파일은 같은 ran_at 의 것을 같이 고친다.
+    사람 학생(A·B …)의 기록은 어떤 경우에도 건드리지 않는다."""
+    log_path = tutor.STUDENT_DIR / "sentence_log.jsonl"
+    nb_path = tutor.STUDENT_DIR / "notebook.json"
+    student = "GEN"
+
+    def _prune_log(keep_fn) -> int:
+        if not log_path.exists():
+            return 0
+        with tutor._lock:
+            lines = log_path.read_text(encoding="utf-8").splitlines()
+            kept, removed = [], 0
+            for line in lines:
+                try:
+                    row = json.loads(line) if line.strip() else None
+                except ValueError:
+                    row = None
+                if row is not None and row.get("student") == student and not keep_fn(row):
+                    removed += 1
+                    continue
+                kept.append(line)
+            log_path.write_text("\n".join(kept) + ("\n" if kept else ""), encoding="utf-8")
+        return removed
+
+    if everything:
+        files = sorted(OUT_DIR.glob("gen_gaps_*.json"))
+        for f in files:
+            f.unlink()
+        removed = _prune_log(lambda row: False)
+        if nb_path.exists():
+            with tutor._lock:
+                try:
+                    nb = json.loads(nb_path.read_text(encoding="utf-8"))
+                except ValueError:
+                    nb = {}
+                if student in nb:
+                    nb.pop(student)
+                    nb_path.write_text(json.dumps(nb, ensure_ascii=False, indent=1), encoding="utf-8")
+        return {"deleted_files": len(files), "deleted_log_rows": removed, "latest": None}
+
+    g = latest()
+    if not g or not g.get("results"):
+        return {"deleted_files": 0, "deleted_log_rows": 0, "latest": g}
+    drop = {i for i in (indices or []) if 0 <= i < len(g["results"])}
+    if not drop:
+        return {"deleted_files": 0, "deleted_log_rows": 0, "latest": g}
+    gone_texts = {g["results"][i]["text"] for i in drop}
+    g["results"] = [r for i, r in enumerate(g["results"]) if i not in drop]
+    g["tally"] = {k: sum(1 for r in g["results"] if r["result"] == k) for k in ("ok", "rule", "OTHER", "fail", "llm_err")}
+    g["missed_outside"] = [x for x in g["results"] if not x["inside"] and x["result"] == "ok"]
+    text = json.dumps(g, ensure_ascii=False, indent=1)
+    LATEST.write_text(text, encoding="utf-8")
+    for f in OUT_DIR.glob("gen_gaps_*.json"):                 # 같은 실행의 시간 파일도 맞춰 둔다 (ran_at 으로 찾음)
+        if f == LATEST:
+            continue
+        try:
+            if json.loads(f.read_text(encoding="utf-8")).get("ran_at") == g.get("ran_at"):
+                f.write_text(text, encoding="utf-8")
+        except (ValueError, OSError):
+            pass
+    removed = _prune_log(lambda row: (row.get("text") or "").strip() not in gone_texts)
+    return {"deleted_files": 0, "deleted_log_rows": removed, "latest": g}
+
+
 def job_status() -> dict:
     with _job_lock:
         return {k: (list(v) if isinstance(v, list) else v) for k, v in _job.items()}

@@ -12,6 +12,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import os
 from collections import Counter
 from datetime import datetime, timedelta
 
@@ -44,6 +45,40 @@ def _count(path) -> int | None:
         if path.suffix == ".csv":
             return max(sum(1 for _ in csv.reader(f)) - 1, 0)
         return sum(1 for line in f if line.strip())
+
+
+@router.get("/status")
+def service_status():
+    """관리자 "서비스 상태" 패널용 (9/17): 답변 모델(백엔드 이름이 아니라 실제 모델명·주소) · 대체 모델 · 임베딩(어디서·모델·주소) · 음성 인식 · 색인 5개 · 데이터.
+    전부 지금 프로세스가 읽은 .env 값이라 .env 를 바꾸면 서버를 재시작해야 바뀐다."""
+    import os as _os
+    from backend import embedding as _emb
+    b = settings.llm_backend or "gemini"
+    ep = (settings.llm_endpoints or {}).get(b, {})
+    llm_info = {"backend": b, "model": llm._model_of(b), "url": ep.get("url") or ("Google API" if b == "gemini" else "Anthropic API" if b == "claude" else ""),
+                "fallback": (f"gemini · {settings.gemini_model}" if (settings.llm_fallback and b != "gemini") else None), "timeout_s": settings.llm_timeout,
+                "backends": {name: llm._model_of(name) for name in llm.backends()}}
+    emb = {"provider": _emb.EMBEDDING_PROVIDER, "model": _emb.EMBEDDING_MODEL, "url": _os.environ.get("EMBEDDING_REMOTE_URL", "").strip() if _emb.EMBEDDING_PROVIDER == "remote-http" else ""}
+    stt = {"backend": _os.environ.get("STT_BACKEND", "gemini"), "whisper_url": _os.environ.get("WHISPER_SERVER_URL", "").strip(), "whisper_model": _os.environ.get("WHISPER_MODEL", "base")}
+    idx: dict[str, dict | None] = {}
+    try:
+        from backend import indexing as _ix
+        m = _ix.load_manifest() or {}
+        idx["rules"] = {"count": m.get("count"), "model": m.get("model"), "generated_at": m.get("generated_at")} if m.get("count") is not None else None
+    except Exception:
+        idx["rules"] = None
+    try:
+        from backend import textbook as _tb
+        for kind in ("examples", "textbook", "faq", "rulealias"):
+            m = _tb.load_manifest(kind) or {}
+            idx[kind] = {"count": m.get("count"), "model": m.get("model"), "generated_at": m.get("generated_at")} if m.get("count") else None
+    except Exception:
+        for kind in ("examples", "textbook", "faq", "rulealias"):
+            idx.setdefault(kind, None)
+    rules_n = _count((golden.SAMPLE if golden.using_sample() else golden.GOLDEN) / "rules.jsonl")
+    return {"llm": llm_info, "embedding": emb, "stt": stt, "indexes": idx,
+            "index_stale": bool(idx.get("rules") and rules_n is not None and idx["rules"]["count"] != rules_n),
+            "data": {"dir": str((golden.SAMPLE if golden.using_sample() else golden.GOLDEN).relative_to(golden.ROOT)).replace("\\", "/"), "using_sample": golden.using_sample()}}
 
 
 @router.get("/golden")
@@ -152,6 +187,21 @@ def gen_gaps_latest():
     return {"latest": g, "job": gapcheck.job_status(), "backends": llm.backends(), "default_backend": settings.llm_backend}
 
 
+class GenDel(BaseModel):
+    all: bool = False
+    indices: list[int] = []
+
+
+@router.delete("/gen_gaps")
+def gen_gaps_delete(body: GenDel):
+    """생성 점검 결과 지우기 — all=true 면 결과 파일 전부 + 학생 GEN 기록(sentence_log·notebook), 아니면 최근 결과에서 indices 번호 문장만 (그 문장의 GEN 로그 행 포함).
+    사람 학생 기록은 안 건드린다. 작업이 도는 중이면 409."""
+    if gapcheck.job_status().get("running"):
+        raise HTTPException(409, "생성 점검이 돌고 있어요. 끝난 뒤 지워 주세요.")
+    r = gapcheck.delete(indices=body.indices, everything=body.all)
+    return {**r, "job": gapcheck.job_status()}
+
+
 @router.post("/gen_gaps")
 def gen_gaps_run(body: GenIn):
     """생성 점검을 백그라운드로 시작한다 (한 번에 하나). 진행은 GET /admin/gen_gaps 의 job 으로 본다."""
@@ -236,6 +286,27 @@ class FixRunIn(BaseModel):
     per_rule: int = 0                  # 규칙당 n 문장만 (0 = 전부). 화면의 "빠르게" 가 1
     normal: int = -1                   # 정상 문장 n 개만 (-1 = 전부)
     textbook: bool = True              # False 면 교과서 검색(패턴 힌트) 없이 — 교과서 범위 효과 비교용 (tutor 가 FIX_TEXTBOOK=0 을 읽을 때 유효)
+
+
+@router.get("/stt_history")
+def stt_history():
+    """STT 정확도(WER) 결과 — data/rag_eval/stt_eval_*.json (tests/eval_stt.py). 합성음(synth)·서비스 녹음(service) 각각 최신 실행 + 실행 목록."""
+    import glob as _glob
+    runs = []
+    for f in sorted(_glob.glob(str(golden.ROOT / "data" / "rag_eval" / "stt_eval_*.json"))):
+        try:
+            d = json.loads(open(f, encoding="utf-8").read())
+        except (ValueError, OSError):
+            continue
+        runs.append({"file": os.path.basename(f), "ran_at": d.get("ran_at"), "source": d.get("source"), "backend": d.get("backend"), "model": d.get("model"),
+                     "n": d.get("n"), "wer": d.get("wer"), "passed_rate": d.get("passed_rate"), "words": d.get("words"), "errors": d.get("errors"),
+                     "worst": d.get("worst", [])[:10], "days": d.get("days"), "skipped_free": d.get("skipped_free")})
+    latest = {}
+    for r in runs:
+        latest[r["source"]] = r                                           # 정렬돼 있어 마지막이 최신
+    speak_log = golden.ROOT / "data" / "student" / "speak_log.jsonl"
+    return {"latest": latest, "runs": [{k: v for k, v in r.items() if k != "worst"} for r in runs[-20:]],
+            "speak_log_exists": speak_log.exists(), "manifest_n": sum(1 for _ in open(golden.ROOT / "data" / "stt_eval" / "manifest.csv", encoding="utf-8")) - 1 if (golden.ROOT / "data" / "stt_eval" / "manifest.csv").exists() else 0}
 
 
 @router.get("/fix_history")

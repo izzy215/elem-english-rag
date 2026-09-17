@@ -58,14 +58,14 @@ const DEV = {
   on() { try { return localStorage.getItem('devView') === '1'; } catch (_) { return false; } },
   toggle() { try { localStorage.setItem('devView', DEV.on() ? '0' : '1'); } catch (_) {} renderTopbar(renderTopbar.last || {}); window.dispatchEvent(new Event('devview')); },
 };
-function renderTopbar({ back = true, crumbs = true } = {}) {
-  renderTopbar.last = { back, crumbs };
+function renderTopbar({ back = true, crumbs = true, backTo = null } = {}) {   // backTo: '뒤로'가 history.back() 대신 이 페이지로 (관리자·실험실은 홈으로, 9/17)
+  renderTopbar.last = { back, crumbs, backTo };
   const s = S.get(); const parts = [];
   if (crumbs && s.level) parts.push(`Level ${s.level.level}`);
   if (crumbs && s.unit) parts.push(`${s.unit.unit} ${s.unit.title}`);
   // 칩을 누르면 이동 (Level → 홈, Unit → 유닛 목록). 아이들이 칩을 버튼인 줄 알고 눌러서 (9/15)
   const links = ['index.html', 'units.html'];
-  $('#topbar').innerHTML = `${back ? '<button class="back" onclick="history.back()">‹ 뒤로</button>' : ''}<div class="crumb">${parts.map((p, i) => `<span class="lnk" data-go="${links[i]}" title="${i ? '유닛 목록으로' : '홈으로'}">${esc(p)}</span>`).join('')}</div><div class="student${DEV.on() ? ' dev' : ''}" title="길게 누르면 발표용 보기">학생 ${esc(s.student || 'A')}${DEV.on() ? ' · 발표용' : ''}</div>`;
+  $('#topbar').innerHTML = `${back ? `<button class="back" onclick="${backTo ? `go('${backTo}')` : 'history.back()'}">‹ ${backTo ? '홈' : '뒤로'}</button>` : ''}<div class="crumb">${parts.map((p, i) => `<span class="lnk" data-go="${links[i]}" title="${i ? '유닛 목록으로' : '홈으로'}">${esc(p)}</span>`).join('')}</div><div class="student${DEV.on() ? ' dev' : ''}" title="길게 누르면 발표용 보기">학생 ${esc(s.student || 'A')}${DEV.on() ? ' · 발표용' : ''}</div>`;
   $$('#topbar .crumb .lnk').forEach(el => el.addEventListener('click', () => go(el.dataset.go)));
   const chip = $('#topbar .student'); let t = null;
   const start = () => { t = setTimeout(() => { t = null; DEV.toggle(); }, 600); };

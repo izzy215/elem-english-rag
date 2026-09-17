@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>초등 영어 · 실험실</title>
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar" id="topbar"></header>
+  <main>
+    <h1>실험실</h1>
+    <p class="sub">검색 정확도 · 튜터 정확도 · 교과서 검색 시험 · 생성 점검 · STT 정확도 — 개발할 때 보는 것</p>
+    <div class="switch"><a href="admin.html" class="">관리자</a><a href="lab.html" class="cur">실험실</a><button class="foldall" id="foldAll" onclick="foldAll()">모두 접기</button></div>
+
+    <div class="grid2">
+      <!-- RAG 정확도 (GET /api/rag/eval · 막대는 GET /api/admin/eval_history 의 latest) -->
+      <section class="panel">
+        <h2>RAG 정확도 — 문장 → 규칙 찾기</h2>
+        <div class="d" id="evalDesc">시험지(eval.csv) 문장마다 검색을 돌려, 정답 규칙이 상위 3개 안에 들면 맞힘</div>
+        <div class="kpis">
+          <div class="kpi"><div class="num na" id="hit3">–</div><div class="lbl">hit@3</div></div>
+          <div class="kpi"><div class="num na" id="hit1">–</div><div class="lbl">hit@1</div></div>
+          <div class="kpi"><div class="num na" id="evalN">–</div><div class="lbl">채점 문장</div></div>
+        </div>
+        <div class="bars" id="runs"></div>
+        <div class="head wrap" style="margin-top:10px">
+          <h2 style="font-size:.95rem">검색 평가 실행 — 임베딩 모델 · 재랭킹 골라서 시험지 채점</h2>
+          <div class="row3" id="evalCtl">
+            <select class="small" id="evBackend" title="임베딩 백엔드"></select>
+            <select class="small" id="evModel" title="임베딩 모델 (.env 표)"></select>
+            <select class="small" id="evCorpus" title="검색 대상 — 규칙 설명문(지금 서비스) / 틀린 예문(errors.jsonl → 규칙) / 둘 합침"></select>
+            <select class="small" id="evRerank" title="재랭킹"></select>
+            <input class="small" id="evTopn" type="number" min="5" max="30" value="10" style="width:56px" title="재랭킹에 넣을 검색 상위 개수">
+            <button class="btn small" id="evBtn" onclick="runEval()">실행</button>
+          </div>
+        </div>
+        <div class="d" id="evNote">고른 모델로 시험지 문장을 이 자리에서 임베딩해 채점해요. <b>검색 대상</b>은 규칙 설명문(지금 서비스) / 틀린 예문(errors.jsonl 400 + 규칙 틀린 예 100 → 규칙) / 둘 합침 중 고를 수 있어요. 서비스가 쓰는 색인과 <code>.env</code> 는 안 바뀌어요. 결과는 위 비교 표에 한 줄로 붙어요.</div>
+        <div class="hint" id="evStatus"></div>
+        <div class="hint" id="evalHint"></div>
+        <div class="tw"><table class="mini" id="missTable"></table></div>
+        <div class="hint" id="missHint"></div>
+      </section>
+    </div>
+
+    <section class="panel" style="margin-top:14px">
+      <div class="head wrap">
+        <h2>튜터 정확도 — /fix 끝까지 (검색 → 모델 → 검증 → 정답 규칙과 비교)</h2>
+        <div class="row3" id="fixCtl">
+          <select class="small" id="fxBackend" title="답변 모델 (LLM)"></select>
+          <select class="small" id="fxSize" title="문장 수"><option value="1">규칙당 1문장 + 정상 20 (120)</option><option value="2">규칙당 2문장 + 정상 40 (240)</option><option value="all">전체 시험지 (360)</option></select>
+          <input class="small" id="fxLimit" type="number" min="0" max="360" value="0" style="width:64px" title="앞 N문장만 (0 = 위 선택대로 전부)">
+          <select class="small" id="fxRag" title="검색(RAG) 사용 여부"><option value="rag">검색 5개 + 유닛·공통 규칙 (실제 서비스)</option><option value="norag">검색 없이 규칙 100개 전부 (기준선)</option></select>
+          <select class="small" id="fxTb" title="교과서 검색(패턴 힌트) 사용 여부 — 서버가 지원하면 유효"><option value="1">교과서 검색 있음</option><option value="0">교과서 검색 없음</option></select>
+          <button class="btn small" id="fxBtn" onclick="runFix()">실행</button>
+        </div>
+      </div>
+      <div class="d">시험지 문장을 실제 튜터에 넣고 <b>모델이 고른 규칙</b>이 정답 규칙과 같은지 봐요. 위 "RAG 정확도"는 후보 안에 정답이 들어갔나(1단계)이고, 여기는 끝까지 맞혔나(2단계)예요.
+        정상 문장 60개는 "고칠 게 없다"고 해야 맞음 — 그 비율이 <b>정상 유지율</b>이고, 고치겠다고 나선 게 <b>오교정</b>이에요. "빠르게"(120문장)는 강의실 32b 로 15분쯤, 전체 360문장은 40분 넘게 걸려요.</div>
+      <div class="hint" id="fxStatus"></div>
+      <div class="kpis">
+        <div class="kpi"><div class="num na" id="fxRuleAcc">–</div><div class="lbl">규칙 정답률</div></div>
+        <div class="kpi"><div class="num na" id="fxKept">–</div><div class="lbl">정상 유지율</div></div>
+        <div class="kpi"><div class="num na" id="fxFail">–</div><div class="lbl">실패</div></div>
+        <div class="kpi"><div class="num na" id="fxTbUse">–</div><div class="lbl">교과서 표현으로 고침</div></div>
+        <div class="kpi"><div class="num na" id="fxOut">–</div><div class="lbl">학년 밖 단어 나옴</div></div>
+      </div>
+      <div class="hint" id="fxHint"></div>
+      <div class="tw"><table class="mini" id="fixRuns"></table></div>
+      <div class="tw"><table class="mini" id="fixMiss"></table></div>
+      <div class="hint" id="fxMissHint"></div>
+    </section>
+
+    <section class="panel" style="margin-top:14px">
+      <div class="head wrap">
+        <h2>교과서 검색 시험 — 학생 문장에 가까운 패턴·단어 (모델이 모르는 우리 자료)</h2>
+        <div class="row3" id="tbCtl">
+          <input class="small" id="tbQ" type="text" placeholder="예: I go to school by bus." style="flex:1 1 220px;min-width:0">
+          <select class="small" id="tbLevel" title="학년 (이 학년 이하 자료만)"><option value="3">3학년까지</option><option value="4">4학년까지</option><option value="5">5학년까지</option><option value="6">6학년까지</option></select>
+          <button class="btn small" id="tbBtn" onclick="runTextbook()">검색</button>
+        </div>
+      </div>
+      <div class="d">규칙 색인과 별개로 patterns.csv 462 + words.csv 400 을 색인한 것(backend/textbook.py, 프로토타입). 문장을 넣으면 학년 이하 자료 중 뜻이 가까운 패턴 5 · 단어 5 가 점수와 함께 나와요.
+        엉뚱한 문장을 넣어 점수가 얼마나 떨어지는지 보면 문턱(min_score)을 정할 수 있어요. 아직 /fix 프롬프트에는 안 들어가요.</div>
+      <div class="hint" id="tbStatus"></div>
+      <div class="result" id="tbJudge"></div>
+      <div class="tw"><table class="mini" id="tbTable"></table></div>
+    </section>
+
+    <!-- 생성 점검 (POST /api/admin/gen_gaps) — 결과 문장은 학생 GEN 으로 로그에 쌓여 관리자 화면 "데이터팀 안건"에도 보임 -->
+    <section class="panel">
+      <div class="head" style="margin-top:18px">
+        <h2 style="font-size:.95rem">생성 점검 — 모델이 만든 틀린 문장으로 튜터 시험하기</h2>
+        <div class="row3">
+          <select class="small" id="genBackend"></select>
+          <input class="small" id="genN" type="number" min="1" max="60" value="20" style="width:64px">
+          <button class="btn small" id="genBtn" onclick="runGen()">실행</button>
+          <button class="btn small ghost" id="genDelSel" onclick="delGen(false)" title="표에서 체크한 문장만 지움 (그 문장의 GEN 로그 행 포함)">선택 삭제</button>
+          <button class="btn small ghost" id="genDelAll" onclick="delGen(true)" title="결과 파일 전부 + 학생 GEN 의 로그·오답노트 기록">전체 삭제</button>
+        </div>
+      </div>
+      <div class="d">고른 모델이 초등학생 문장을 만들어요. 절반은 우리 규칙 38개에 <b>있는</b> 오류, 절반은 규칙에 <b>없는</b> 오류로요. 그 문장을 같은 모델이 튜터로 진단해요.
+        규칙에 없는 오류인데 튜터가 "맞는 문장"이라고 하면 그게 추가할 규칙 후보예요. 결과는 학생 GEN 으로 로그에 쌓이고 위 표에 "생성 점검"으로 올라와요. 1~3분 걸려요</div>
+      <div class="hint" id="genStatus"></div>
+      <table class="mini" id="genTable"></table>
+    </section>
+
+    <!-- STT 정확도 (GET /api/admin/stt_history · tests/eval_stt.py) -->
+    <section class="panel">
+      <h2>STT 정확도 — 얼마나 잘 받아쓰나 (단어 오류율 WER, 낮을수록 좋음)</h2>
+      <div class="d" id="sttDesc">합성음 기준선 = Piper 가 읽은 교과서 패턴을 Whisper 가 받아쓴 것 (파이프라인 점검, 0 에 가까워야 정상) · 서비스 녹음 = 아이들이 따라 말하기에서 실제로 녹음한 것 (TTS 담당의 speak_log 가 쌓이면)</div>
+      <div class="kpis">
+        <div class="kpi"><div class="num na" id="sttSynth">측정 전</div><div class="lbl" id="sttSynthLbl">WER · 합성음 기준선</div></div>
+        <div class="kpi"><div class="num na" id="sttSvc">측정 전</div><div class="lbl" id="sttSvcLbl">WER · 서비스 녹음 (따라 말하기)</div></div>
+        <div class="kpi"><div class="num na" id="sttN">–</div><div class="lbl">시험 녹음 (합성 · 서비스)</div></div>
+      </div>
+      <div class="hint" id="sttHint"></div>
+      <div class="tw"><table class="mini" id="sttWorst"></table></div>
+    </section>
+
+  </main>
+  <div class="status" id="status"></div>
+</div>
+<script src="js/common.js"></script>
+<script src="js/lab.js"></script>
+</body>
+</html>
