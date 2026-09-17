@@ -974,6 +974,17 @@ def _retrieval_answer(question: str, body: AskIn, skip_similar: bool = False,
         if len(eng_tokens) >= 2:
             fwords_eng = set(re.findall(r"[a-z]+", (f["question"] + " " + f["matched"]).lower()))
             overlap = eng_tokens <= fwords_eng
+        elif len(qwords) >= 2:
+            # 한국어만 있는 질문도 내용어가 2개 이상이면 같은 기준을 적용한다 — "저녁 인사 영어로"가
+            # F-14(작별 인사, farewell)에 매칭되던 문제(2026-09-17 실사용 테스트로 발견): 진짜
+            # 화제어 "저녁"은 하나도 안 겹치는데 "인사"·"영어로"처럼 이 유닛 FAQ 여러 개에 공통으로
+            # 나오는 말만 겹쳐도 통과해서, 교재에 없는 화제(저녁 인사)를 전혀 다른 화제(작별 인사)
+            # 답으로 자신 있게 내보냈다. 내용어 전부가 겹쳐야 인정하면 이런 "틀만 같고 화제어는
+            # 다른" 오매칭을 막을 수 있다("in이랑 on 차이"류 영단어 규칙과 같은 논리).
+            overlap = all(
+                any(len(w) >= 2 and len(x) >= 2 and abs(len(w) - len(x)) <= 2 and (w in x or x in w) for x in fwords)
+                for w in qwords
+            )
         else:
             overlap = any(len(w) >= 2 and len(x) >= 2 and abs(len(w) - len(x)) <= 2 and (w in x or x in w)
                           for w in qwords for x in fwords)

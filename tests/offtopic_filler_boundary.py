@@ -115,6 +115,17 @@ check("F2", '(회귀) 정타 "과거시제가 뭐예요?"는 여전히 R-31로 �
       r_correct_past["offtopic"] is False and any(s.get("chunk_id") == "R-31" for s in r_correct_past["source"]))
 
 
+# ── G. FAQ 화제어 오버랩 — "인사 영어로"류 공통 틀만 겹치고 진짜 화제어는 안 겹치면 거절 ──
+r_evening = a("저녁 인사 영어로", unit="Unit01", level=3)
+check("G1", '"저녁 인사 영어로"(교재에 없는 화제)가 F-14(작별인사/farewell)로 잘못 답하지 않음',
+      not any(s.get("chunk_id") == "F-14" for s in r_evening["source"]), f"(offtopic={r_evening['offtopic']}, answer={r_evening['answer'][:40]!r})")
+
+r_wellbeing = a("안부 인사 영어로")
+check("G2", '(회귀) "안부 인사 영어로"(화제어까지 다 겹치는 진짜 매칭)는 F-69로 정상 답변',
+      r_wellbeing["offtopic"] is False and any(s.get("chunk_id") == "F-69" for s in r_wellbeing["source"]),
+      f"(source={r_wellbeing['source']})")
+
+
 print("\n=== 요약 ===")
 passed = sum(1 for _, _, c, _ in results if c)
 print(f"{passed}/{len(results)} 통과")
