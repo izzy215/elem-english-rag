@@ -124,7 +124,8 @@ async function record() {
     const { blob, b64, mime } = await recordOnce({ maxMs: 5000, onStart: s => stopFn = s });
     btn.classList.remove('rec'); btn.textContent = '🎙 따라 말하기'; btn.onclick = record;
     showResult('#learnResult', '채점 중… (몇 초 걸려요)');
-    const [myWave, r] = await Promise.all([waveFromBlob(blob), speak(b64, p.id, '🎧 채점 중… 잠깐만요', mime)]);
+    // 따라 말하기는 항상 영어 문장이라 language를 강제해서 서버의 자동 언어판정(_detect_language) 생략
+    const [myWave, r] = await Promise.all([waveFromBlob(blob), speak(b64, p.id, '🎧 채점 중… 잠깐만요', mime, 'en')]);
     if (!teacherWave) await (teacherWaveP || loadTeacherWave(p));   // 듣기를 안 눌렀어도 선생님 파형은 그린다
     $('#shWave').style.display = 'block'; drawWave($('#wvT'), teacherWave); drawWave($('#wvM'), myWave);
     $('#wvTTxt').textContent = teacherWave ? p.text : '(선생님 음원 없음)'; $('#wvMTxt').textContent = r.heard || '';

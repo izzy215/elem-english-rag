@@ -102,6 +102,17 @@ def _get_whisper_model():
     return _whisper_model
 
 
+@router.on_event("startup")
+def _warm_local_whisper() -> None:
+    """_detect_language()(언어 자동판정, 항상 로컬 실행)가 첫 실제 호출 때 모델을 새로 불러오느라
+    9초 넘게 걸리는 걸(2026-09-17 실측, 콜드 9.6초) 첫 학생이 그대로 떠안지 않도록 서버 기동 시
+    미리 로드해둔다. 실패해도(다운로드 문제 등) 기동 자체는 막지 않음 — 첫 실제 호출 때 다시 시도됨."""
+    try:
+        _get_whisper_model()
+    except Exception as e:
+        print(f"[speak] 로컬 whisper 모델 워밍업 실패({e}) — 첫 실제 호출 때 재시도됨", flush=True)
+
+
 def _detect_language(audio_base64: str, mime: str) -> str:
     """오디오만 듣고 언어를 자동 판단한다(Whisper 내장, 로컬·무료)."""
     import whisper
@@ -114,9 +125,15 @@ def _detect_language(audio_base64: str, mime: str) -> str:
     return max(probs, key=probs.get)
 
 
-def _remote_whisper(audio_base64: str, mime: str, language: str | None, model: str = "large-v3") -> tuple[str, float]:
-    """GPU 서버의 whisper_server.py 호출. (텍스트, avg_logprob) 반환. 실패하면 예외 그대로 던짐(호출부가 로컬로 대체)."""
-    body = json.dumps({"audio_base64": audio_base64, "mime": mime, "language": language, "model": model}).encode()
+def _remote_whisper(audio_base64: str, mime: str, language: str | None, model: str = "large-v3",
+                     force: bool = False) -> tuple[str, float]:
+    """GPU 서버의 whisper_server.py 호출. (텍스트, avg_logprob) 반환. 실패하면 예외 그대로 던짐(호출부가 로컬로 대체).
+    force=True 는 서버의 언어 자동판정·덮어쓰기(9/17, 팀장 — 감지 확신 높으면 요청한 language 를 무시하고
+    감지된 언어로 받아씀, 강제 언어가 실제와 다르면 번역돼버리는 걸 막음)를 끄고 요청한 language 그대로
+    강제한다. hybrid_stt() 가 "한국어로 강제/영어로 강제" 두 번을 일부러 다르게 시켜서 비교하는 용도라
+    자동판정이 둘을 같은 값으로 덮어써버리면 그 비교 자체가 무의미해지기 때문(2026-09-17 실측 확인)."""
+    body = json.dumps({"audio_base64": audio_base64, "mime": mime, "language": language, "model": model,
+                        "force": force}).encode()
     req = urllib.request.Request(WHISPER_SERVER_URL.rstrip("/") + "/transcribe", data=body,
                                   headers={"Content-Type": "application/json"}, method="POST")
     with urllib.request.urlopen(req, timeout=60) as r:
@@ -124,11 +141,13 @@ def _remote_whisper(audio_base64: str, mime: str, language: str | None, model: s
     return data["text"], data.get("avg_logprob", -999.0)
 
 
-def _transcribe(audio_base64: str, mime: str, language: str | None) -> tuple[str, float]:
-    """WHISPER_SERVER_URL 설정돼 있으면 GPU 서버로, 실패하거나 설정 없으면 로컬 Whisper로. (텍스트, avg_logprob) 반환."""
+def _transcribe(audio_base64: str, mime: str, language: str | None, force: bool = False) -> tuple[str, float]:
+    """WHISPER_SERVER_URL 설정돼 있으면 GPU 서버로, 실패하거나 설정 없으면 로컬 Whisper로. (텍스트, avg_logprob) 반환.
+    force 는 원격 서버에만 의미 있음(_remote_whisper 참고) — 로컬 폴백은 애초에 자동판정 덮어쓰기가
+    없어서 항상 요청한 language 그대로 강제된다."""
     if WHISPER_SERVER_URL:
         try:
-            return _remote_whisper(audio_base64, mime, language)
+            return _remote_whisper(audio_base64, mime, language, force=force)
         except Exception as e:
             print(f"[speak] whisper 서버 호출 실패({e}) → 로컬로 대체", flush=True)
     audio_bytes = base64.b64decode(audio_base64)
@@ -139,7 +158,8 @@ def _transcribe(audio_base64: str, mime: str, language: str | None) -> tuple[str
 
 
 def whisper_stt(audio_base64: str, mime: str, language: str = "en") -> str:
-    """Whisper STT (STT_BACKEND=whisper 테스트용, 할당량 안 씀). WHISPER_SERVER_URL 있으면 GPU 서버 사용."""
+    """Whisper STT (STT_BACKEND=whisper 테스트용, 할당량 안 씀). WHISPER_SERVER_URL 있으면 GPU 서버 사용.
+    force 안 씀 — 서버의 언어 자동판정 안전장치(강제 언어가 실제와 다르면 번역돼버리는 걸 막음)를 그대로 받는다."""
     return _transcribe(audio_base64, mime, language)[0]
 
 
@@ -288,8 +308,11 @@ def hybrid_stt(audio_base64: str, mime: str, student: str = "") -> str:
     vocab_set = {v.lower() for v in golden.known_english_vocab(unit_scope or None, words_only=True)}
 
     # initial_prompt 로 vocab 힌트를 줘봤으나 오탐·반복 루프가 더 늘어 실측상 안 씀(2026-09-09)
-    korean_guess, ko_conf = _transcribe(audio_base64, mime, "ko")
-    english_guess, en_conf = _transcribe(audio_base64, mime, "en")
+    # force=True: 서버(강의실 GPU)의 언어 자동판정 덮어쓰기를 끄고 "ko"/"en" 을 진짜로 다르게 강제한다
+    # — 안 그러면 확신 높은 오디오는 둘 다 감지된 한쪽 언어로 수렴해서(2026-09-17 실측: 두 요청이 완전히
+    # 같은 텍스트로 돌아옴) 바로 아래 en_only_words 비교 자체가 무의미해진다.
+    korean_guess, ko_conf = _transcribe(audio_base64, mime, "ko", force=True)
+    english_guess, en_conf = _transcribe(audio_base64, mime, "en", force=True)
     print(f"[hybrid_stt] ko 강제={korean_guess!r}(conf={ko_conf:.2f}) en 강제={english_guess!r}(conf={en_conf:.2f})", flush=True)
     korean_guess = _strip_hallucination_tail(korean_guess)
     english_guess = _strip_hallucination_tail(english_guess)
@@ -474,12 +497,14 @@ def speak(body: SpeakIn):
     except Exception as e:
         # str(e)가 빈 문자열인 예외(예: 인자 없이 raise된 경우)도 있어서, 그때도 error 필드가
         # ""로 비어 "성공"과 구분이 안 되는 걸 막기 위해 타입명으로라도 채운다.
-        result = {"heard": "", "expected": expected, "score": 0, "passed": False, "error": str(e) or type(e).__name__}
+        result = {"heard": "", "expected": expected, "score": 0, "passed": False, "error": str(e) or type(e).__name__, "language": language}
         _log_speak_result(log_id, body, expected, result, language, backend_used or "error", t0)
         return result
 
     score = similarity(heard, expected)
-    result = {"heard": heard, "expected": expected, "score": score, "passed": score >= PASS_SCORE}
+    # language: 프론트(learn.js otherLanguage())가 "다른 언어로 들렸어요" 판정에 서버 판정을 최우선으로
+    # 쓰겠다고 명시(9/17, 팀장) — hybrid_stt 는 항상 "ko", whisper_stt 는 강제/자동판정된 값 그대로.
+    result = {"heard": heard, "expected": expected, "score": score, "passed": score >= PASS_SCORE, "language": language}
 
     if result["passed"]:
         try:

@@ -38,6 +38,11 @@ class TranscribeIn(BaseModel):
     mime: str = "audio/webm"
     language: str | None = None
     model: str = "large-v3"
+    # True면 아래 언어 자동판정·덮어쓰기를 끄고 language 를 그대로 강제한다 — speak.py의 hybrid_stt()가
+    # "한국어로 강제/영어로 강제" 두 번을 일부러 다르게 시켜서 비교하는 용도라, 자동판정이 둘을 같은
+    # 값으로 덮어써버리면 비교 자체가 무의미해짐(2026-09-17, TTS 담당 요청 — 감지 확신 높은 오디오는
+    # language='ko'/'en' 요청이 완전히 같은 텍스트로 돌아오는 게 실측 확인됨).
+    force: bool = False
 
 
 @app.post("/transcribe")
@@ -48,10 +53,27 @@ def transcribe(body: TranscribeIn):
         with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as f:
             f.write(base64.b64decode(body.audio_base64))
             path = f.name
-        result = _get_model(body.model).transcribe(path, language=body.language, fp16=True, temperature=0.0)
+        model = _get_model(body.model)
+
+        if body.force:
+            language = body.language
+            detected = prob = None
+        else:
+            # 1) 언어 감지 (앞 30초, GPU 0.1초). 화면이 'en' 이라고 보내도 실제 한국어면 Whisper 가 영어로 번역해 버리므로
+            #    감지된 언어로 받아쓴다 – 번역 방지. 감지 확률이 낮으면(0.5 미만) 요청한 언어를 그대로 쓴다.
+            audio = whisper.pad_or_trim(whisper.load_audio(path))
+            mel = whisper.log_mel_spectrogram(audio, n_mels=model.dims.n_mels).to(model.device)   # large-v3 는 128, 나머지는 80
+            _, probs = model.detect_language(mel)
+            detected, prob = max(probs.items(), key=lambda kv: kv[1])
+            language = detected if prob >= 0.5 else body.language
+
+        # 2) 받아쓰기 (task=transcribe 는 기본값. language 가 실제 말과 같으면 번역이 일어나지 않는다)
+        result = model.transcribe(path, language=language, fp16=True, temperature=0.0)
         segs = result.get("segments") or []
         avg_logprob = sum(s.get("avg_logprob", -999.0) for s in segs) / len(segs) if segs else -999.0
-        return {"text": result["text"].strip(), "avg_logprob": avg_logprob}
+        return {"text": result["text"].strip(), "avg_logprob": avg_logprob,
+                "language": language, "detected": detected, "language_prob": round(float(prob), 3) if prob is not None else None,
+                "requested": body.language}
     finally:
         if path:
             os.unlink(path)
