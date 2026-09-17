@@ -184,21 +184,36 @@ def _notebook_units(student: str) -> list[str]:
     return sorted(units)
 
 
-def _rag_rule_hint(text: str) -> dict | None:
-    """텍스트와 가장 가까운 규칙 1개(RAG 검색, rag.py). 색인 없음·검색 실패면 None(다음 우선순위로 대체)."""
-    try:
-        from backend.rag import search_rules
-        hits = search_rules(text, k=1)
-        return hits[0] if hits else None
-    except Exception as e:                                    # 색인 없음(IndexUnavailableError) 포함, 힌트 실패로 요청 자체를 막지 않음
-        print(f"[hybrid_stt] rag 힌트 검색 실패 → 생략: {type(e).__name__}: {e}", flush=True)
-        return None
-
-
 def _vocab_words_in(text: str, vocab_set: set[str]) -> set[str]:
     """text 안에서 vocab_set(소문자)에 있는 영단어를 뽑는다. 불용어 필터 없이 그대로 —
     "what" 같은 흔한 단어가 힌트로 잡히는 부작용은 알려진 한계로 감수(2026-09-10)."""
     return {w for w in re.findall(r"[A-Za-z']+", text.lower()) if w in vocab_set}
+
+
+# Whisper가 애매한/무음 구간에서 학습 데이터(유튜브 자막)에 흔한 문구를 지어내는 잘 알려진
+# 환각 패턴 — 특히 오디오 끝에 붙는다. "thank" 같은 진짜 학습 단어가 이 문구 안에 있으면
+# words_only 필터로도 안 걸러져서 학생이 말한 적 없는 문장이 병합에 그대로 들어갔다(2026-09-17,
+# "우리 어제 zoo에 갔어요"의 en 강제 인식이 "...Thank you."를 지어내 병합에 반영된 사례). 실측
+# (무음·화이트노이즈 1~8초, 5회 전부 재현) 결과 en 강제="Thank you.", ko 강제="감사합니다."로
+# 거의 항상 나와서 — 공개 연구에서도 "thank you"류가 Whisper 무음 환각의 압도적 1위(약 25%,
+# https://arxiv.org/pdf/2501.11378 )로 보고된 것과 일치한다. 양쪽 언어 다 잘라낸다.
+# 이 마이크는 "질문/요청"용이라 이런 인사치레 맺음말이 진짜 내용일 가능성이 낮아, 통째로 잘라낸다.
+_WHISPER_HALLUCINATION_TAIL = re.compile(
+    r"\s*(thanks? you( very much)?|thanks? for watching|please (subscribe|like)|"
+    r"see you (next time|later)|like and subscribe|bye( bye)?|"
+    r"감사합니다|고맙습니다|시청해 ?주셔서 감사합니다|구독과 ?좋아요|다음에 ?또 ?만나요|안녕히 ?계세요)"
+    r"\s*[.!]?\s*$",
+    re.IGNORECASE,
+)
+
+
+def _strip_hallucination_tail(text: str) -> str:
+    """문장 전체가 환각 문구뿐이면(무음 구간 전체를 "감사합니다"로 지어낸 경우) 빈 문자열을
+    그대로 돌려준다 — 잘라낸 결과가 비었다고 원문(환각 그 자체)으로 되돌리면 안 된다."""
+    stripped = _WHISPER_HALLUCINATION_TAIL.sub("", text).strip()
+    if stripped != text.strip():
+        print(f"[hybrid_stt] Whisper 환각 맺음말 제거: {text!r} -> {stripped!r}", flush=True)
+    return stripped
 
 
 def _avg_logprob(result: dict) -> float:
@@ -216,8 +231,11 @@ def _extract_sentence(text: str) -> str:
         try:
             data = json.loads(text)
             if isinstance(data, dict):
-                value = next((v for v in data.values() if isinstance(v, str) and v.strip()), None)
-                if value:
+                # 빈 문자열도 유효한 값(A/B 둘 다 비어서 병합할 게 없을 때)이라 v.strip() 진위값이
+                # 아니라 "문자열 값이 있었는가"로 판단한다 — 아니면 "" 를 못 찾은 걸로 오판해서
+                # JSON 원문을 그대로 반환해버렸다(2026-09-17, 무음 입력 테스트로 발견).
+                value = next((v for v in data.values() if isinstance(v, str)), None)
+                if value is not None:
                     return value.strip().strip("\"'“”‘’")
         except json.JSONDecodeError:
             pass
@@ -227,7 +245,13 @@ def _extract_sentence(text: str) -> str:
 def hybrid_stt(audio_base64: str, mime: str, student: str = "") -> str:
     """language="ko" 인식. Whisper 로컬 2회(한국어/영어 강제, 할당량 안 씀) + Gemini 병합 1회로
     섞인 영어 단어를 보존한다. 단어 목록은 _recent_context()/_notebook_units() 로 학생 맥락에 맞게
-    좁히고, 규칙 힌트는 _rag_rule_hint() → 최근 /fix → 유닛 제목 순으로 대체한다.
+    좁히고, 규칙 힌트는 최근 /fix → 유닛 제목 순으로 준다(둘 다 실제 시스템 상태 — 학생이 방금
+    무엇을 했는지 — 에서 나온 값). rag.py 검색으로 STT 추측 텍스트에서 규칙을 다시 찾아 힌트로
+    주는 것도 해봤으나(2026-09-10), rag.py의 search_rules()는 문턱값 없이 1위 후보를 그대로
+    반환하는 "안전망"용 검색이라(ask.py가 같은 목적으로 쓰는 textbook.py 쪽은 0.86 문턱값+내용어
+    겹침 검증까지 있음) 신뢰 못 할 STT 추측을 넣고 그 결과를 다시 확신으로 병합에 주입하는 구조가
+    되어, 실제로 아무 근거 없는 문장을 지어내는 사고가 났다(2026-09-17 — "미래시제가 뭐예요?"가
+    "미래시제가 will+동사원형이예요?"로 등. rule_id/unit_info로 대체).
     병합 실패 시 한국어 강제 인식 결과를 그대로 반환한다."""
     unit, rule_id, level = _recent_context(student)
     unit_scope = list({unit, *_notebook_units(student)} - {None}) if unit else _notebook_units(student)
@@ -243,6 +267,12 @@ def hybrid_stt(audio_base64: str, mime: str, student: str = "") -> str:
     korean_guess, ko_conf = _transcribe(audio_base64, mime, "ko")
     english_guess, en_conf = _transcribe(audio_base64, mime, "en")
     print(f"[hybrid_stt] ko 강제={korean_guess!r}(conf={ko_conf:.2f}) en 강제={english_guess!r}(conf={en_conf:.2f})", flush=True)
+    korean_guess = _strip_hallucination_tail(korean_guess)
+    english_guess = _strip_hallucination_tail(english_guess)
+    if not korean_guess and not english_guess:
+        # 둘 다 환각 맺음말뿐이었던 무음/잡음 입력 — 합칠 실내용이 없으니 LLM 호출 없이 바로 반환
+        print(f"[hybrid_stt] 두 인식 결과 다 환각 제거 후 빈 문자열 → 병합 생략", flush=True)
+        return ""
     if _normalize(korean_guess) == _normalize(english_guess) and korean_guess:
         # 둘이 이미 같은 문장(대개 순수 영어) → 병합 모델이 "번역"해버리는 걸 막기 위해 병합 자체를 생략
         print(f"[hybrid_stt] ko=en 이라 병합 생략, 그대로 사용", flush=True)
@@ -253,13 +283,9 @@ def hybrid_stt(audio_base64: str, mime: str, student: str = "") -> str:
         print(f"[hybrid_stt] en 강제가 한글 없고 신뢰도도 더 높아 그대로 사용", flush=True)
         return english_guess
     print(f"[hybrid_stt] unit={unit} rule_id={rule_id} vocab={vocab!r}", flush=True)
-    rag_hit = _rag_rule_hint(korean_guess)
-    print(f"[hybrid_stt] rag_hit={rag_hit['id'] if rag_hit else None}", flush=True)
     rule = golden.find_rule(rule_id) if rule_id else None
     unit_info = golden.find_unit(level, unit) if (unit and level) else None
-    if rag_hit:
-        topic_line = f'이 질문은 "{rag_hit["type"]}" 규칙과 관련 있어 보인다({rag_hit["text"]}).\n'
-    elif rule:
+    if rule:
         topic_line = f'방금 이 학생은 "{rule["type"]}"({rule["short"]}) 규칙을 다루고 있었다.\n'
     elif unit_info:
         topic_line = f'이 학생은 지금 "{unit_info["title"]}" 유닛 내용에 대해 물어보는 중이다.\n'
@@ -304,6 +330,10 @@ B는 영어 단어 자체는 맞게 알아들었을 가능성이 높지만 나�
 절대 쓰지 말 것. 그리고 이건 번역이 아니다 — A/B에 나온 단어를 그대로 골라 이어붙이기만 하고,
 전체 뜻을 다른 말로 새로 옮기지 마라(예: "I play friend" 가 섞여 있으면 "플레이"·"프렌드"처럼 그
 발음/철자를 살리고, "친구랑 놀아요"처럼 뜻만 번역한 새 문장을 만들지 말 것).
+영어 비중이 많아도 마찬가지다 — 문장 뒤에 붙은 한국어 질문 표현("이거 맞아요?" 등)은 그
+한국어 그대로 두고, "Is this right?"처럼 영어로 옮기지 말 것
+(예: A="She is 예링 A 레드드레스 이거 맞아요?", B="She is wearing a red dress. Is this right?"
+  -> "She is wearing a red dress 이거 맞아요?" — 영어 부분은 B에서, 한국어 꼬리는 그대로 살림).
 다른 설명 없이 문장만 출력."""
 
     try:
