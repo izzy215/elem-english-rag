@@ -173,9 +173,18 @@ def eval_set() -> list[dict]:
     return _read("eval.csv")
 
 
-def known_english_vocab(unit: str | list[str] | None = None) -> list[str]:
+def known_english_vocab(unit: str | list[str] | None = None, words_only: bool = False) -> list[str]:
     """golden data 전체에 등장하는 영어 단어 목록 (speak.py 의 STT 화이트리스트용).
-    unit 을 주면 그 유닛(+"ALL")으로만 좁힌다. 문자열/리스트 둘 다 받는다."""
+    unit 을 주면 그 유닛(+"ALL")으로만 좁힌다. 문자열/리스트 둘 다 받는다.
+
+    words_only=True 면 words.csv 의 word 컬럼만 쓰고 예문·패턴·규칙·FAQ 텍스트는 뺀다 — 그
+    텍스트들엔 "what"/"do"/"does"/"is" 같은 문법 단어까지 섞여 있어서(예: R-100 예문 "Do you
+    like pizza?"), speak.py 의 hybrid_stt() 가 "이 단어는 학생이 진짜 말한 단어일 것"이라고
+    믿고 병합에 강제 반영하는 힌트용으로 쓰면 오히려 Whisper 영어강제 인식의 헛짚음(순수 한국어
+    문장인데 "What is ~"류로 오인식)까지 힌트로 잡아서, "너무 다르면 원문 유지" 안전장치를
+    뚫고 엉뚱한 영어를 섞어 넣는 문제가 있었다(2026-09-17, "이거 왜 틀렸어"가 "This is 왜
+    틀렸어"로 병합된 사례로 재현). words.csv 의 word 컬럼은 실제로 가르치는 어휘만 있어서
+    이 용도엔 이쪽이 맞다."""
     units_scope = {unit} if isinstance(unit, str) else set(unit) if unit else set()
 
     def _in_scope(row_unit: str | None) -> bool:
@@ -185,20 +194,22 @@ def known_english_vocab(unit: str | list[str] | None = None) -> list[str]:
     for w in _read("words.csv"):
         if _in_scope(w.get("unit")):
             texts.append(w.get("word", ""))
-            texts.append(w.get("example", ""))
-    for p in _read("patterns.csv"):
-        if _in_scope(p.get("unit")):
-            texts.append(p.get("text", ""))
-    for r in rules():
-        if _in_scope(r.get("unit")):
-            texts.extend(r.get("examples", []) or [])
-            texts.append(r.get("wrong_example", "") or "")
-            texts.append(r.get("text", "") or "")
-    for f in faqs():
-        if _in_scope(f.get("unit")):
-            texts.append(f.get("example", "") or "")
-            texts.append(f.get("question", "") or "")
-            texts.extend(f.get("variants", []) or [])
+            if not words_only:
+                texts.append(w.get("example", ""))
+    if not words_only:
+        for p in _read("patterns.csv"):
+            if _in_scope(p.get("unit")):
+                texts.append(p.get("text", ""))
+        for r in rules():
+            if _in_scope(r.get("unit")):
+                texts.extend(r.get("examples", []) or [])
+                texts.append(r.get("wrong_example", "") or "")
+                texts.append(r.get("text", "") or "")
+        for f in faqs():
+            if _in_scope(f.get("unit")):
+                texts.append(f.get("example", "") or "")
+                texts.append(f.get("question", "") or "")
+                texts.extend(f.get("variants", []) or [])
 
     vocab = set()
     for t in texts:

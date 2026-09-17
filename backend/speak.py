@@ -233,7 +233,11 @@ def hybrid_stt(audio_base64: str, mime: str, student: str = "") -> str:
     unit_scope = list({unit, *_notebook_units(student)} - {None}) if unit else _notebook_units(student)
     vocab_list = golden.known_english_vocab(unit_scope or None)
     vocab = ", ".join(vocab_list)
-    vocab_set = {v.lower() for v in vocab_list}
+    # word_hint 판정용은 words.csv의 실제 가르치는 어휘로 좁힘 — 예문·패턴·규칙 텍스트에
+    # 섞인 "what"/"is"/"do" 같은 문법 단어가 힌트로 잡혀서, en 강제 인식의 헛짚음(순수 한국어인데
+    # "What is ~"로 오인식)까지 학생이 진짜 말한 단어로 믿고 병합에 강제 반영하던 문제 수정
+    # (2026-09-17, golden.known_english_vocab() words_only 옵션 참고).
+    vocab_set = {v.lower() for v in golden.known_english_vocab(unit_scope or None, words_only=True)}
 
     # initial_prompt 로 vocab 힌트를 줘봤으나 오탐·반복 루프가 더 늘어 실측상 안 씀(2026-09-09)
     korean_guess, ko_conf = _transcribe(audio_base64, mime, "ko")
