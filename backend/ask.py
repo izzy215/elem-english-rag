@@ -398,15 +398,17 @@ def _local_match(question: str, faq_list: list[dict], rule_list: list[dict],
         # 그대로 쓴다: 영어 낱말이 질문에 그대로 있거나 "영어로" 표시가 있을 때만 신뢰.
         from backend import textbook
         hits = textbook.lookup_word(question, level=level)
-        if hits:
+        if hits and not _PROPERTY_TAIL.search(question):
             w = hits[0]
             eng_in_q = w["word"].lower() in question.lower()
             asks_translation = bool(re.search(r"영어로|영어\s*(단어|낱말)", question))
             if eng_in_q or asks_translation:
                 return _word_answer(w, ctx_unit=ctx_unit, level=level)
         # lookup_word가 못 찾으면 오타로 보고 _word_match의 스펠체커 폴백을 재사용(lookup_word엔
-        # 오타 교정이 없음 — "-s/-es/-ing/-ed" 어미 제거만 함, "pencl" 같은 오타는 못 잡음).
-        word = _word_match(question, words_pool)
+        # 오타 교정이 없음 — "-s/-es/-ing/-ed" 어미 제거만 함, "pencl" 같은 오타는 못 잡음). 이것도
+        # "과거형"류 속성 질문이면 건너뛴다 — _word_match엔 원래 속성 판별이 아예 없어서 "play
+        # 과거형이 뭐야"가 뜻풀이로 새고 있었다(2026-09-17 발견).
+        word = None if _PROPERTY_TAIL.search(question) else _word_match(question, words_pool)
         if word is not None:
             return word
 
@@ -509,6 +511,14 @@ _COMPARE_PATTERN = re.compile(r"차이|다르|달라")
 
 _DEFINE_TAIL = re.compile(r"뭐(예요|야|지|임)|무슨\s*뜻|뜻이\s*뭐|뜻인가요")
 
+# "과거형이 뭐야"/"복수형이 뭐예요"류 — 단어의 "뜻"이 아니라 특정 문법 속성을 물은 질문. 이게
+# 있으면 단어장 조회(lookup_word, 뜻풀이)로 바로 답하면 안 되고(2026-09-17, "play 과거형이 뭐야"가
+# "play는 논다는 뜻이에요"로, "cook 과거형이 뭐예요?"가 "cook는 요리사라는 뜻이에요"로 질문과
+# 무관하게 답해버리던 문제 발견), _word_pair_rule_answer()가 규칙을 찾을 때도 그 규칙 본문에
+# 같은 속성 키워드가 실제로 있어야만 인정해야 한다("walk 과거형이 뭐야"가 walk를 예문에만 우연히
+# 담은 R-28(too+형용사, "과거형" 언급 전혀 없음)을 근거로 대던 문제 발견).
+_PROPERTY_TAIL = re.compile(r"과거형|복수형|현재형|미래형|스펠링|철자")
+
 # "go랑 went 뭐가 달라?"/"foot이랑 feet이랑 뭐가 달라?"류 질문에서 규칙 본문 매칭에 쓸 때 무시할
 # 흔한 문법 기능어 — 이 단어들만 우연히 겹쳐서 엉뚱한 규칙이 걸리는 걸 막는다(예: "want가 뭐예요?"가
 # want를 언급하는 규칙 10개+에 다 걸려 모호해지는 것 방지).
@@ -581,6 +591,12 @@ def _word_pair_rule_answer(question: str) -> dict | None:
         return found
 
     hits = _find(_rule_preamble_words) or _find(_rule_text_words)
+    property_kw = _PROPERTY_TAIL.findall(question)
+    if property_kw:
+        # "과거형"을 물었으면 단어만 우연히 겹치는 게 아니라 매칭된 규칙 본문에도 실제로 그
+        # 속성 단어가 있어야 인정한다 — "walk 과거형이 뭐야"가 walk를 예문에만 담은 R-28(too+
+        # 형용사, "과거형" 언급 전혀 없음)을 근거로 대던 문제(2026-09-17 발견)를 막는다.
+        hits = [r for r in hits if any(kw in r.get("text", "") for kw in property_kw)]
     if not hits:
         return None
     if is_compare and len(hits) != 1:
@@ -1010,7 +1026,7 @@ def _retrieval_answer(question: str, body: AskIn, skip_similar: bool = False,
     # skip_word_lookup=True면 1단계(_local_match)가 이미 같은 level로 시도해서 건너뜀(2026-09-16).
     if not skip_word_lookup:
         word_hits = textbook.lookup_word(question, level=level)
-        if word_hits:
+        if word_hits and not _PROPERTY_TAIL.search(question):
             w = word_hits[0]
             # lookup_word의 한국어 뜻 매칭은 순수 부분일치라 "형"(뜻)이 "과거형"/"형용사" 안에도
             # 걸려서 완전히 무관한 답이 나가는 문제가 있었다(2026-09-16 재현 — "과거형이 뭐예요?"가
