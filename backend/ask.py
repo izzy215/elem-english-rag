@@ -23,6 +23,7 @@ notebook_text() 도 개인화 참고 자료로 넣는다(답 근거는 여전히
 """
 import difflib
 import json
+import math
 import re
 import time
 from pathlib import Path
@@ -210,10 +211,32 @@ def _a_an_followup_answer(question: str, student: str) -> dict | None:
     return _a_an_word_answer(m.group(1))
 
 
+def _corpus_idf(items: list[dict], candidates_of) -> dict[str, float]:
+    """이 후보 집합(FAQ 전체 또는 규칙 전체) 안에서 각 내용어의 문서빈도(df, 몇 개의 서로 다른
+    후보에 등장하는지) 기반 가중치 — 표준 IDF(log(N/df))와 같은 발상. "왜"/"앞에"처럼 여러
+    FAQ에 공통으로 나오는 질문 틀 상투어는 df가 커서 가중치가 자동으로 낮아지고, 특정 FAQ
+    한둘에만 나오는 진짜 주제어는 가중치가 높게 유지된다 — _GENERIC_WORDS를 새로 발견할 때마다
+    손으로 계속 늘리는 대신(2026-09-17, "왜 do를 you 앞에 써야 해?"가 "왜"·"앞에"만 겹쳐 무관한
+    F-06에 0.5로 매칭되던 문제로 발견 — 그 둘은 _GENERIC_WORDS에 없었음), 말뭉치 통계로 새 상투어도
+    자동으로 걸러지게 한다. _GENERIC_WORDS는 그대로 두고(이미 검증된 안전장치) 이건 보조 계층이다."""
+    df: dict[str, int] = {}
+    for item in items:
+        seen: set[str] = set()
+        for cand in candidates_of(item):
+            seen |= set(_content_words(cand))
+        for w in seen:
+            df[w] = df.get(w, 0) + 1
+    n = max(len(items), 1)
+    return {w: max(math.log(n / d), 0.1) for w, d in df.items()}   # 모든 후보에 다 나오는 단어(d==n)도
+                                                                     # 0이 아니라 최소 가중치는 남긴다
+
+
 def _best_match(question: str, items: list[dict], candidates_of) -> tuple[dict | None, float]:
-    """단어 겹침 기반 매칭. frontend/js/common.js 의 faqMatch()와 같은 알고리즘 —
-    서버가 먼저 이걸로 찾아보고, 못 찾을 때만 Gemini 로 넘어간다(할당량 절약, 응답도 빠름)."""
+    """단어 겹침 기반 매칭. frontend/js/common.js 의 faqMatch()와 같은 알고리즘(단, IDF 가중치는
+    아직 거기 없음) — 서버가 먼저 이걸로 찾아보고, 못 찾을 때만 Gemini 로 넘어간다(할당량 절약,
+    응답도 빠름)."""
     qs = _content_words(question)
+    idf = _corpus_idf(items, candidates_of)
     best, best_score = None, 0.0
     for item in items:
         for cand in candidates_of(item):
@@ -224,14 +247,15 @@ def _best_match(question: str, items: list[dict], candidates_of) -> tuple[dict |
             # "elephant"의 부분 문자열이라 무관한 단어끼리 겹치는 경우가 있고(2026-09-10), 길이 차가
             # 크면 "the"가 "weather" 안에, "get"이 "budget"이 안에 우연히 들어있는 것처럼 무관한 단어끼리
             # 겹치는 경우가 있음(2026-09-14). 완전히 같은 단어는 길이 상관없이 인정.
-            hit = sum(1 for w in cs if any(
+            hit_words = {w for w in cs if any(
                 w == x or (len(w) >= 3 and len(x) >= 3 and abs(len(w) - len(x)) <= 2 and (w in x or x in w))
                 for x in qs
-            ))
-            if len(cs) >= 2 and hit < 2:
+            )}
+            if len(cs) >= 2 and len(hit_words) < 2:
                 continue   # 단어 2개 이상인 후보가 1개만 겹치면 우연의 일치로 보고 스킵 — "과거형이 뭐에요?"가
                            # "see 과거형"과 "과거형" 한 단어만 겹쳐 saw 전용 FAQ로 잘못 매칭되던 문제(2026-09-10)
-            score = hit / len(cs)
+            weighted_total = sum(idf.get(w, 1.0) for w in cs)
+            score = sum(idf.get(w, 1.0) for w in hit_words) / weighted_total if weighted_total else 0.0
             if score > best_score:
                 best_score, best = score, item
     return best, best_score
@@ -323,7 +347,7 @@ def _pattern_match(question: str, patterns_pool: list[dict], faq_list: list[dict
 
 def _local_match(question: str, faq_list: list[dict], rule_list: list[dict],
                   words_pool: dict[str, dict], patterns_pool: list[dict], level: int = 3,
-                  ctx_unit: str | None = None) -> dict | None:
+                  ctx_unit: str | None = None, skip_word_lookup: bool = False) -> dict | None:
     """faq→rules→patterns→words 순으로 로컬 매칭, 전부 실패하면 None → 폴백.
 
     level: 단어장 조회(lookup_word)에 쓸 학년. _retrieval_answer()가 실패 시 같은 조회를 또
@@ -367,7 +391,7 @@ def _local_match(question: str, faq_list: list[dict], rule_list: list[dict],
     # 걸려서 문장 비교 대신 단어 뜻풀이로 잘못 답하던 문제(2026-09-11) — RAG 힌트로 걸러보려
     # 했으나 점수 자체가 신뢰하기엔 너무 자주 틀려서(단순 단어 질문에도 0.83으로 확신) 대신
     # 질문에 영단어가 2개를 넘으면(비교·복문 가능성) 단어 매칭을 건너뛰고 LLM 폴백으로 넘긴다.
-    if len(re.findall(r"[A-Za-z']+", question)) <= 2:
+    if len(re.findall(r"[A-Za-z']+", question)) <= 2 and not skip_word_lookup:
         # 계약 문서(2026-09-15) — 영어→뜻은 lookup_word()로 대체(한국어→영어 역방향도 덤으로
         # 지원). 단, lookup_word의 한국어 뜻 매칭은 순수 부분일치라 "형"이 "과거형/형용사"
         # 안에도 걸리는 오탐이 있어서(2026-09-16 재현) _retrieval_answer()와 같은 안전장치를
@@ -478,6 +502,92 @@ _REFERENTIAL_PATTERN = re.compile(
                           # (2026-09-14, can 이유 설명 직후 "왜요?"가 offtopic으로 빠짐). 새 주제를
                           # 담은 긴 "왜 X는 Y해요?"는 이 패턴에 안 걸려서 정상적으로 규칙 검색됨.
 )
+
+# "X랑 Y 뭐가 달라?"/"X 랑 Y 뭔 차이야?"류 비교 질문 — STT가 "뭐가 달라요"를 "모가달라요"로
+# 흘려써도 "달라" 부분문자열은 남아서 여전히 걸린다(2026-09-17, hybrid_stt 실측 확인).
+_COMPARE_PATTERN = re.compile(r"차이|다르|달라")
+
+_DEFINE_TAIL = re.compile(r"뭐(예요|야|지|임)|무슨\s*뜻|뜻이\s*뭐|뜻인가요")
+
+# "go랑 went 뭐가 달라?"/"foot이랑 feet이랑 뭐가 달라?"류 질문에서 규칙 본문 매칭에 쓸 때 무시할
+# 흔한 문법 기능어 — 이 단어들만 우연히 겹쳐서 엉뚱한 규칙이 걸리는 걸 막는다(예: "want가 뭐예요?"가
+# want를 언급하는 규칙 10개+에 다 걸려 모호해지는 것 방지).
+_RULE_MATCH_STOPWORDS = {
+    "this", "that", "these", "those", "have", "has", "want", "wants", "like", "likes",
+    "make", "makes", "here", "there", "very", "also", "too", "how", "what", "who", "why",
+    "each", "every", "some", "any", "many", "much", "day", "school", "time", "good", "well",
+    # go/went 같은 2글자 실질단어(go, on, in, up 등)까지 살리려고 길이 기준을 2로 낮췄는데,
+    # 그러면 흔한 2글자 문법 기능어까지 같이 들어와서 따로 뺀다(2026-09-17).
+    "is", "am", "be", "an", "to", "at", "in", "on", "up", "it", "we", "he", "my", "no",
+    "so", "do", "of", "or", "if", "us", "as", "the", "and",
+}
+
+
+def _rule_text_words(rule: dict) -> set[str]:
+    text = " ".join([rule.get("text", ""), " ".join(rule.get("examples") or []), rule.get("wrong_example") or ""])
+    return {w.lower() for w in re.findall(r"[A-Za-z']+", text) if len(w) >= 2} - _RULE_MATCH_STOPWORDS
+
+
+# 규칙 text는 관례상 "한국어 설명. (예:/틀린 예: 또는 그냥) 영어 예문들" 순서로 쓰여있어서, 설명
+# 문장(preamble)만 잘라내면 "그 규칙이 실제로 설명하는 단어"와 "예문에 우연히 등장한 단어"를
+# 가를 수 있다 — "예:"/"틀린 예:" 표시나 ". 대문자" 문장 경계 중 가장 먼저 나오는 지점에서 자른다.
+_PREAMBLE_CUT = re.compile(r"틀린\s*예\s*:|예\s*:|\.\s+[A-Z]")
+
+
+def _rule_preamble_words(rule: dict) -> set[str]:
+    text = rule.get("text", "")
+    m = _PREAMBLE_CUT.search(text)
+    preamble = text[:m.start()] if m else text
+    return {w.lower() for w in re.findall(r"[A-Za-z']+", preamble) if len(w) >= 2} - _RULE_MATCH_STOPWORDS
+
+
+def _word_pair_rule_answer(question: str) -> dict | None:
+    """"go랑 went 뭐가 달라?"류 비교 질문(과 "went가 뭐예요?"류 한 단어 질문)이 임베딩 검색에
+    안 걸려 offtopic으로 새던 문제(2026-09-17 실사용 테스트 발견 — R-31은 rule_alias_hits 상위
+    3위 안에도 안 들어오고, FAQ도 "buy 과거형"(F-125)만 있고 go/see/eat용은 없음)를, 사람이
+    "go/went" 같은 쌍을 미리 표로 나열하는 대신 규칙 본문(text/examples/wrong_example)에 그
+    단어들이 실제로 같이 나오는지 그때그때 찾아서 잡는다 — 새 규칙이 추가돼도 코드 수정 없이
+    자동으로 커버된다(2026-09-17, R-71의 foot/feet·tooth/teeth도 같은 문제라 이렇게 일반화함).
+
+    _retrieval_answer()의 다른 모든 경로(FAQ·규칙별칭·패턴·단어)가 전부 실패한 뒤 "5) 전부 실패"
+    직전에만 최후 수단으로 호출된다 — 이미 더 정교하게 튜닝된 FAQ 답변(예: buy/bought의 F-125)이
+    있으면 그게 먼저 이기고, 이 함수는 아무 데도 안 걸렸을 때만 한 번 더 찾아보는 안전망이다.
+
+    먼저 설명 문장(preamble)만으로 찾아본다 — "ate가 뭐예요?"가 R-31(진짜 설명: "eat는 ate가
+    돼요")·R-34·R-53(둘 다 예문에만 ate가 우연히 등장) 세 규칙에 다 걸려 모호해지던 문제를
+    이걸로 가른다(2026-09-17). 그래도 못 찾으면 예문까지 넓혀서 재시도한다.
+
+    비교 질문("X랑 Y")은 두 단어가 다 같은 규칙에 있어야 하니 모호할 위험이 낮아 정확히 하나일
+    때만 답하고, 한 단어만 묻는 질문은 그 단어가 데이터에 있다는 가정하에(2026-09-17 사용자 결정)
+    — 그래도 여러 규칙에 걸치면 첫 번째로 답한다(안 맞는 규칙이라도 완전히 무시하고 offtopic
+    처리하는 것보단 낫다고 보고)."""
+    q_words = {w.lower() for w in re.findall(r"[A-Za-z']+", question) if len(w) >= 2} - _RULE_MATCH_STOPWORDS
+    if not q_words:
+        return None
+    is_compare = bool(_COMPARE_PATTERN.search(question)) and len(q_words) >= 2
+    is_define = bool(_DEFINE_TAIL.search(question))
+    if not (is_compare or is_define):
+        return None
+
+    def _find(word_fn):
+        found = []
+        for rule in golden.rules():
+            rule_words = word_fn(rule)
+            if is_compare:
+                if q_words <= rule_words:
+                    found.append(rule)
+            elif q_words & rule_words:
+                found.append(rule)
+        return found
+
+    hits = _find(_rule_preamble_words) or _find(_rule_text_words)
+    if not hits:
+        return None
+    if is_compare and len(hits) != 1:
+        return None  # 비교 질문은 정확히 하나로 좁혀질 때만 — 어느 쪽을 비교하는지 틀리면 안 되니
+    rule = hits[0]  # 한 단어만 묻는 질문은 여러 규칙에 걸쳐도 첫 번째로 답한다(위 docstring 참고)
+    return {"answer": rule["text"], "source": [{"chunk_id": rule["id"]}], "offtopic": False,
+            "suggested": _followup_questions([rule["id"]], golden.faqs())}
 
 
 def _related_faq(rule_ids: list[str], faq_list: list[dict], exclude_ids: set[str]) -> dict | None:
@@ -1109,6 +1219,13 @@ def _retrieval_answer(question: str, body: AskIn, skip_similar: bool = False,
 
         return {"answer": answer, "source": [{"chunk_id": final_id}], "offtopic": False, "suggested": suggested}
 
+    # 5) 전부 실패하기 직전 최후 수단 — 질문에 나온 영단어가 어느 규칙 본문에 실제로 같이
+    # 나오면(_word_pair_rule_answer) 그걸로 답한다. FAQ·규칙별칭·패턴·단어 검색이 전부 이미
+    # 실패한 뒤에만 호출해서, 더 정교한 기존 답변을 덮어쓰지 않는다.
+    word_pair = _word_pair_rule_answer(question)
+    if word_pair is not None:
+        return word_pair
+
     # 5) 전부 실패 — 1위 점수가 어느 정도(0.8) 있으면 "완전 무관"은 아니라고 보고 유닛을 알려준다.
     # 진짜 엉뚱한 질문(예: "오늘 날씨 어때?")까지 아무 유닛이나 갖다 붙이지 않기 위한 최소선
     # (임시값, sharp()의 top/gap처럼 실측 조정 필요).
@@ -1198,16 +1315,22 @@ def _hybrid_answer(body: AskIn) -> dict:
     # 경계 테스트에서 발견). 영단어가 하나도 없을 때만(순수 지시어, "이거 왜 틀렸어?" 등)
     # 이어가기로 보고 로컬 매칭을 건너뛴다.
     treat_as_referential = bool(referential) and en_word_count == 0
-    word_lookup_attempted = not treat_as_referential and en_word_count <= 2
+    # "buy랑 bought랑 뭔 차이야?"/"go랑 went 뭐가 달라?"류 비교 질문은 영단어가 정확히 2개라
+    # 아래 "영단어 ≤2개면 단어장 조회" 지름길에 걸려서, X 하나만 붙잡고 단어 뜻풀이로 잘못
+    # 답했다(2026-09-17 실사용 테스트 발견 — "buy랑 bought"가 "buy는 사다예요"로 답변됨, 정작
+    # 정답 FAQ(F-125 "buy 과거형이 뭐예요", 0.863)는 검색 경로에만 있어서 이 지름길이 먼저
+    # 가로채면 도달 못 함). 비교 질문이면 단어장 조회를 아예 건너뛰고 검색 경로로 보낸다.
+    is_comparison = bool(_COMPARE_PATTERN.search(question))
+    word_lookup_attempted = not treat_as_referential and (is_comparison or en_word_count <= 2)
     if not treat_as_referential:
         local = _local_match(question, all_faqs, all_rules, words_pool, patterns_pool, level=level,
-                              ctx_unit=body.context.unit)
+                              ctx_unit=body.context.unit, skip_word_lookup=is_comparison)
         if local is not None:
             return local
 
     # 여기까지 전부 실패해야만 검색 기반 경로로 — 바로 위에서 _similar_match를 이미 확인했고
     # (skip_similar=True), all_faqs도 이미 읽어뒀고(golden.faqs() 재호출 방지), 위 word_lookup_
-    # attempted면 lookup_word도 이미 시도했으니(skip_word_lookup) 전부 중복 호출을 없앤다
-    # (2026-09-16).
+    # attempted면 lookup_word도 이미 시도했거나(skip_word_lookup) 비교 질문이라 아예 부적절하니
+    # 전부 중복 호출을 없앤다(2026-09-16, is_comparison 조건은 2026-09-17 추가).
     return _retrieval_answer(question, body, skip_similar=True, all_faqs=all_faqs,
                               skip_word_lookup=word_lookup_attempted)
