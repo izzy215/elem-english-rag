@@ -26,6 +26,7 @@ import torch
 import whisper
 from silero_vad import collect_chunks, get_speech_timestamps, load_silero_vad
 
+torch.set_num_threads(max(2, (os.cpu_count() or 4) // 2))
 _FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
 _ENCODER_FRAME_RATE = 50  # whisper 인코더는 30초를 1500프레임으로 인코딩 = 초당 50프레임
 
