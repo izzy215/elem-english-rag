@@ -824,6 +824,8 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
     if ok and typo_pair and not spelling:                    # 모델의 full_fixed 에 다른 것도 섞여 있으면 (wrong→fix) 한 쌍만 반영
         full_fixed = _single_fix(text, typo_pair[0], typo_pair[1]) or text
         spelling = _spelling_pairs(orig, full_fixed)
+    if ok and not spelling and pre_spelling:                 # 모델 답이 "맞는 문장"으로 끝났는데 full_fixed 에 철자 말고 다른 변화가 섞여 철자 쌍을 못 뽑은 경우
+        full_fixed, spelling = text, list(pre_spelling)      # 사전검사로 잡은 철자(schol→school)는 잃지 않는다 ("i go schol by bus" 가 철자 없이 나가던 문제, 9/17)
     timing["total_ms"] = int((time.perf_counter() - t_start) * 1000)
     log_id = "L-" + datetime.now().strftime("%Y%m%d-%H%M%S%f")[:-3]
     mission = out.get("mission") if isinstance(out.get("mission"), dict) else {"ok": True, "nudge": ""}
