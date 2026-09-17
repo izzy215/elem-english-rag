@@ -201,19 +201,36 @@ def _vocab_words_in(text: str, vocab_set: set[str]) -> set[str]:
 _WHISPER_HALLUCINATION_TAIL = re.compile(
     r"\s*(thanks? you( very much)?|thanks? for watching|please (subscribe|like)|"
     r"see you (next time|later)|like and subscribe|bye( bye)?|"
-    r"감사합니다|고맙습니다|시청해 ?주셔서 감사합니다|구독과 ?좋아요|다음에 ?또 ?만나요|안녕히 ?계세요)"
+    r"감사합니다|고맙습니다|시청해 ?주셔서 감사합니다|구독과 ?좋아요|다음에 ?또 ?만나요|"
+    r"다음 ?영상에서 ?만나요|안녕히 ?계세요)"
     r"\s*[.!]?\s*$",
     re.IGNORECASE,
 )
+# 위 고정 문구와 달리 길이가 들쭉날쭉한 유튜브 자막 크레딧류 — "자막 제공"이나 "진심으로
+# 감사드립니다"가 나오면 그 지점부터 끝까지를 통째로 잘라낸다(2026-09-17, 100문항 재실측에서
+# "관사 다시 설명해줘. 자막 제공 및 자막 제공 및 광고를 포함하고 있습니다.", "...자막 제공을
+# 해 주신 모든 분들께 진심으로 감사드립니다." 두 번 재현). 학생이 "자막"을 말할 일은 거의 없다.
+_WHISPER_HALLUCINATION_FROM = re.compile(r"\s*(자막\s*제공|진심으로\s*감사드립니다).*$")
 
 
 def _strip_hallucination_tail(text: str) -> str:
     """문장 전체가 환각 문구뿐이면(무음 구간 전체를 "감사합니다"로 지어낸 경우) 빈 문자열을
     그대로 돌려준다 — 잘라낸 결과가 비었다고 원문(환각 그 자체)으로 되돌리면 안 된다."""
-    stripped = _WHISPER_HALLUCINATION_TAIL.sub("", text).strip()
+    stripped = _WHISPER_HALLUCINATION_FROM.sub("", _WHISPER_HALLUCINATION_TAIL.sub("", text)).strip()
     if stripped != text.strip():
         print(f"[hybrid_stt] Whisper 환각 맺음말 제거: {text!r} -> {stripped!r}", flush=True)
     return stripped
+
+
+def _kept_enough_korean(original: str, merged: str, min_ratio: float = 0.4) -> bool:
+    """병합 결과가 원문(A)의 한글 내용을 충분히 유지했는지 — 힌트 단어 하나만 바꾸라고 시켜도
+    모델이 문장 전체를 영어로 번역해버리는 경우가 있어서(위 word_hint 코멘트 참고) 프롬프트
+    지시와 별개로 결정적으로 확인한다. A에 한글이 거의 없었으면(이미 영어 위주) 검사 대상 아님."""
+    orig_hangul = len(re.findall(r"[가-힣]", original))
+    if orig_hangul < 2:
+        return True
+    merged_hangul = len(re.findall(r"[가-힣]", merged))
+    return merged_hangul >= orig_hangul * min_ratio
 
 
 def _avg_logprob(result: dict) -> float:
@@ -277,12 +294,27 @@ def hybrid_stt(audio_base64: str, mime: str, student: str = "") -> str:
         # 둘이 이미 같은 문장(대개 순수 영어) → 병합 모델이 "번역"해버리는 걸 막기 위해 병합 자체를 생략
         print(f"[hybrid_stt] ko=en 이라 병합 생략, 그대로 사용", flush=True)
         return korean_guess
-    if english_guess and not re.search(r"[가-힣]", english_guess) and en_conf - ko_conf > 0.3:
+    if english_guess and not re.search(r"[가-힣]", english_guess) and en_conf - ko_conf > 0.3 and en_conf > -0.5:
         # 한글 없는 온전한 영어 + 신뢰도도 더 높으면 순수 영어로 보고 그대로 사용(신뢰도까지 봐야
-        # 한국어를 영어로 지어낸 오역과 구분됨)
+        # 한국어를 영어로 지어낸 오역과 구분됨). en_conf 자체의 절대 하한도 같이 본다 — ko 강제가
+        # 아주 짧고 애매한 발화("왜요?")를 완전히 잘못 들어(conf 아주 낮음) en 강제가 상대적으로만
+        # 나아 보이는 경우("Well...", conf=-0.92)까지 "확신에 찬 순수 영어"로 오판했다(2026-09-17,
+        # 100문항 실측). 관측된 정상 인식은 대체로 -0.5보다 좋았음(-0.1~-0.3대) — 그 밖은 둘 다
+        # 신뢰 못 할 가능성이 높아 이 지름길을 안 태운다(그러면 아래 로직이 이어서 처리).
         print(f"[hybrid_stt] en 강제가 한글 없고 신뢰도도 더 높아 그대로 사용", flush=True)
         return english_guess
     print(f"[hybrid_stt] unit={unit} rule_id={rule_id} vocab={vocab!r}", flush=True)
+    # en 강제 인식에만 걸린 학습 단어(ko 강제가 다른 소리로 잘못 들었을 가능성) — 신뢰도로는 못
+    # 걸러내서(en 신뢰도가 항상 더 낮게 나옴, 2026-09-10 실측: cat/friend 등) 단어 등장 여부로 직접 힌트
+    en_only_words = _vocab_words_in(english_guess, vocab_set) - _vocab_words_in(korean_guess, vocab_set)
+    if not en_only_words:
+        # 바꿔치기할 단어가 없으면 병합 자체를 안 부른다 — "자유롭게 재구성해라"만 주고 고칠 게
+        # 없으면 모델이 "친절하게" 전체를 영어로 번역해버리는 경우가 매우 광범위했다(2026-09-17,
+        # 100문항 실측 — 순수 한국어 문법 질문·요청형 문장 다수가 완전 번역됨. "번역하지 말라"
+        # 프롬프트 지시만으로는 못 막아서, 애초에 고칠 필요가 없으면 호출 자체를 생략하는 결정적
+        # 안전장치로 바꿈).
+        print(f"[hybrid_stt] 바꿔치기할 학습 단어 없음 → 병합 생략, ko 강제 그대로 사용", flush=True)
+        return korean_guess
     rule = golden.find_rule(rule_id) if rule_id else None
     unit_info = golden.find_unit(level, unit) if (unit and level) else None
     if rule:
@@ -291,22 +323,18 @@ def hybrid_stt(audio_base64: str, mime: str, student: str = "") -> str:
         topic_line = f'이 학생은 지금 "{unit_info["title"]}" 유닛 내용에 대해 물어보는 중이다.\n'
     else:
         topic_line = ""
-    # en 강제 인식에만 걸린 학습 단어(ko 강제가 다른 소리로 잘못 들었을 가능성) — 신뢰도로는 못
-    # 걸러내서(en 신뢰도가 항상 더 낮게 나옴, 2026-09-10 실측: cat/friend 등) 단어 등장 여부로 직접 힌트
-    en_only_words = _vocab_words_in(english_guess, vocab_set) - _vocab_words_in(korean_guess, vocab_set)
-    word_hint = ""
-    if en_only_words:
-        # "그 단어를 살려서 합쳐라"라고만 하면 모델이 한글 음역을 안 지우고 영어를 덧붙여 중복
-        # 시키거나(투데이즈 two days ago는), 아예 무시하는 경우가 많아(2026-09-10 실측) 예시로 못박는다
-        word_hint = (
-            f'주의: (B)에는 있는데 (A)에는 없는 학습 단어가 있다: {", ".join(sorted(en_only_words))} '
-            "— (A)가 이 단어를 한글 음역으로 잘못 받아썼을 가능성이 높다. (A)에서 그 음역 부분을 "
-            "찾아 완전히 지우고 그 자리에 힌트 단어의 영어 철자를 넣어 하나로 합쳐라(음역과 영어 "
-            "철자를 둘 다 남기면 안 됨).\n"
-            '예: A="라스트위크는 뭐예요?", B="What is last week?", 힌트=last, week\n'
-            '  -> "last week는 뭐예요?" ("라스트위크"를 지우고 그 자리에 "last week"를 넣음)\n'
-        )
-        print(f"[hybrid_stt] word_hint={en_only_words}", flush=True)
+    # "그 단어를 살려서 합쳐라"라고만 하면 모델이 한글 음역을 안 지우고 영어를 덧붙여 중복
+    # 시키거나(투데이즈 two days ago는), 아예 무시하는 경우가 많아(2026-09-10 실측) 예시로 못박는다
+    word_hint = (
+        f'주의: (B)에는 있는데 (A)에는 없는 학습 단어가 있다: {", ".join(sorted(en_only_words))} '
+        "— (A)가 이 단어를 한글 음역으로 잘못 받아썼을 가능성이 높다. (A)에서 그 음역 부분을 "
+        "찾아 완전히 지우고 그 자리에 힌트 단어의 영어 철자를 넣어 하나로 합쳐라(음역과 영어 "
+        "철자를 둘 다 남기면 안 됨). 그 외의 부분은 (A)와 완전히 똑같이 유지해라 — 한 글자도 더 "
+        "바꾸거나 번역하지 마라.\n"
+        '예: A="라스트위크는 뭐예요?", B="What is last week?", 힌트=last, week\n'
+        '  -> "last week는 뭐예요?" ("라스트위크"를 지우고 그 자리에 "last week"를 넣음, 나머지는 그대로)\n'
+    )
+    print(f"[hybrid_stt] word_hint={en_only_words}", flush=True)
     prompt = f"""아래는 초등학생이 영어 수업 챗봇에게 "질문이나 요청"을 하나 말한 음성을, 로컬
 STT(Whisper)로 두 번 받아쓴 결과다(이 마이크는 챗봇한테 뭔가를 묻거나 부탁하는 용도로만 쓴다 —
 "왜 ~예요?"처럼 물음표로 끝나는 질문일 수도 있고, "~보여줘"/"~만들어줘"/"~알려줘"처럼 부탁하는
@@ -340,7 +368,16 @@ B는 영어 단어 자체는 맞게 알아들었을 가능성이 높지만 나�
         # 병합은 자유 재구성 작업이라 14b(서비스 기본)보다 32b가 더 안정적이었음(실측) — 이 호출만 지정
         merged = _extract_sentence(llm.generate_text(prompt, backend="merge32b"))
         print(f"[hybrid_stt] 병합 결과={merged!r}", flush=True)
-        return merged or korean_guess
+        if not merged:
+            return korean_guess
+        if not _kept_enough_korean(korean_guess, merged):
+            # "번역하지 말라"는 프롬프트 지시를 무시하고 A를 통째로 영어로 갈아엎는 경우가
+            # 넓게 재현됐다(2026-09-17, 100문항 실측 — "오늘 숙제 안 냈어요"가 "I didn't give
+            # you homework today"로 주어까지 뒤바뀌는 등). 프롬프트만으로 못 막아서, A의 한글이
+            # 병합 후 크게 줄면 지시 위반으로 보고 결정적으로 거절한다.
+            print(f"[hybrid_stt] 병합 결과가 한글을 너무 많이 잃음(과다 번역) → 거절, ko 강제 그대로 사용", flush=True)
+            return korean_guess
+        return merged
     except llm.LLMError as e:
         print(f"[hybrid_stt] 병합 실패({e}) → ko 강제 결과 그대로 사용", flush=True)
         return korean_guess
