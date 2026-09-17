@@ -31,7 +31,7 @@ for _stream in (sys.stdout, sys.stderr):
     except (AttributeError, ValueError):
         pass
 
-from backend import admin, ask, drill, explain, golden, quiz, rag, speak, student, tts, tutor
+from backend import admin, ask, drill, explain, golden, quiz, rag, report, speak, student, tts, tutor
 from backend.config import settings
 
 ROOT = Path(__file__).resolve().parent.parent          # project/
@@ -51,7 +51,7 @@ async def no_cache(request, call_next):
 
 
 # 담당자별 라우터 — 새 기능은 파일 하나 만들고 여기 한 줄 추가
-for r in (golden.router, tts.router, speak.router, ask.router, rag.router, quiz.router, explain.router, tutor.router, drill.router, student.router, admin.router):
+for r in (report.router, golden.router, tts.router, speak.router, ask.router, rag.router, quiz.router, explain.router, tutor.router, drill.router, student.router, admin.router):
     app.include_router(r, prefix="/api")
 
 
