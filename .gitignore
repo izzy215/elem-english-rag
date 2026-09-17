@@ -23,3 +23,6 @@ piper_voices/
 .idea/
 .claude/
 data/rag_eval/
+
+# STT 합성음 시험 세트 wav (tests/eval_stt.py --make-synth 로 다시 만듦) — manifest.csv 는 올린다
+data/stt_eval/synth/
