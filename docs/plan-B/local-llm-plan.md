@@ -138,11 +138,11 @@ nohup /home/research1/ollama/bin/ollama serve > ollama.log 2>&1 &
 - `OLLAMA_MODELS`: 기본 경로(`~/.ollama/models`)가 아니라 실제 모델이 있는 경로.
 - `OLLAMA_HOST=0.0.0.0:11434`: 안 주면 `127.0.0.1`로만 바인딩돼 팀원 PC에서 접속 불가.
 
-서버 재부팅/재시작마다 잊기 쉬우니, sudo 있으면 systemd 서비스로 등록해서 위 세 환경변수를
-고정해두는 걸 권장(`Restart=always`까지 지정 가능).
+서버 재부팅/재시작마다 잊기 쉬워서 systemd 서비스로 등록해두는 게 제일 깔끔하지만,
+**우리 팀 계정 전부(TTS 담당 포함) sudo 권한이 없어서 systemd 등록 자체가 불가능**하다
+(2026-09-18 확인 — `sudo tee /etc/systemd/system/ollama.service`가 암호 요구로 실패).
 
-sudo가 없으면 일반 사용자 crontab의 `@reboot`로 대신 방어 — 서버 재부팅 때만 올바른
+그래서 일반 사용자 crontab의 `@reboot`로 대신 방어한다 — 서버 재부팅 때만 올바른
 환경변수로 자동 기동(`ensure_ollama.sh`를 `@reboot sleep 10 && <경로>/ensure_ollama.sh`로
 등록). 주기적으로(예: 5분마다) 감시·재시작하는 방식은 쓰지 않는다 — 다른 팀이 GPU 자리를
-비우려고 일부러 Ollama를 내렸을 때도 계속 되살려버려서 방해가 되기 때문. TTS 담당 계정에는
-sudo가 없어서 이 방식으로 대신함(2026-09-18).
+비우려고 일부러 Ollama를 내렸을 때도 계속 되살려버려서 방해가 되기 때문.
