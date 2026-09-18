@@ -5,7 +5,13 @@ Ollama처럼 별도 프로세스로 nohup 실행). 이 프로젝트 앱이 임�
 서버에서 실행 (team2 전용 venv, torch+CUDA+sentence-transformers 필요):
     source ~/workspace/team2/elem-english-rag/.venv/bin/activate
     pip install fastapi uvicorn sentence-transformers
-    nohup python embed_server.py > embed_server.log 2>&1 &
+    USE_TF=0 nohup python embed_server.py > embed_server.log 2>&1 &
+
+`USE_TF=0` 필수 — 이 venv에 다른 작업(YOLO 등)이 설치해둔 TensorFlow가 같이 있으면,
+`sentence_transformers`가 import 시 TensorFlow도 같이 로드하려다 torch와 네이티브 라이브러리
+충돌로 세그폴트(코어 덤프)가 난다(2026-09-18 실측 — GPU/CPU 둘 다 재현, torch 단독·tensorflow
+단독은 각각 멀쩡했음). `USE_TF=0`으로 transformers가 TensorFlow 백엔드를 아예 안 건드리게
+막으면 해결됨.
 
 팀원마다 원하는 모델을 요청에서 골라 쓸 수 있다(whisper_server.py의 모델 이름별 캐시와 동일한
 패턴) — 서버 재시작 없이 여러 모델을 동시에 테스트 가능. 단, 모델마다 GPU 메모리를 새로 쓰니
