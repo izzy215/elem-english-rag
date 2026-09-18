@@ -119,3 +119,24 @@ ask.py가 Gemini를 직접 부르는 부분을 `llm.generate_json(prompt)`로 �
 1. 서버 IP와 SSH 계정, 팀원 PC에서 11434 포트로 접속 가능한지
 2. GPU 메모리(5060이 8GB인지 16GB인지)와 CUDA 설치 여부
 3. Ollama(또는 Docker) 설치 허용 여부, 디스크 여유(모델 1개당 4~6GB)
+
+## 7. 강의실 서버 Ollama 운영 참고 (2026-09-18)
+
+강의실 서버는 GPU 2장(whisper_server.py가 GPU0 점유)을 여러 팀이 공유한다. Ollama를
+기본값으로 띄우면 GPU0 여유 공간이 부족해 32B 모델이 거의 CPU로 밀려나(`size_vram`이
+전체 크기의 1% 수준) `LLM_TIMEOUT=60`을 넘겨 실패한다. 반드시 아래 3개 환경변수를
+지정해서 띄워야 한다(`nohup ollama serve`만 치면 재발함):
+
+```bash
+CUDA_VISIBLE_DEVICES=1 \
+OLLAMA_MODELS=/home/research1/workspace/team2/elem-english-rag/ollama-models \
+OLLAMA_HOST=0.0.0.0:11434 \
+nohup /home/research1/ollama/bin/ollama serve > ollama.log 2>&1 &
+```
+
+- `CUDA_VISIBLE_DEVICES=1`: whisper_server.py가 쓰는 GPU0을 피해 GPU1에 전부 올린다.
+- `OLLAMA_MODELS`: 기본 경로(`~/.ollama/models`)가 아니라 실제 모델이 있는 경로.
+- `OLLAMA_HOST=0.0.0.0:11434`: 안 주면 `127.0.0.1`로만 바인딩돼 팀원 PC에서 접속 불가.
+
+서버 재부팅/재시작마다 잊기 쉬우니, 가능하면 systemd 서비스로 등록해서 위 세 환경변수를
+고정해두는 걸 권장.
