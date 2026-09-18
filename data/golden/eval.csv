@@ -35,9 +35,9 @@ I see window a red.,R-11,형용사는 명사 앞에 · 새 문장 (E-0041 대응
 I have nine pencil.,R-12,숫자 2 이상+복수형 · 새 문장 (E-0046 대응),T1(복수형),원본 유지
 I have one bananas.,R-12,숫자 2 이상+복수형 · 새 문장 (E-0045 대응),T1(복수형),원본 유지
 I have two cookie.,R-12,숫자 2 이상+복수형 · 새 문장 (E-0047 대응),T1(복수형),원본 유지
-He was first in line.,R-13,"서수 앞엔 the · 새 문장 (E-0049 대응, 수동 보완)",,원본 유지
-He was second in the race.,R-13,정제본 교체(문장 성립 불가/의미 붕괴),,교체
-She was first at school today.,R-13,"서수 앞엔 the · 새 문장 (E-0051 대응, 수동 보완)",,원본 유지
+It was first day of the trip.,R-13,확정 오류 재정정 - 정상 문장을 R-13 오류로 잘못 라벨링했던 문제 수정 (2026-09-18),,교체
+This was second week of school.,R-13,확정 오류 재정정 - 정상 문장을 R-13 오류로 잘못 라벨링했던 문제 수정 (2026-09-18),,교체
+That was first game of the season.,R-13,확정 오류 재정정 - 정상 문장을 R-13 오류로 잘못 라벨링했던 문제 수정 (2026-09-18),,교체
 This is cold today.,R-14,날씨는 It is ~ · 새 문장 (E-0053 대응),,원본 유지
 This is snowy today.,R-14,날씨는 It is ~ · 새 문장 (E-0055 대응),,원본 유지
 This is windy today.,R-14,날씨는 It is ~ · 새 문장 (E-0054 대응),,원본 유지
