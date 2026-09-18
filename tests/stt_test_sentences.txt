@@ -127,3 +127,49 @@ Tom's book에서 's는 뭐예요?
 고마워요
 sister가 뭐예요?
 이거 왜요?
+
+# ── [캐주얼+힌트] 반말 어미 + 힌트 단어 (번역 잔존율 측정, 2026-09-18) ──
+# 8967578/19ec96597 커밋에서 "캐주얼 어미에서 여전히 번역되는 경우가 남아있다"고
+# 기록된 부분 — _kept_enough_korean 40% 문턱이 실제로 얼마나 잡아주는지 별도 측정.
+This is my pencil 이거 맞지?
+I like pizza 맞지?
+He is happy 이거 맞아
+She has a cat 맞나?
+I am a student 이거 진짜야?
+They are friends 맞아 안 맞아?
+I went to school 맞지?
+He like pizza 이거 맞아 아니야?
+elephant 맞지?
+teacher 맞나?
+banana 맞아 안 맞아?
+그거 teacher 맞지?
+이거 homework 맞아?
+friend 맞지 이거?
+그 단어 elephant 맞잖아
+
+# ── [단어] 신규 어휘 (2026-09-18, 기존에 안 쓴 직업/감정 단어) ──
+firefighter가 뭐예요?
+nurse가 무슨 뜻이에요?
+nervous가 뭐예요?
+
+# ── [비교] 신규 단어쌍 ──
+buy랑 bought랑 뭐가 달라요?
+hot이랑 cold 뭐가 달라요?
+pilot이랑 vet 뭐가 달라요?
+
+# ── [정오] 신규 문법 패턴 (be동사 누락·시제불일치·복수형누락) ──
+She wearing a dress 이거 맞아요?
+He goes to school yesterday 맞아요?
+I have two apple 맞아?
+
+# ── [요청] 신규 ──
+firefighter로 문장 만들어줘
+직업 단어 예문 보여줘
+감정 단어 뜻 알려줘
+
+# ── [철자] 신규 ──
+nurse 스펠링이 뭐야?
+pilot 철자 알려줘
+
+# ── [짧은] 신규 ──
+firefighter

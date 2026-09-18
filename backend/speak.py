@@ -217,6 +217,15 @@ def _vocab_words_in(text: str, vocab_set: set[str]) -> set[str]:
     return {w for w in re.findall(r"[A-Za-z']+", text.lower()) if w in vocab_set}
 
 
+# en 강제가 요청문을 "Please tell me..."처럼 공손하게 의역하면서 please가 힌트로 잘못 잡히는
+# 경우가 있다 — 학생이 실제로 말한 단어라는 신호가 아니라서 힌트 후보에서 제외.
+_HINT_STOPWORDS = {"please"}
+
+
+def _en_only_hint_words(english_guess: str, korean_guess: str, vocab_set: set[str]) -> set[str]:
+    return (_vocab_words_in(english_guess, vocab_set) - _vocab_words_in(korean_guess, vocab_set)) - _HINT_STOPWORDS
+
+
 # Whisper가 애매한/무음 구간에서 학습 데이터(유튜브 자막)에 흔한 문구를 지어내는 잘 알려진
 # 환각 패턴 — 특히 오디오 끝에 붙는다. "thank" 같은 진짜 학습 단어가 이 문구 안에 있으면
 # words_only 필터로도 안 걸러져서 학생이 말한 적 없는 문장이 병합에 그대로 들어갔다(2026-09-17,
@@ -249,15 +258,25 @@ def _strip_hallucination_tail(text: str) -> str:
     return stripped
 
 
-def _kept_enough_korean(original: str, merged: str, min_ratio: float = 0.4) -> bool:
+def _kept_enough_korean(original: str, merged: str, min_ratio: float = 0.3) -> bool:
     """병합 결과가 원문(A)의 한글 내용을 충분히 유지했는지 — 힌트 단어 하나만 바꾸라고 시켜도
     모델이 문장 전체를 영어로 번역해버리는 경우가 있어서(위 word_hint 코멘트 참고) 프롬프트
-    지시와 별개로 결정적으로 확인한다. A에 한글이 거의 없었으면(이미 영어 위주) 검사 대상 아님."""
+    지시와 별개로 결정적으로 확인한다. A에 한글이 거의 없었으면(이미 영어 위주) 검사 대상 아님.
+    min_ratio 40%는 정상적인 음역 교체("위크"->"week")도 같이 거절하는 오탐이 실측으로 확인돼
+    30%로 낮춤 — 정상 사례(33~37.5%)와 진짜 과다번역(0~23%)이 갈리는 지점(2026-09-18)."""
     orig_hangul = len(re.findall(r"[가-힣]", original))
     if orig_hangul < 2:
         return True
     merged_hangul = len(re.findall(r"[가-힣]", merged))
     return merged_hangul >= orig_hangul * min_ratio
+
+
+def _no_fabricated_growth(korean_guess: str, merged: str) -> bool:
+    """병합 결과 단어 수가 원문(ko 강제)보다 늘면 거절한다 — 단어 하나만 말해도 병합이 "elephant는
+    뭐예요?"처럼 없던 질문을 지어내는 사례가 확인됐는데, 지어낸 꼬리도 한글이라
+    _kept_enough_korean(글자 수 비율)을 우연히 통과해서 별도로 확인이 필요하다. 힌트 단어 교체는
+    단어를 "바꾸는" 것이라 정상 사례는 늘어날 일이 없다."""
+    return len(merged.split()) <= len(korean_guess.split())
 
 
 def _avg_logprob(result: dict) -> float:
@@ -336,7 +355,7 @@ def hybrid_stt(audio_base64: str, mime: str, student: str = "") -> str:
     print(f"[hybrid_stt] unit={unit} rule_id={rule_id} vocab={vocab!r}", flush=True)
     # en 강제 인식에만 걸린 학습 단어(ko 강제가 다른 소리로 잘못 들었을 가능성) — 신뢰도로는 못
     # 걸러내서(en 신뢰도가 항상 더 낮게 나옴, 2026-09-10 실측: cat/friend 등) 단어 등장 여부로 직접 힌트
-    en_only_words = _vocab_words_in(english_guess, vocab_set) - _vocab_words_in(korean_guess, vocab_set)
+    en_only_words = _en_only_hint_words(english_guess, korean_guess, vocab_set)
     if not en_only_words:
         # 바꿔치기할 단어가 없으면 병합 자체를 안 부른다 — "자유롭게 재구성해라"만 주고 고칠 게
         # 없으면 모델이 "친절하게" 전체를 영어로 번역해버리는 경우가 매우 광범위했다(2026-09-17,
@@ -359,10 +378,15 @@ def hybrid_stt(audio_base64: str, mime: str, student: str = "") -> str:
         f'주의: (B)에는 있는데 (A)에는 없는 학습 단어가 있다: {", ".join(sorted(en_only_words))} '
         "— (A)가 이 단어를 한글 음역으로 잘못 받아썼을 가능성이 높다. (A)에서 그 음역 부분을 "
         "찾아 완전히 지우고 그 자리에 힌트 단어의 영어 철자를 넣어 하나로 합쳐라(음역과 영어 "
-        "철자를 둘 다 남기면 안 됨). 그 외의 부분은 (A)와 완전히 똑같이 유지해라 — 한 글자도 더 "
-        "바꾸거나 번역하지 마라.\n"
+        "철자를 둘 다 남기면 안 됨). 그 외의 부분은 (A)와 완전히 똑같이 유지해라 — 조사(가/는/를/을 "
+        "등)나 어미(반말/존댓말, 예: 뭐야?/뭐예요?)도 A에 있는 그대로 두고, 한 글자도 더 바꾸거나 "
+        "번역하지 마라. A가 단어 하나뿐이거나 질문/요청 형태가 아니면, 그 형태 그대로 두고 새로 "
+        "질문이나 요청을 만들어 붙이지 마라.\n"
         '예: A="라스트위크는 뭐예요?", B="What is last week?", 힌트=last, week\n'
         '  -> "last week는 뭐예요?" ("라스트위크"를 지우고 그 자리에 "last week"를 넣음, 나머지는 그대로)\n'
+        '예: A="엘리펜트", B="Elephant", 힌트=elephant\n'
+        '  -> "elephant" (단어 하나만 있으므로 음역만 바꾸고 끝 — "elephant는 뭐예요?"처럼 없던 '
+        "질문을 지어내면 안 됨)\n"
     )
     print(f"[hybrid_stt] word_hint={en_only_words}", flush=True)
     prompt = f"""아래는 초등학생이 영어 수업 챗봇에게 "질문이나 요청"을 하나 말한 음성을, 로컬
@@ -400,7 +424,14 @@ B는 영어 단어 자체는 맞게 알아들었을 가능성이 높지만 나�
         print(f"[hybrid_stt] 병합 결과={merged!r}", flush=True)
         if not merged:
             return korean_guess
-        if not _kept_enough_korean(korean_guess, merged):
+        if not _no_fabricated_growth(korean_guess, merged):
+            print(f"[hybrid_stt] 병합 결과가 원문보다 단어가 늘어남(질문/요청 지어냄 의심) → 거절, ko 강제 그대로 사용", flush=True)
+            return korean_guess
+        # 원문이 힌트 단어 개수만큼밖에 안 되면(예: "엘레펜트" 한 단어에 힌트 elephant 하나) 그
+        # 한글은 전부 힌트 단어의 음역일 뿐이라 비교할 "다른 한글 내용"이 없다 — 한글 손실률
+        # 체크를 건너뛴다("elephant"가 정상 병합됐는데도 0%로 줄었다는 이유로 거절되던 문제).
+        skip_ratio_check = len(korean_guess.split()) <= len(en_only_words)
+        if not skip_ratio_check and not _kept_enough_korean(korean_guess, merged):
             # "번역하지 말라"는 프롬프트 지시를 무시하고 A를 통째로 영어로 갈아엎는 경우가
             # 넓게 재현됐다(2026-09-17, 100문항 실측 — "오늘 숙제 안 냈어요"가 "I didn't give
             # you homework today"로 주어까지 뒤바뀌는 등). 프롬프트만으로 못 막아서, A의 한글이
