@@ -867,6 +867,8 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
             _t = (golden.find_unit(level, _other) or {}).get("title") or _other
             print(f"[fix] 미션: 이 유닛 단어 없음, 다른 유닛({_other}) 단어만 있음 → 미션 아님", flush=True)
             mission = {"ok": False, "nudge": f"그건 {_other} {_t} 표현이에요. " + _nudge}
+    if not mission.get("ok") and not str(mission.get("nudge") or "").strip():   # 모델이 미션 아님이라면서 안내를 비워 보내면(hello, 9/18 Unit19) 🎯 뒤가 빈 채로 뜬다 → 기본 안내
+        mission["nudge"] = _nudge
 
     # 4) 근거·점수는 모델이 아니라 '서버가 전달한 후보' 에서 구성 (인계문서 2절)
     top = cands[0] if cands else None
