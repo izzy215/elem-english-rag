@@ -141,6 +141,8 @@ nohup /home/research1/ollama/bin/ollama serve > ollama.log 2>&1 &
 서버 재부팅/재시작마다 잊기 쉬우니, sudo 있으면 systemd 서비스로 등록해서 위 세 환경변수를
 고정해두는 걸 권장(`Restart=always`까지 지정 가능).
 
-sudo가 없으면 일반 사용자 crontab만으로도 비슷하게 방어 가능(5분마다 확인 후 죽어있으면
-올바른 환경변수로 재시작) — `ensure_ollama.sh`를 만들어 `*/5 * * * * <경로>/ensure_ollama.sh`로
-crontab에 등록. TTS 담당 PC 계정에는 sudo가 없어서 이 방식으로 대신함(2026-09-18).
+sudo가 없으면 일반 사용자 crontab의 `@reboot`로 대신 방어 — 서버 재부팅 때만 올바른
+환경변수로 자동 기동(`ensure_ollama.sh`를 `@reboot sleep 10 && <경로>/ensure_ollama.sh`로
+등록). 주기적으로(예: 5분마다) 감시·재시작하는 방식은 쓰지 않는다 — 다른 팀이 GPU 자리를
+비우려고 일부러 Ollama를 내렸을 때도 계속 되살려버려서 방해가 되기 때문. TTS 담당 계정에는
+sudo가 없어서 이 방식으로 대신함(2026-09-18).
