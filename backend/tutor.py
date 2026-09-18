@@ -756,8 +756,18 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
             out["wrong"] = out["fix"] = None
             out["why"] = "우리 교과서 규칙으로는 짚기 어려운 부분이에요. 이렇게 말하면 자연스러워요."   # 잘못 짚은 규칙의 설명은 버린다
         else:
+            # 모델이 두 번 다 뜻을 바꾸는 답(eat→cook)만 내놓는 문장 = 우리 규칙으로 고칠 수 없는 문장 ('i eat kichen', 9/18).
+            # 502 로 "서버 진단 실패"를 보여 주는 대신, 규칙 밖으로 돌려주고 교과서에서 배운 표현으로 다시 말해 보라고 안내한다.
+            # 로그에는 여전히 실패로 남겨 데이터팀이 규칙을 보탤 재료로 쓴다.
             _log_failure(orig, student, level, unit, source_kind, problem, record, llm_info)
-            raise HTTPException(502, f"모델 답이 규칙에 안 맞아 버렸어요 ({problem}). 다시 [고쳐줘]를 눌러 주세요.")
+            print(f"[fix] 검증 2회 실패 + 살릴 문장 없음({problem}) → 규칙 밖 + 다시 말하기 안내", flush=True)
+            hint = ", ".join((unit_row.get("hint_words") or [])[:4])
+            rule_id, problem = OTHER_RULE["id"], None
+            out["wrong"] = out["fix"] = None
+            out["fixed"] = out["full_fixed"] = text                # 철자만 고친 학생 문장 그대로 (뜻을 바꾼 모델 답은 쓰지 않는다)
+            out["more_errors"] = False
+            out["why"] = ("이 문장은 우리 교과서 규칙으로는 고치기 어려워요. 하려던 말을 교과서에서 배운 표현으로 다시 말해 볼까요?"
+                          + (f" (이번 유닛 낱말: {hint})" if hint else ""))
     other = (not ok) and rule_id == OTHER_RULE["id"]
     typo_pair = None
     if not ok:                                               # 모델이 철자 실수(read→red)를 문법 규칙(어순 등)으로 잡는 경우 — 프롬프트 1-1 을 소형 모델이 자주 무시함
