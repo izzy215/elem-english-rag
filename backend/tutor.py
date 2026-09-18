@@ -850,10 +850,21 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
     if first_mission and _m2 and bool(first_mission.get("ok")) != bool(_m2.get("ok")):
         mission = dict(first_mission if not first_mission.get("ok") else _m2)
     #   ④ 이 유닛 단어는 없고 다른 유닛 단어만 있으면("I like pizza." 는 Unit05 음식) 미션 아님 + 어느 유닛 표현인지 안내. 어느 유닛 단어도 없으면(I feel great) 모델 판단
-    _hints = [h.lower() for h in (unit_row.get("hint_words") or [])] or [w["word"].lower() for w in golden.words(level, unit)]
+    # 힌트 단어 + 이 유닛의 단어장 (학년 전부 — pizza·seven·baseball 은 같은 유닛의 4학년 단어라 3학년 힌트만 보면 놓친다, 9/18 36문장 시험)
+    _hints = [h.lower() for h in (unit_row.get("hint_words") or [])]
+    if unit:
+        _hints += [w["word"].lower() for lv in (3, 4, 5, 6) for w in golden.words(lv, unit)]
     _words = re.findall(r"[a-z']+", (full_fixed or text).lower())
     _match = lambda w, h: w == h or (w.startswith(h) and len(w) - len(h) <= 3)
     _hit = any(_match(w, h) for h in _hints for w in _words)
+    if not _hit and unit:                                    # 힌트 단어는 없어도 이 유닛 교과서 문장(학년 전부)과 거의 같은 문장이면(내용어 3분의 2 이상 겹침) 미션 성공
+        _stop = {"i", "a", "an", "the", "to", "is", "am", "are", "do", "you", "my", "it", "this", "that", "and", "we", "he", "she", "they", "of", "in", "on", "at"}
+        _sw = {w for w in _words if w not in _stop}
+        for _p in [p for lv in (3, 4, 5, 6) for p in golden.patterns(lv, unit)]:
+            _pw = {w for w in re.findall(r"[a-z']+", _p["text"].lower()) if w not in _stop}
+            if _pw and len(_pw & _sw) >= max(2, (len(_pw) * 2 + 2) // 3):
+                _hit = True
+                break
     _nudge = f"미션은 \"{unit_row.get('mission') or ''}\"이에요. {' · '.join(_hints[:4])} 같은 단어를 넣어 한 문장으로 말해 볼까요?"
     if _hit:
         mission = {"ok": True, "nudge": ""}
