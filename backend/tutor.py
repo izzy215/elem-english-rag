@@ -694,6 +694,7 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
     first_nochange = False                                   # 1차 답이 '고친 게 없음' 이었나 (2차가 지어낸 답이면 1차 판단을 채택)
     first_ok_recheck = False                                 # 1차가 ok 인데 닮은 실수가 아주 가까워 다시 물었나 (2차가 억지 답이면 1차 ok 채택)
     retry_note = ""
+    first_mission = None
     for attempt in (1, 2):
         sent = prompt if attempt == 1 else prompt + (retry_note or f"\n\n## 다시: 직전 답이 규칙 위반이었다 ({problem}). wrong 은 학생 문장에 실제로 있는 말(보통 한 단어, 어순 규칙이면 구간 전체), fix 는 그 말을 규칙에 맞게 바꾼 것만 쓴다. 학생이 안 쓴 단어를 넣거나 시간 표현을 바꾸지 않는다.")
         if settings.log_prompt:                                  # 모델에 실제로 보내는 프롬프트 전문 (LOG_PROMPT=0 으로 끔)
@@ -704,6 +705,8 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
             raise HTTPException(502, str(e))
         llm_info = out.pop("_llm", {})
         print(f"[fix] {llm_info.get('backend')}:{llm_info.get('model')} {llm_info.get('ms')}ms 응답: {json.dumps(out, ensure_ascii=False)}", flush=True)
+        if attempt == 1:
+            first_mission = out.get("mission") if isinstance(out.get("mission"), dict) else None   # 1차의 미션 판단 (2차는 "다시 고쳐 보라"는 압박 속의 답이라 미션까지 느슨해짐 — 'hello' 9/18)
 
         ok = bool(out.get("ok"))
         _n = lambda x: re.sub(r"[.!?\s]+$", "", str(x or "")).strip().lower()
@@ -756,8 +759,18 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
             out["wrong"] = out["fix"] = None
             out["why"] = "우리 교과서 규칙으로는 짚기 어려운 부분이에요. 이렇게 말하면 자연스러워요."   # 잘못 짚은 규칙의 설명은 버린다
         else:
+            # 모델이 두 번 다 뜻을 바꾸는 답(eat→cook)만 내놓는 문장 = 우리 규칙으로 고칠 수 없는 문장 ('i eat kichen', 9/18).
+            # 502 로 "서버 진단 실패"를 보여 주는 대신, 규칙 밖으로 돌려주고 교과서에서 배운 표현으로 다시 말해 보라고 안내한다.
+            # 로그에는 여전히 실패로 남겨 데이터팀이 규칙을 보탤 재료로 쓴다.
             _log_failure(orig, student, level, unit, source_kind, problem, record, llm_info)
-            raise HTTPException(502, f"모델 답이 규칙에 안 맞아 버렸어요 ({problem}). 다시 [고쳐줘]를 눌러 주세요.")
+            print(f"[fix] 검증 2회 실패 + 살릴 문장 없음({problem}) → 규칙 밖 + 다시 말하기 안내", flush=True)
+            hint = ", ".join((unit_row.get("hint_words") or [])[:4])
+            rule_id, problem = OTHER_RULE["id"], None
+            out["wrong"] = out["fix"] = None
+            out["fixed"] = out["full_fixed"] = text                # 철자만 고친 학생 문장 그대로 (뜻을 바꾼 모델 답은 쓰지 않는다)
+            out["more_errors"] = False
+            out["why"] = ("이 문장은 우리 교과서 규칙으로는 고치기 어려워요. 하려던 말을 교과서에서 배운 표현으로 다시 말해 볼까요?"
+                          + (f" (이번 유닛 낱말: {hint})" if hint else ""))
     other = (not ok) and rule_id == OTHER_RULE["id"]
     typo_pair = None
     if not ok:                                               # 모델이 철자 실수(read→red)를 문법 규칙(어순 등)으로 잡는 경우 — 프롬프트 1-1 을 소형 모델이 자주 무시함
@@ -828,7 +841,32 @@ def diagnose(text: str, level: int = 3, unit: str = "", student: str = "A", sour
         full_fixed, spelling = text, list(pre_spelling)      # 사전검사로 잡은 철자(schol→school)는 잃지 않는다 ("i go schol by bus" 가 철자 없이 나가던 문제, 9/17)
     timing["total_ms"] = int((time.perf_counter() - t_start) * 1000)
     log_id = "L-" + datetime.now().strftime("%Y%m%d-%H%M%S%f")[:-3]
-    mission = out.get("mission") if isinstance(out.get("mission"), dict) else {"ok": True, "nudge": ""}
+    # 미션 판정 (9/18 'hello' 가 Unit18 감정 미션 성공으로 나가던 문제):
+    #   ① 1차·2차 답의 미션 판단이 다르면 "미션 아님" 쪽 — 2차는 "다시 고쳐 보라"는 압박 속 답이라 미션까지 느슨해진다
+    #   ② 힌트 단어(없으면 유닛 단어)가 문장에 있으면 코드가 미션 성공으로 (화면 checkMission 과 같은 기준, 로그와 화면이 어긋나지 않게)
+    #   ③ 힌트 단어가 없고 두 단어 이하면 모델이 뭐라 했든 미션 아님 — 인사 한 마디로 미션이 올라가지 않게
+    _m2 = out.get("mission") if isinstance(out.get("mission"), dict) else None
+    mission = dict(_m2 or first_mission or {"ok": True, "nudge": ""})
+    if first_mission and _m2 and bool(first_mission.get("ok")) != bool(_m2.get("ok")):
+        mission = dict(first_mission if not first_mission.get("ok") else _m2)
+    #   ④ 이 유닛 단어는 없고 다른 유닛 단어만 있으면("I like pizza." 는 Unit05 음식) 미션 아님 + 어느 유닛 표현인지 안내. 어느 유닛 단어도 없으면(I feel great) 모델 판단
+    _hints = [h.lower() for h in (unit_row.get("hint_words") or [])] or [w["word"].lower() for w in golden.words(level, unit)]
+    _words = re.findall(r"[a-z']+", (full_fixed or text).lower())
+    _match = lambda w, h: w == h or (w.startswith(h) and len(w) - len(h) <= 3)
+    _hit = any(_match(w, h) for h in _hints for w in _words)
+    _nudge = f"미션은 \"{unit_row.get('mission') or ''}\"이에요. {' · '.join(_hints[:4])} 같은 단어를 넣어 한 문장으로 말해 볼까요?"
+    if _hit:
+        mission = {"ok": True, "nudge": ""}
+    elif len(_words) <= 2 and mission.get("ok"):
+        mission = {"ok": False, "nudge": _nudge}
+    elif mission.get("ok") and unit:
+        _generic = {"today", "yesterday", "tomorrow", "now", "play", "like", "want", "have", "make", "look", "come", "good", "nice", "very", "many", "some", "this", "that", "there", "here", "what", "how"}   # 어느 유닛 문장에나 나오는 말 — 이걸로 다른 유닛이라 하지 않는다 ("I feel great today." 의 today 가 Unit14 요일 단어)
+        _other = next((u["unit"] for lv in (3, 4, 5, 6) for u in golden.units(lv) if u["unit"] != unit
+                       for w in golden.words(lv, u["unit"]) if len(w["word"]) >= 3 and w["word"].lower() not in _generic and any(_match(x, w["word"].lower()) for x in _words)), None)
+        if _other:
+            _t = (golden.find_unit(level, _other) or {}).get("title") or _other
+            print(f"[fix] 미션: 이 유닛 단어 없음, 다른 유닛({_other}) 단어만 있음 → 미션 아님", flush=True)
+            mission = {"ok": False, "nudge": f"그건 {_other} {_t} 표현이에요. " + _nudge}
 
     # 4) 근거·점수는 모델이 아니라 '서버가 전달한 후보' 에서 구성 (인계문서 2절)
     top = cands[0] if cands else None
